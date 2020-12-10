@@ -1,2 +1,2 @@
-# InstaWorkr-Website
-Web platform for InstaWorkr
+# Worxstr-Website
+Web platform for Worxstr
