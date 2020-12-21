@@ -1,4 +1,5 @@
 # Environment Variables File
+config.env
 ENVIRON
 static/
 # Byte-compiled / optimized / DLL files
