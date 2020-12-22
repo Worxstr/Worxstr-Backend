@@ -17,17 +17,50 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def get_env_variable(var_name, default=False):
+    """
+    Get the environment variable or return exception
+    :param var_name: Environment Variable to lookup
+    """
+    try:
+        return os.environ[var_name]
+    except KeyError:
+        from io import StringIO
+        import configparser
+        env_file = os.path.join(BASE_DIR, 'config.env')
+        try:
+            config = StringIO()
+            config.write("[DATA]\n")
+            config.write(open(env_file).read())
+            config.seek(0, os.SEEK_SET)
+            cp = configparser.ConfigParser()
+            cp.read_file(config)
+            value = dict(cp.items('DATA'))[var_name.lower()]
+            if value.startswith('"') and value.endswith('"'):
+                value = value[1:-1]
+            elif value.startswith("'") and value.endswith("'"):
+                value = value[1:-1]
+            os.environ.setdefault(var_name, value)
+            return value
+        except (KeyError, IOError):
+            if default is not False:
+                return default
+            from django.core.exceptions import ImproperlyConfigured
+            error_msg = "Either set the env variable '{var}' or place it in your " \
+                        "{env_file} file as '{var} = VALUE'"
+            raise ImproperlyConfigured(error_msg.format(var=var_name, env_file=env_file))
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
+SECRET_KEY = get_env_variable('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ['DJANGO_DEBUG'] 
+DEBUG = get_env_variable('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = [os.environ['WWW_HOST_NAME'], os.environ['HOST_NAME'], os.environ['IP_ADDR'], 'localhost']
-
+ALLOWED_HOSTS = [get_env_variable('WWW_HOST_NAME'), get_env_variable('HOST_NAME'), get_env_variable('IP_ADDR'), 'localhost']
 
 # Application definition
 
@@ -70,7 +103,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'worxstr.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
@@ -78,13 +110,12 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'worxstr',
-        'USER': os.environ['DJANGO_DATABASE_USER'],
-        'PASSWORD': os.environ['DJANGO_DATABASE_PASSWORD'],
+        'USER': get_env_variable('DJANGO_DATABASE_USER'),
+        'PASSWORD': get_env_variable('DJANGO_DATABASE_PASSWORD'),
         'HOST': 'localhost',
         'PORT': '',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -104,7 +135,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.1/topics/i18n/
 
@@ -117,7 +147,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
