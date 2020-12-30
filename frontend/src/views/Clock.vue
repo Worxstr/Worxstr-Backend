@@ -7,14 +7,14 @@
       style="margin-top: 20vh; margin-bottom: 15vh; top: 60px; position: sticky"
     >
       <h6 class="text-h6">Your shift ends at</h6>
-      <h3 class="text-h3 py-2">
+      <h3 class="text-h3 py-2 font-weight-bold">
         {{
           nextEvent.timestamp
             .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
             .replace(/^0(?:0:0?)?/, "")
         }}
       </h3>
-      <p class="text-subtitle-2 text-center">
+      <p class="text-subtitle-2 text-center text-md-left">
         <countdown :end-time="nextEvent.timestamp">
           <template v-slot:process="props">
             <span>

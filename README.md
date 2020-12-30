@@ -36,28 +36,6 @@ Web platform for Worxstr
     ```
 
 ## Development
-### Flask development server
-1. Build the latest frontend code
-    1. Navigate to `frontend`
-    ```shell
-    cd frontend
-    ```
-
-    2. Build the app
-    ```shell
-    yarn build
-    ```
-
-2. Run the server
-    1. Navigate back to the root directory
-    ```shell
-    cd ..
-    ```
-    2. Run flask
-    ```shell
-    FLASK_APP=main.py FLASK_ENV=development flask run
-    ```
-
 ### Vue development server
 1. Navigate to `/frontend`
 ```shell
@@ -69,5 +47,27 @@ cd frontend
 yarn serve
 ```
 
+### Flask development server
+
+1. Ensure that the vue server is still running on port 8080
+
+2. Run the server
+    1. Open a new terminal to the root directory
+    2. Run flask
+    ```shell
+    FLASK_APP=main.py FLASK_ENV=development flask run
+    ```
+
 ## Production
 Write this when we actually have something to deploy
+
+1. Build the latest frontend code
+    1. Navigate to `frontend`
+    ```shell
+    cd frontend
+    ```
+
+    2. Build the app
+    ```shell
+    yarn build
+    ```
