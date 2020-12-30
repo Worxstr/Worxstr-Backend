@@ -10,42 +10,64 @@ Web platform for Worxstr
 
 1. Python virtual environment
     a. Create a new virtual environment
-    `python -m venv env`
+    ```shell
+    python -m venv env
+    ```
 
     b. Activate the environemnt
-    `source env/bin/activate`
+    ```shell
+    source env/bin/activate
+    ```
 
     c. Install packages
-    `pip install -r requirements.txt`
+    ```shell
+    pip install -r requirements.txt
+    ```
 
 2. Frontend
     a. Navigate to `/frontend`
-    `cd frontend`
+    ```shell
+    cd frontend
+    ```
 
     b. Install packages
-    `yarn install`
+    ```shell
+    yarn install
+    ```
 
 ## Development
 ### Flask development server
 1. Build the latest frontend code
     a. Navigate to `frontend`
-    `cd frontend`
+    ```shell
+    cd frontend
+    ```
 
     b. Build the app
-    `yarn build`
+    ```shell
+    yarn build
+    ```
 
 2. Run the server
     a. Navigate back to the root directory
-    `cd ..`
+    ```shell
+    cd ..
+    ```
     b. Run flask
-    `FLASK_APP=main.py FLASK_ENV=development flask run`
+    ```shell
+    FLASK_APP=main.py FLASK_ENV=development flask run
+    ```
 
 ### Vue development server
 1. Navigate to `/frontend`
-`cd frontend`
+```shell
+cd frontend
+```
 
 2. Run the dev server
-`yarn serve`
+```shell
+yarn serve
+```
 
 ## Production
 Write this when we actually have something to deploy
