@@ -1,0 +1,9 @@
+html {
+    overflow: hidden;
+}
+html,
+body {
+  overflow: hidden;
+  margin: 0;
+  height: 100%;
+}
