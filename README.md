@@ -9,28 +9,28 @@ Web platform for Worxstr
 - [Yarn](https://yarnpkg.com/)
 
 1. Python virtual environment
-    a. Create a new virtual environment
+    1. Create a new virtual environment
     ```shell
     python -m venv env
     ```
 
-    b. Activate the environemnt
+    2. Activate the environemnt
     ```shell
     source env/bin/activate
     ```
 
-    c. Install packages
+    3. Install packages
     ```shell
     pip install -r requirements.txt
     ```
 
 2. Frontend
-    a. Navigate to `/frontend`
+    1. Navigate to `/frontend`
     ```shell
     cd frontend
     ```
 
-    b. Install packages
+    2. Install packages
     ```shell
     yarn install
     ```
@@ -38,22 +38,22 @@ Web platform for Worxstr
 ## Development
 ### Flask development server
 1. Build the latest frontend code
-    a. Navigate to `frontend`
+    1. Navigate to `frontend`
     ```shell
     cd frontend
     ```
 
-    b. Build the app
+    2. Build the app
     ```shell
     yarn build
     ```
 
 2. Run the server
-    a. Navigate back to the root directory
+    1. Navigate back to the root directory
     ```shell
     cd ..
     ```
-    b. Run flask
+    2. Run flask
     ```shell
     FLASK_APP=main.py FLASK_ENV=development flask run
     ```
