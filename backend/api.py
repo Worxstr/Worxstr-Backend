@@ -15,7 +15,7 @@ db = {
 					'first': 'Jackson',
 					'last': 'Sippe'
 			}
-    }
+    	}
 	]
 }
     
