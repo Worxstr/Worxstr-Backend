@@ -1,3 +1,4 @@
+from flask_security import UserMixin, RoleMixin
 
 from app import db
 
@@ -7,7 +8,7 @@ class RolesUsers(db.Model):
     user_id = db.Column('user_id', db.Integer(), db.ForeignKey('user.id'))
     role_id = db.Column('role_id', db.Integer(), db.ForeignKey('role.id'))
 
-class Role(db.Model):
+class Role(db.Model, RoleMixin):
     __tablename__ = 'role'
     id = db.Column(db.Integer(), primary_key=True)
     name = db.Column(db.String(80), unique=True)
@@ -16,8 +17,7 @@ class Role(db.Model):
     def __repr__(self):
         return '<Role {}>'.format(self.name)
 
-class User(db.Model):
-    __tablename__ = 'user'
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True)
     phone = db.Column(db.String(10))
@@ -32,7 +32,7 @@ class User(db.Model):
     login_count = db.Column(db.Integer)
     active = db.Column(db.Boolean())
     confirmed_at = db.Column(db.DateTime())
-    roles = db.relationship('Role', secondary='roles_users', backref='users', lazy='dynamic')
+    roles = db.relationship('Role', secondary='roles_users', backref=db.backref('users', lazy='dynamic'))
     
     def __repr__(self):
         return '<User {}>'.format(self.username)    
@@ -59,6 +59,7 @@ class Job(db.Model):
     zip_code = db.Column(db.String(10))
     consultant_name = db.Column(db.String(255))
     consultant_phone = db.Column(db.String(10))
+    consultant_code = db.Column(db.String(255))
 
     def __repr__(self):
         return '<Job {}>'.format(self.name)

@@ -6,12 +6,18 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
+from flask_security import Security, SQLAlchemyUserDatastore
+from flask_wtf.csrf import CSRFProtect
+from flask_cors import CORS
 
 from config import Config
 
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
+user_datastore = NotImplemented
+security = Security()
+csrf = CSRFProtect()
 
 def create_app(config_class=Config):
     app = Flask(
@@ -19,11 +25,19 @@ def create_app(config_class=Config):
         static_folder = "./frontend/dist",
         template_folder = "./frontend/dist"
     )
+    
     app.config.from_object(config_class)
 
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
+
+    from app.models import User, Role
+    user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+    security.init_app(app, user_datastore)
+
+    csrf.init_app(app)
+    cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
