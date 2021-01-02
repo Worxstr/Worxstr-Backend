@@ -1,6 +1,5 @@
-from flask import Blueprint, jsonify
-
-api = Blueprint('api', __name__, url_prefix='/api')
+from flask import jsonify
+from app.api import bp
 
 db = {
 	'users': [
@@ -18,8 +17,8 @@ db = {
     	}
 	]
 }
-    
-@api.route('/users')
+
+@bp.route('/users')
 def list_users():
 	""" Returns list of registered users
 	---
@@ -32,7 +31,7 @@ def list_users():
 	"""
 	return jsonify(db.get('users'))
 
-@api.route('/users/<id>')
+@bp.route('/users/<id>')
 def get_user(id):
 	""" Returns a user by their ID
 	---
