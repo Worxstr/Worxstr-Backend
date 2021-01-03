@@ -114,6 +114,7 @@ def clock_history():
 		'history': db_test.get('history')[(offset * limit):(limit * offset) + limit]
 	})
 
+
 @bp.route('/clock/clock_in/<shift_id>', methods=['POST'])
 @login_required
 def clock_in(shift_id):
@@ -125,15 +126,28 @@ def clock_in(shift_id):
 			timeclock = TimeClock(time=datetime.datetime.now(), employee_id=current_user.get_id(), action=TimeClockAction.clock_in)
 			db.session.add(timeclock)
 			db.session.commit()
-			return 'True'
-	return 'False'
+			return jsonify({
+				'success': True
+			})
+
+		# TODO: Return 401 status
+		return jsonify({
+			'success': False
+		})
+
 
 @bp.route('/clock/clock_out', methods=['POST'])
 @login_required
 def clock_out():
 	if request.method == 'POST':
-		timeclock = TimeClock(time=datetime.datetime.now(), employee_id=current_user.get_id(), action=TimeClockAction.clock_out)
+		timeclock = TimeClock(
+			time=datetime.datetime.now(),
+			employee_id=current_user.get_id(),
+			action=TimeClockAction.clock_out
+		)
 		db.session.add(timeclock)
 		db.session.commit()
-		return 'True'
-	return 'False'
+
+		return jsonify({
+			'success': True
+		})
