@@ -59,3 +59,20 @@ class Config(object):
     SECURITY_CSRF_COOKIE = {"key": "XSRF-TOKEN"}
     WTF_CSRF_CHECK_DEFAULT = False
     WTF_CSRF_TIME_LIMIT = None
+
+    SWAGGER_CONFIG = {
+        "headers": [
+        ],
+        "specs": [
+            {
+                "endpoint": 'apispec_1',
+                "route": '/apispec_1.json',
+                "rule_filter": lambda rule: True,  # all in
+                "model_filter": lambda tag: True,  # all in
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        # "static_folder": "static",  # must be set by user
+        "swagger_ui": True,
+        "specs_route": "/docs/"
+    }

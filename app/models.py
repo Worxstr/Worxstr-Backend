@@ -37,7 +37,7 @@ class User(db.Model, UserMixin):
     roles = db.relationship('Role', secondary='roles_users', backref=db.backref('users', lazy='dynamic'))
     
     def __repr__(self):
-        return '<User {}>'.format(self.username)    
+        return '<User {}>'.format(self.username)
 
 class Organization(db.Model):
     __tablename__ = 'organization'
@@ -91,7 +91,7 @@ class TimeClock(db.Model):
 class EmployeeInfo(db.Model):
     __tablename__ = 'employee_info'
     id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    ssn = db.Column(db.String(9))
+    ssn = db.Column(db.String(9), unique=True)
     address = db.Column(db.String(255))
     city = db.Column(db.String(255))
     state = db.Column(db.String(255))

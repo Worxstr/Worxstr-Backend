@@ -9,13 +9,16 @@ from flask_mail import Mail
 from flask_security import Security, SQLAlchemyUserDatastore
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
+from flasgger import Swagger
 
 from config import Config
 
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
-user_datastore = NotImplemented
+swagger = Swagger(config=Config.SWAGGER_CONFIG)
+from app.models import User, Role
+user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security()
 csrf = CSRFProtect()
 
@@ -31,9 +34,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
-
-    from app.models import User, Role
-    user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+    swagger.init_app(app)
     security.init_app(app, user_datastore)
 
     csrf.init_app(app)
