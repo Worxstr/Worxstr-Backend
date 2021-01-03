@@ -1,7 +1,9 @@
-# Environment Variables File
-config.env
-ENVIRON
-static/
+# Custom
+.flaskenv
+*.db
+logs/
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

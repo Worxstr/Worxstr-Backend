@@ -13,7 +13,12 @@
           </v-avatar>
         </router-link>
 
-        <div class="d-flex flex-row" v-if="!$vuetify.breakpoint.smAndDown">
+        <div
+          class="d-flex flex-row"
+          v-if="
+            $store.state.authenticatedUser && !$vuetify.breakpoint.smAndDown
+          "
+        >
           <v-btn
             v-for="link in links"
             :key="link"
@@ -26,7 +31,7 @@
 
         <v-spacer />
 
-        <div v-if="authenticatedUser">
+        <div v-if="$store.state.authenticatedUser">
           <v-menu v-model="menu" :close-on-content-click="false" bottom left>
             <template v-slot:activator="{ on, attrs }">
               <v-btn icon>
@@ -78,6 +83,8 @@
           <v-btn icon @click="signOut">
             <v-icon>mdi-logout-variant</v-icon>
           </v-btn>
+
+          <v-btn text>User id: {{ $store.state.authenticatedUser.id }}</v-btn>
         </div>
 
         <div v-else>
@@ -105,7 +112,7 @@
         :input-value="active"
         v-if="
           $vuetify.breakpoint.smAndDown &&
-          authenticatedUser &&
+          $store.state.authenticatedUser &&
           $route.name != 'home' &&
           $route.name != 'conversation'
         "
@@ -124,26 +131,41 @@
         </v-btn>
       </v-bottom-navigation>
     </transition>
+
+    <v-snackbar
+      app
+      v-model="snackbar.show"
+      :timeout="snackbar.timeout"
+    >
+      {{ snackbar.text }}
+
+      <template v-slot:action="{ attrs }" v-if="snackbar.action">
+        <v-btn
+          color="blue"
+          text
+          v-bind="attrs"
+          @click="snackbar.show = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-app>
 </template>
 
 <script lang="ts">
 import Vue from "vue";
-import { mapState } from "vuex";
+import { mapState, mapActions } from "vuex";
 
 export default Vue.extend({
   name: "App",
   methods: {
-    signOut() {
-      this.authenticatedUser = false;
-      this.$router.push("/");
-    },
+    ...mapActions(["signOut"]),
   },
   computed: {
-    ...mapState(["showBottomNav"]),
+    ...mapState(["snackbar"]),
   },
   data: () => ({
-    authenticatedUser: true,
     links: [
       {
         icon: "mdi-clock-outline",
@@ -206,10 +228,12 @@ export default Vue.extend({
   transform: initial !important;
   height: 56px !important;
 }
-.slide-fade-enter-active, .slide-fade-leave-active {
+.slide-fade-enter-active,
+.slide-fade-leave-active {
   transition: all 0.2s ease !important;
 }
-.slide-fade-enter, .slide-fade-leave-to {
+.slide-fade-enter,
+.slide-fade-leave-to {
   transform: translateY(100%) !important;
   height: 0 !important;
   opacity: 0;

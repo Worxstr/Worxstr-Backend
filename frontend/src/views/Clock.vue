@@ -82,7 +82,7 @@
 
       <v-timeline align-top dense>
         <transition-group name="scroll-y-transition">
-          <div v-for="event in history" :key="event.id || event.time || event.label">
+          <div v-for="event in clockHistory" :key="event.id || event.label">
             <v-timeline-item v-if="event.label" hide-dot>
               <span>{{ event.label }}</span>
             </v-timeline-item>
@@ -103,7 +103,7 @@
       </v-timeline>
 
       <v-card-actions class="d-flex justify-center">
-        <v-btn text color="primary">
+        <v-btn text color="primary" @click="loadClockHistory">
           <v-icon right dark> mdi-arrow-down </v-icon>
           Load more
         </v-btn>
@@ -115,6 +115,7 @@
 <script>
 import Vue from "vue"
 import vueAwesomeCountdown from "vue-awesome-countdown"
+import { mapGetters } from 'vuex'
 
 Vue.use(vueAwesomeCountdown, "vac")
 
@@ -138,72 +139,14 @@ export default {
     },
     clocked: true,
     break: false,
-    history: [
-      {
-        label: "Today",
-      },
-      {
-        time: "9:01 am",
-        message: "Clocked in",
-        color: "green",
-        description: "1 min late",
-      },
-      {
-        label: "Yesterday",
-      },
-      {
-        time: "4:55 pm",
-        message: "Clocked out",
-        color: "pink",
-        description: "5 mins left",
-      },
-      {
-        time: "1:06 pm",
-        message: "Finished break",
-        color: "green",
-        description: "2 mins left",
-      },
-      {
-        time: "2:45 pm",
-        message: "Started break",
-        color: "amber",
-        description: "30 mins available",
-      },
-      {
-        time: "9:02 am",
-        message: "Clocked in",
-        color: "green",
-        description: "Caption",
-      },
-      {
-        label: "Thursday",
-      },
-      {
-        time: "4:58 pm",
-        message: "Clocked out",
-        color: "pink",
-        description: "2 mins left",
-      },
-      {
-        time: "1:06 pm",
-        message: "Finished break",
-        color: "green",
-        description: "2 mins left",
-      },
-      {
-        time: "2:45 pm",
-        message: "Started break",
-        color: "amber",
-        description: "30 mins available",
-      },
-      {
-        time: "9:02 am",
-        message: "Clocked in",
-        color: "green",
-        description: "Caption",
-      },
-    ],
+    clockHistoryOffset: 0
   }),
+  mounted() {
+    this.loadClockHistory()
+  },
+  computed: {
+    ...mapGetters(['clockHistory'])
+  },
   methods: {
     toggleClock() {
       this.history.splice(1, 0, {
@@ -231,6 +174,10 @@ export default {
       id++
       this.break = !this.break
     },
+    loadClockHistory()  {
+      this.$store.dispatch('getClockHistory', {limit: 1, offset: this.clockHistoryOffset})
+      this.clockHistoryOffset++
+    }
   },
 };
 </script>
