@@ -1,3 +1,5 @@
+from enum import Enum
+
 from flask_security import UserMixin, RoleMixin
 
 from app import db
@@ -64,14 +66,27 @@ class Job(db.Model):
     def __repr__(self):
         return '<Job {}>'.format(self.name)
 
-class Shift(db.Model):
-    __tablename__ = 'shift'
+class ScheduleShift(db.Model):
+    __tablename__ = 'schedule_shift'
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'))
     time_begin = db.Column(db.DateTime)
     time_end = db.Column(db.DateTime)
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     site_location = db.Column(db.String(255))
+
+class TimeClockAction(Enum):
+    clock_in = 1
+    clock_out = 2
+    start_break = 3
+    end_break = 4
+
+class TimeClock(db.Model):
+    __tablename__ = 'time_clock'
+    id = db.Column(db.Integer, primary_key=True)
+    time = db.Column(db.DateTime)
+    action = db.Column(db.Enum(TimeClockAction))
+    employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 class EmployeeInfo(db.Model):
     __tablename__ = 'employee_info'

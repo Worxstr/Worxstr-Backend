@@ -1,6 +1,8 @@
-from flask import jsonify
+from flask import jsonify, current_app
+
+from app import db
 from app.api import bp
-from flask import current_app
+from app.models import User
 
 db = {
 	'users': [
@@ -59,4 +61,3 @@ def get_user(id):
 	"""
 
 	return jsonify(db.get('users')[int(id)])
-	

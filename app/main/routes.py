@@ -1,6 +1,8 @@
-from app.main import bp as bp
 import requests
+
 from flask import render_template, current_app
+
+from app.main import bp as bp
 
 # Direct all other traffic to Vue app
 @bp.route('/', defaults={'path': ''})

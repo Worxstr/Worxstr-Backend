@@ -1,9 +1,13 @@
+import datetime
+
 from flask import jsonify, request
+from flask_security import login_required, current_user
 
 from app.api import bp
-from app import db
+from app import db, security
+from app.models import Job, ScheduleShift, TimeClock, TimeClockAction
 
-db = {
+db_test = {
 	'clocked': False,
 	'on_break': False,
 	'users': [
@@ -107,9 +111,29 @@ def clock_history():
 	offset = int(request.args.get('offset')) or 0
 
 	return jsonify({
-		'history': db.get('history')[(offset * limit):(limit * offset) + limit]
+		'history': db_test.get('history')[(offset * limit):(limit * offset) + limit]
 	})
 
-@bp.route('/clock/verify')
-def clock_verify(code, job_id):
-	return
+@bp.route('/clock/clock_in/<shift_id>', methods=['POST'])
+@login_required
+def clock_in(shift_id):
+	if request.method == 'POST' and request.json:
+		code = str(request.json.get('code'))
+		correct_code = db.session.query(Job.consultant_code).join(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+
+		if code == correct_code[0]:
+			timeclock = TimeClock(time=datetime.datetime.now(), employee_id=current_user.get_id(), action=TimeClockAction.clock_in)
+			db.session.add(timeclock)
+			db.session.commit()
+			return 'True'
+	return 'False'
+
+@bp.route('/clock/clock_out', methods=['POST'])
+@login_required
+def clock_out():
+	if request.method == 'POST':
+		timeclock = TimeClock(time=datetime.datetime.now(), employee_id=current_user.get_id(), action=TimeClockAction.clock_out)
+		db.session.add(timeclock)
+		db.session.commit()
+		return 'True'
+	return 'False'
