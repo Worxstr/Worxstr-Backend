@@ -66,17 +66,25 @@ const store = new Vuex.Store({
         return data
       }
       catch (err) {
-        dispatch('UNSET_AUTHENTICATED_USER')
-        return false
+        commit('UNSET_AUTHENTICATED_USER')
+        return err
       }
     },
 
-    async signUp({ commit, dispatch }, userData) {
-      const { data } = await axios({
-        method: 'POST',
-        url: `${baseUrl}/users/register`,
-        data: userData
-      })
+    async signUp({ dispatch }, userData) {
+      try {
+        const { data } = await axios({
+          method: 'POST',
+          url: `${baseUrl}/auth/register`,
+          data: userData
+        })
+        router.push({ name: 'home' })
+        dispatch('showSnackbar', { text: "Check your email to verify your account!" })
+        return data
+      }
+      catch (err) {
+        return err
+      }
     },
 
     async signOut({ commit }) {
@@ -91,7 +99,8 @@ const store = new Vuex.Store({
     async getAuthenticatedUser({ commit, dispatch }) {
       const { data } = await axios({
         method: 'GET',
-        url: `${baseUrl}/users/me`
+        url: `${baseUrl}/users/me`,
+        
       })
       commit('SET_AUTHENTICATED_USER', { user: data.authenticated_user })
     },
@@ -125,9 +134,19 @@ const store = new Vuex.Store({
 axios.interceptors.response.use(response => {
   return response
 }, error => {
+
+  // if (error.config.hideErrorMessage) return
+  
   let message;
-  if (error.response.data.message) {
-    message = error.response.data.message
+  const res = error.response.data
+
+  console.log(error.request)
+
+  // TODO: this is stupid, don't keep this. use custom axios config
+  if (error.request.responseURL == 'http://localhost:5000/api/users/me') return
+
+  if (res.message || res.response.error) {
+    message = res.message || res.response.error
   } else {
     const errorList = error.response.data.response.errors
     message = errorList[Object.keys(errorList)[0]][0]

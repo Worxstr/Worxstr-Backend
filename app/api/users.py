@@ -25,8 +25,8 @@ def list_users():
 def add_employee():
 	if request.method == 'POST' and request.json:
 
-		first_name = request.json.get('first_name')
-		last_name = request.json.get('last_name')
+		first_name = request.json.get('firstName')
+		last_name = request.json.get('lastName')
 		username = request.json.get('username')
 		email = request.json.get('email')
 		phone = request.json.get('phone')
@@ -36,7 +36,7 @@ def add_employee():
 		address = request.json.get('address')
 		city = request.json.get('city')
 		state = request.json.get('state')
-		zip_code = request.json.get('zip_code')
+		zip_code = request.json.get('zipCode')
 
 		user = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, password=hash_password(password))
 		db.session.commit()

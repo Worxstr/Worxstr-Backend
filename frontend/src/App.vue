@@ -94,6 +94,10 @@
           <v-btn text :to="{ name: 'signIn' }" active-class="primary--text">
             Sign in
           </v-btn>
+
+          <v-btn text :to="{ name: 'signUp' }" active-class="primary--text">
+            Sign up
+          </v-btn>
         </div>
       </v-container>
     </v-app-bar>
@@ -159,10 +163,10 @@ export default Vue.extend({
       console.log(storedUser);
       this.$store.commit("SET_AUTHENTICATED_USER", {
         user: JSON.parse(storedUser),
-      });
-      // Refresh user data in case of an update
-      this.$store.dispatch("getAuthenticatedUser");
-    }
+			});
+		}
+		// Refresh user data in case of an update
+		this.$store.dispatch("getAuthenticatedUser");
   },
   methods: {
     signOut() {
