@@ -26,10 +26,11 @@ const routes = [
     component: SignIn
   },
   {
-    path: 'sign-up',
+    path: '/sign-up',
+    alias: '/confirmed',
     name: 'signUp',
     component: SignUp
-  }
+  },
   {
     path: '/clock',
     name: 'clock',

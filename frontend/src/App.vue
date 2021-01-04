@@ -84,13 +84,20 @@
             <v-icon>mdi-logout-variant</v-icon>
           </v-btn>
 
-          <v-btn text>User id: {{ $store.state.authenticatedUser.id }}</v-btn>
+          <v-btn text>
+            {{ authenticatedUser.first_name }}
+            {{ authenticatedUser.last_name }}
+          </v-btn>
         </div>
 
         <div v-else>
-          <v-btn text :to="{ name: 'signIn' }" active-class="primary--text"
-            >Sign in</v-btn
-          >
+          <v-btn text :to="{ name: 'signIn' }" active-class="primary--text">
+            Sign in
+          </v-btn>
+
+          <v-btn text :to="{ name: 'signUp' }" active-class="primary--text">
+            Sign up
+          </v-btn>
         </div>
       </v-container>
     </v-app-bar>
@@ -132,20 +139,11 @@
       </v-bottom-navigation>
     </transition>
 
-    <v-snackbar
-      app
-      v-model="snackbar.show"
-      :timeout="snackbar.timeout"
-    >
+    <v-snackbar app v-model="snackbar.show" :timeout="snackbar.timeout">
       {{ snackbar.text }}
 
       <template v-slot:action="{ attrs }" v-if="snackbar.action">
-        <v-btn
-          color="blue"
-          text
-          v-bind="attrs"
-          @click="snackbar.show = false"
-        >
+        <v-btn color="blue" text v-bind="attrs" @click="snackbar.show = false">
           Close
         </v-btn>
       </template>
@@ -159,11 +157,25 @@ import { mapState, mapActions } from "vuex";
 
 export default Vue.extend({
   name: "App",
+  mounted() {
+    const storedUser = localStorage.getItem("authenticatedUser");
+    if (storedUser) {
+      console.log(storedUser);
+      this.$store.commit("SET_AUTHENTICATED_USER", {
+        user: JSON.parse(storedUser),
+			});
+		}
+		// Refresh user data in case of an update
+		this.$store.dispatch("getAuthenticatedUser");
+  },
   methods: {
-    ...mapActions(["signOut"]),
+    signOut() {
+      console.log("sign out");
+      this.$store.dispatch("signOut");
+    },
   },
   computed: {
-    ...mapState(["snackbar"]),
+    ...mapState(["authenticatedUser", "snackbar"]),
   },
   data: () => ({
     links: [
