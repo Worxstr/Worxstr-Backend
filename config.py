@@ -17,7 +17,7 @@ class Config(object):
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    ADMINS = ['jackson@worxstr.com', 'alexwohlbruck@gmail.com']
+    ADMINS = ['support@worxstr.com', 'admin@worxstr.com']
 
     # Application threads. A common general assumption is
     # using 2 per available processor cores - to handle
@@ -49,6 +49,7 @@ class Config(object):
     SECURITY_REDIRECT_BEHAVIOR = "spa"
     SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT") or '146585145368132386173505678016728509634'
 
+
     # CSRF protection is critical for all session-based browser UIs
     # enforce CSRF protection for session / browser - but allow token-based
     # API calls to go through
@@ -59,6 +60,8 @@ class Config(object):
     SECURITY_CSRF_COOKIE = {"key": "XSRF-TOKEN"}
     WTF_CSRF_CHECK_DEFAULT = False
     WTF_CSRF_TIME_LIMIT = None
+
+    CORS_HEADERS = 'Content-Type'
 
     SWAGGER_CONFIG = {
         "headers": [

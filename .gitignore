@@ -3,6 +3,7 @@
 *.db
 logs/
 .vscode/
+codes/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

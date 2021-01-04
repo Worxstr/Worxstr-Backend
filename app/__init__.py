@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
@@ -25,20 +25,24 @@ csrf = CSRFProtect()
 def create_app(config_class=Config):
     app = Flask(
         __name__,
-        static_folder = "./frontend/dist",
-        template_folder = "./frontend/dist"
+        static_folder = "./frontend/dist"
     )
     
+    cors = CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
     app.config.from_object(config_class)
-
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
     swagger.init_app(app)
     security.init_app(app, user_datastore)
 
+    @security.login_manager.unauthorized_handler
+    def unauthorized_handler():
+        return jsonify(success=False,
+                        data={'login_required': True},
+                        message='Authorize please to access this page.'), 401
+
     csrf.init_app(app)
-    cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)

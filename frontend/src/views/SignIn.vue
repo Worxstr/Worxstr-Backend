@@ -7,8 +7,8 @@
         <v-card-title>Sign in</v-card-title>
 
         <v-card-text>
-          <v-text-field label="Email" type="email" v-model="email" />
-          <v-text-field label="Password" type="password" v-model="password" />
+          <v-text-field label="Email" type="email" v-model="form.email" />
+          <v-text-field label="Password" type="password" v-model="form.password" />
         </v-card-text>
 
         <v-card-actions>
@@ -16,6 +16,12 @@
           <v-btn text color="primary" type="submit">Sign in</v-btn>
         </v-card-actions>
       </form>
+
+      <v-fade-transition>
+        <v-overlay absolute opacity="0.2" v-if="loading">
+          <v-progress-circular indeterminate/>
+        </v-overlay>
+      </v-fade-transition>
     </v-card>
   </v-container>
 </template>
@@ -24,16 +30,19 @@
 export default {
   name: "signIn",
   data: () => ({
-    email: "",
-    password: "",
+    form: {
+      email: "",
+      password: "",
+    },
+    loading: false,
   }),
   methods: {
-    signIn() {
-      this.$store.dispatch("signIn", {
-        email: this.email,
-        password: this.password,
-      });
+    async signIn() {
+      this.loading = true
+      await this.$store.dispatch("signIn", this.form)
+      console.log('test')
+      this.loading = false
     },
   },
-}
+};
 </script>

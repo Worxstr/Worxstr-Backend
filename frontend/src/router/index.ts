@@ -3,6 +3,7 @@ import VueRouter, { RouteConfig } from 'vue-router'
 
 import Home from '../views/Home.vue'
 import SignIn from '../views/SignIn.vue'
+import SignUp from '../views/SignUp.vue'
 import Clock from '../views/Clock.vue'
 import Availability from '../views/Availability.vue'
 import Schedule from '../views/Schedule.vue'
@@ -23,6 +24,12 @@ const routes = [
     path: '/sign-in',
     name: 'signIn',
     component: SignIn
+  },
+  {
+    path: '/sign-up',
+    alias: '/confirmed',
+    name: 'signUp',
+    component: SignUp
   },
   {
     path: '/clock',
