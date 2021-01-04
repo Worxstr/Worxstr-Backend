@@ -7,76 +7,13 @@ from app.api import bp
 from app import db, security
 from app.models import Job, ScheduleShift, TimeClock, TimeClockAction
 
-db_test = {
-	'clocked': False,
-	'on_break': False,
-	'users': [
-		{
-			'name': {
-					'first': 'Alex',
-					'last': 'Wohlbruck'
-			}
-    	},
-		{
-			'name': {
-					'first': 'Jackson',
-					'last': 'Sippe'
-			}
-    	}
-	],
-	'history': [
-		{
-			'id': 1,
-			'time': '2021-01-02 07:36:40.034879',
-			'message': 'Clocked in',
-			'event_type': 'clocked_in',
-			'color': 'green',
-			'description': '1 min late',
-		},
-		{
-			'id': 2,
-			'time': '2021-01-02 07:36:40.034842',
-			'message': 'Clocked out',
-			'color': 'pink',
-			'description': '5 mins left',
-		},
-		{
-			'id': 3,
-			'time': '2021-01-02 07:36:40.034724',
-			'message': 'Finished break',
-			'color': 'green',
-			'description': '2 mins left',
-		},
-		{
-			'id': 4,
-			'time': '2021-01-02 07:36:40.034123',
-			'message': 'Started break',
-			'color': 'amber',
-			'description': '30 mins available',
-		},
-		{
-			'id': 5,
-			'time': '2021-01-02 07:36:40.032423',
-			'message': 'Clocked in',
-			'color': 'green',
-			'description': 'Caption',
-		},
-		{
-			'id': 6,
-			'time': '2021-01-02 07:36:40.032423',
-			'message': 'Clocked in',
-			'color': 'green',
-			'description': 'Caption',
-		}
-	]
-}
-
 @bp.route('/clock/history/<week_offset>', methods=['POST'])
+@login_required
 def clock_history(week_offset):
 	today = datetime.datetime.combine(datetime.date.today(), datetime.datetime.max.time())
 	num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
 	num_weeks_end = today - datetime.timedelta(weeks=int(week_offset)-1)
-	shifts = db.session.query(TimeClock).filter(TimeClock.time > num_weeks_begin, TimeClock.time < num_weeks_end).all()
+	shifts = db.session.query(TimeClock).filter(TimeClock.time > num_weeks_begin, TimeClock.time < num_weeks_end, TimeClock.employee_id == current_user.get_id()).all()
 
 	return jsonify({
 		'history': [i.to_dict() for i in shifts]

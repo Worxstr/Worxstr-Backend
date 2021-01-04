@@ -25,8 +25,7 @@ csrf = CSRFProtect()
 def create_app(config_class=Config):
     app = Flask(
         __name__,
-        static_folder = "./frontend/dist",
-        template_folder = "./frontend/dist"
+        static_folder = "./frontend/dist"
     )
     
     cors = CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
