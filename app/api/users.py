@@ -1,7 +1,7 @@
 import json
 
 from flask import jsonify, current_app, request
-from flask_security import hash_password
+from flask_security import hash_password, current_user, login_required
 
 from app import db, user_datastore
 from app.api import bp
@@ -18,11 +18,11 @@ def list_users():
 			schema:
 				$ref: '#/definitions/User'
 	"""
+	result = db.session.query(User).all()
+	return jsonify(users=[x.to_dict() for x in result])
 
-	return jsonify(db.session.query(User.id, User.email, User.phone, User.first_name, User.last_name, User.username).all())
-
-@bp.route('/users/register_user', methods=['POST'])
-def register_user():
+@bp.route('/users/add_employee', methods=['POST'])
+def add_employee():
 	if request.method == 'POST' and request.json:
 
 		first_name = request.json.get('first_name')
@@ -85,4 +85,12 @@ def get_user(id):
 			schema:
 				$ref: '#/definitions/User'
 	"""
-	return jsonify(db.session.query(User.id, User.email, User.phone, User.first_name, User.last_name, User.username).filter(User.id == id).all())
+	result = db.session.query(User).filter(User.id == id).one_or_none()
+	return jsonify(result.to_dict())
+
+@bp.route('/users/me')
+@login_required
+def get_authenticated_user():
+	""" Returns the currently authenticated user
+	"""
+	return jsonify(authenticated_user=current_user.to_dict())

@@ -1,6 +1,7 @@
 from enum import Enum
 
 from flask_security import UserMixin, RoleMixin
+from sqlalchemy_serializer import SerializerMixin
 
 from app import db
 
@@ -19,7 +20,7 @@ class Role(db.Model, RoleMixin):
     def __repr__(self):
         return '<Role {}>'.format(self.name)
 
-class User(db.Model, UserMixin):
+class User(db.Model, UserMixin, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True)
     phone = db.Column(db.String(10))
@@ -35,9 +36,6 @@ class User(db.Model, UserMixin):
     active = db.Column(db.Boolean())
     confirmed_at = db.Column(db.DateTime())
     roles = db.relationship('Role', secondary='roles_users', backref=db.backref('users', lazy='dynamic'))
-    
-    def __repr__(self):
-        return '<User {}>'.format(self.username)
 
 class Organization(db.Model):
     __tablename__ = 'organization'
@@ -81,7 +79,7 @@ class TimeClockAction(Enum):
     start_break = 3
     end_break = 4
 
-class TimeClock(db.Model):
+class TimeClock(db.Model, SerializerMixin):
     __tablename__ = 'time_clock'
     id = db.Column(db.Integer, primary_key=True)
     time = db.Column(db.DateTime)

@@ -5,6 +5,8 @@ import router from '../router'
 
 Vue.use(Vuex)
 
+axios.defaults.withCredentials = true
+
 const baseUrl = 'http://localhost:5000/api'
 
 const store = new Vuex.Store({
@@ -47,21 +49,29 @@ const store = new Vuex.Store({
     showSnackbar({ commit }, snackbar) {
       commit('SHOW_SNACKBAR', snackbar)
     },
-    async signIn({ commit, dispatch }, { email, password }) {
+    async signIn({ commit, dispatch }, credentials) {
+      console.log('signing in')
       const { data } = await axios({
         method: 'POST',
         url: `${baseUrl}/auth/login`,
-        params: {
-          'include_auth_token': true,
-        },
         data: {
-          email,
-          password
+          ...credentials,
+          remember_me: true
         },
       })
-      commit('SET_AUTHENTICATED_USER', data.response)
+      console.log(data)
+      dispatch('getAuthenticatedUser')
       router.push({ name: 'clock' })
     },
+
+    async signUp({ commit, dispatch }, userData) {
+      const { data } = await axios({
+        method: 'POST',
+        url: `${baseUrl}/users/register`,
+        data: userData
+      })
+    },
+
     async signOut({ commit }) {
       await axios({
         method: 'POST',
@@ -70,6 +80,15 @@ const store = new Vuex.Store({
       commit('UNSET_AUTHENTICATED_USER')
       router.push({ name: 'home' })
     },
+
+    async getAuthenticatedUser({ commit, dispatch }) {
+      const { data } = await axios({
+        method: 'GET',
+        url: `${baseUrl}/users/me`
+      })
+      commit('SET_AUTHENTICATED_USER', { user: data.authenticated_user })
+    }
+
     async getClockHistory({ commit }, { limit, offset }) {
       const { data } = await axios.get(`${baseUrl}/clock/history`, {
         params: {
@@ -99,8 +118,13 @@ const store = new Vuex.Store({
 axios.interceptors.response.use(response => {
   return response
 }, error => {
-  const errorList = error.response.data.response.errors
-  const message = errorList[Object.keys(errorList)[0]][0]
+  let message;
+  if (error.response.data.message) {
+    message = error.response.data.message
+  } else {
+    const errorList = error.response.data.response.errors
+    message = errorList[Object.keys(errorList)[0]][0]
+  }
   store.dispatch('showSnackbar', {text: message})
   
   return Promise.reject(error)

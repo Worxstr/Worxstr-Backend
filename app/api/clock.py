@@ -71,47 +71,15 @@ db_test = {
 	]
 }
 
-@bp.route('/clock', methods=['GET', 'POST'])
-def clock():
-	# Get clocked and break status
-	if request.method == 'GET':
-		return jsonify({
-			'clocked': db.get('clocked'),
-			'on_break': db.get('on_break')
-		})
-
-	# Update clock or break status
-	#
-	# Request body: {
-	# 	clocked?: ['true', 'false']
-	# 	on_break?: ['true', 'false']
-	# }
-	elif request.method == 'POST':
-		if request.json:
-			
-			clocked = request.json.get('clocked')
-			on_break = request.json.get('on_break') 
-
-			db['clocked'] = clocked
-			db['on_break'] = on_break
-		
-		return jsonify({
-			'clocked': db['clocked'],
-			'on_break': db['on_break']
-		})
-
-
-@bp.route('/clock/history')
-def clock_history():
-
-	# TODO: This should return the last week of timeclock history, ordered chronologically
-	# TODO: Limit field will be irrelevant, each page should query 1 week of data
-
-	limit = int(request.args.get('limit')) or 2
-	offset = int(request.args.get('offset')) or 0
+@bp.route('/clock/history/<week_offset>', methods=['POST'])
+def clock_history(week_offset):
+	today = datetime.datetime.combine(datetime.date.today(), datetime.datetime.max.time())
+	num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
+	num_weeks_end = today - datetime.timedelta(weeks=int(week_offset)-1)
+	shifts = db.session.query(TimeClock).filter(TimeClock.time > num_weeks_begin, TimeClock.time < num_weeks_end).all()
 
 	return jsonify({
-		'history': db_test.get('history')[(offset * limit):(limit * offset) + limit]
+		'history': [i.to_dict() for i in shifts]
 	})
 
 
@@ -127,7 +95,8 @@ def clock_in(shift_id):
 			db.session.add(timeclock)
 			db.session.commit()
 			return jsonify({
-				'success': True
+				'success': 	True,
+				'data':		timeclock.to_dict()
 			})
 
 		# TODO: Return 401 status
@@ -149,5 +118,40 @@ def clock_out():
 		db.session.commit()
 
 		return jsonify({
-			'success': True
+			'success': 	True,
+			'data':		timeclock.to_dict()
+		})
+
+@bp.route('/clock/start_break', methods=['POST'])
+@login_required
+def start_break():
+	if request.method == 'POST':
+		timeclock = TimeClock(
+			time=datetime.datetime.now(),
+			employee_id=current_user.get_id(),
+			action=TimeClockAction.start_break
+		)
+		db.session.add(timeclock)
+		db.session.commit()
+
+		return jsonify({
+			'success': True,
+			'data' : timeclock.to_dict()
+		})
+
+@bp.route('/clock/end_break', methods=['POST'])
+@login_required
+def end_break():
+	if request.method == 'POST':
+		timeclock = TimeClock(
+			time=datetime.datetime.now(),
+			employee_id=current_user.get_id(),
+			action=TimeClockAction.end_break
+		)
+		db.session.add(timeclock)
+		db.session.commit()
+
+		return jsonify({
+			'success': True,
+			'data' : timeclock.to_dict()
 		})
