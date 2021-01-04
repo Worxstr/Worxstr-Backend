@@ -52,18 +52,23 @@ const store = new Vuex.Store({
       commit('SHOW_SNACKBAR', snackbar)
     },
     async signIn({ commit, dispatch }, credentials) {
-      console.log('signing in')
-      const { data } = await axios({
-        method: 'POST',
-        url: `${baseUrl}/auth/login`,
-        data: {
-          ...credentials,
-          'remember_me': true
-        },
-      })
-      console.log(data)
-      dispatch('getAuthenticatedUser')
-      router.push({ name: 'clock' })
+      try {
+        const { data } = await axios({
+          method: 'POST',
+          url: `${baseUrl}/auth/login`,
+          data: {
+            ...credentials,
+            'remember_me': true
+          },
+        })
+        dispatch('getAuthenticatedUser')
+        router.push({ name: 'clock' })
+        return data
+      }
+      catch (err) {
+        dispatch('UNSET_AUTHENTICATED_USER')
+        return false
+      }
     },
 
     async signUp({ commit, dispatch }, userData) {
@@ -75,7 +80,6 @@ const store = new Vuex.Store({
     },
 
     async signOut({ commit }) {
-      console.log('sign out')
       await axios({
         method: 'POST',
         url: `${baseUrl}/auth/logout`
@@ -128,8 +132,8 @@ axios.interceptors.response.use(response => {
     const errorList = error.response.data.response.errors
     message = errorList[Object.keys(errorList)[0]][0]
   }
-  store.dispatch('showSnackbar', {text: message})
-  
+  store.dispatch('showSnackbar', { text: message })
+
   return Promise.reject(error)
 })
 

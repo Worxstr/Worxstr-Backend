@@ -16,6 +16,11 @@
           <v-btn text color="primary" type="submit">Sign in</v-btn>
         </v-card-actions>
       </form>
+      <v-fade-transition>
+        <v-overlay absolute opacity="0.2" v-if="loading">
+          <v-progress-circular indeterminate/>
+        </v-overlay>
+      </v-fade-transition>
     </v-card>
   </v-container>
 </template>
@@ -26,14 +31,18 @@ export default {
   data: () => ({
     email: "",
     password: "",
+    loading: false,
   }),
   methods: {
-    signIn() {
-      this.$store.dispatch("signIn", {
+    async signIn() {
+      this.loading = true
+      await this.$store.dispatch("signIn", {
         email: this.email,
         password: this.password,
-      });
+      })
+      console.log('test')
+      this.loading = false
     },
   },
-}
+};
 </script>
