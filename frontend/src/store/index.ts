@@ -31,9 +31,11 @@ const store = new Vuex.Store({
     },
     SET_AUTHENTICATED_USER(state, { user }) {
       state.authenticatedUser = user
+      localStorage.setItem('authenticatedUser', JSON.stringify(user))
     },
     UNSET_AUTHENTICATED_USER(state) {
       state.authenticatedUser = null
+      localStorage.removeItem('authenticatedUser')
     },
     SET_CLOCK_HISTORY(state, { history }) {
       state.clock.history = {
@@ -56,7 +58,7 @@ const store = new Vuex.Store({
         url: `${baseUrl}/auth/login`,
         data: {
           ...credentials,
-          remember_me: true
+          'remember_me': true
         },
       })
       console.log(data)
@@ -73,6 +75,7 @@ const store = new Vuex.Store({
     },
 
     async signOut({ commit }) {
+      console.log('sign out')
       await axios({
         method: 'POST',
         url: `${baseUrl}/auth/logout`
@@ -87,7 +90,7 @@ const store = new Vuex.Store({
         url: `${baseUrl}/users/me`
       })
       commit('SET_AUTHENTICATED_USER', { user: data.authenticated_user })
-    }
+    },
 
     async getClockHistory({ commit }, { limit, offset }) {
       const { data } = await axios.get(`${baseUrl}/clock/history`, {

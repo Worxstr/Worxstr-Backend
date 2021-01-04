@@ -29,7 +29,7 @@ const routes = [
     path: 'sign-up',
     name: 'signUp',
     component: SignUp
-  }
+  },
   {
     path: '/clock',
     name: 'clock',
