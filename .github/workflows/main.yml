@@ -83,8 +83,8 @@ jobs:
         - name: Configure AWS Credentials
           uses: aws-actions/configure-aws-credentials@v1
           with:
-            aws-access-key-id: 'AKIAQYK65LWGOVNRU77Y'
-            aws-secret-access-key: 'pfSrgtXYjXfIds9J57/XFhYG5BzR5KVViI/2Y5d6E'
+            aws-access-key-id: 'AKIAQYK65LWGAZ3WOK7C'
+            aws-secret-access-key: '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'
             aws-region: us-east-1
 
         # Create the Elastic Beanstalk application
