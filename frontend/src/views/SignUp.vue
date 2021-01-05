@@ -7,8 +7,8 @@
         <v-card-title>Sign up</v-card-title>
 
         <v-card-text>
-          <v-text-field label="First name" v-model="form.firstName" />
-          <v-text-field label="Last name" v-model="form.lastName" />
+          <v-text-field label="First name" v-model="form.first_name" />
+          <v-text-field label="Last name" v-model="form.last_name" />
           <v-text-field label="Email" type="email" v-model="form.email" />
           <v-text-field label="Phone" type="phone" v-model="form.phone" />
           <v-text-field
@@ -38,11 +38,11 @@ export default {
   name: "signUp",
   data: () => ({
     form: {
-      firstName: "",
-      lastName: "",
-      phone: "",
-      email: "",
-      password: "",
+      'first_name': "",
+      'last_name': "",
+      'phone': "",
+      'email': "",
+      'password': "",
     },
     loading: false,
   }),

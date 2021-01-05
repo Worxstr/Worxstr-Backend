@@ -3,6 +3,9 @@ import Vuex from 'vuex'
 import axios from 'axios'
 import router from '../router'
 
+import dayjs from 'dayjs'
+import { normalizeRelations, resolveRelations } from '../plugins/helpers'
+
 Vue.use(Vuex)
 
 axios.defaults.withCredentials = true
@@ -18,7 +21,12 @@ const store = new Vuex.Store({
     },
     authenticatedUser: null,
     clock: {
-      history: {}
+      clocked: false,
+      break: false,
+      history: {
+        all: [],
+        byId: {}
+      },
     }
   },
   mutations: {
@@ -37,14 +45,10 @@ const store = new Vuex.Store({
       state.authenticatedUser = null
       localStorage.removeItem('authenticatedUser')
     },
-    SET_CLOCK_HISTORY(state, { history }) {
-      state.clock.history = {
-        ...state.clock.history,
-        ...history.reduce((obj, item) => {
-          obj[item.id] = item
-          return obj
-        }, {})
-      }
+    ADD_CLOCK_EVENT(state, event) {
+      Vue.set(state.clock.history.byId, event.id, event)
+      if (!state.clock.history.all.includes(event.id))
+        state.clock.history.all.push(event.id)
     }
   },
   actions: {
@@ -100,24 +104,56 @@ const store = new Vuex.Store({
       const { data } = await axios({
         method: 'GET',
         url: `${baseUrl}/users/me`,
-        
+
       })
       commit('SET_AUTHENTICATED_USER', { user: data.authenticated_user })
     },
 
-    async getClockHistory({ commit }, { limit, offset }) {
+    async loadClockHistory({ commit }, { limit, offset }) {
       const { data } = await axios.get(`${baseUrl}/clock/history`, {
         params: {
-          limit,
-          offset
+          'week_offset': offset
         }
       })
-      commit('SET_CLOCK_HISTORY', data)
+      data.history.forEach(event => {
+        // TODO: Normalize nested data
+        commit('ADD_CLOCK_EVENT', normalizeRelations(event, [/*'user'*/]))
+        /* commit('ADD_USER', event.user, {
+          root: true
+        }) */
+      })
     }
   },
   getters: {
     // TODO: Transform this and add labels, separated by day of week
-    clockHistory: state => state.clock.history
+    clockEvent: (state, _, __, rootGetters) => id => {
+      return resolveRelations(state.clock.history.byId[id], [/*'user'*/], rootGetters)
+    },
+    clockHistory: (state, getters) => {
+      let last
+
+      return state.clock.history.all.flatMap((eventId, i) => {
+        const event = getters.clockEvent(eventId)
+        const current = new Date(event.time)
+        const now = new Date()
+        const ret = []
+
+        if (!last || !(last.getDate() === current.getDate()
+          && last.getMonth() === current.getMonth()
+          && last.getFullYear() === current.getFullYear())) {
+
+          ret.push(
+            {
+              label: current,
+              id: `day${i}`
+            }
+          )
+        }
+        ret.push(event)
+        last = current
+        return ret
+      })
+    }
   },
   modules: {
   }
@@ -136,7 +172,7 @@ axios.interceptors.response.use(response => {
 }, error => {
 
   // if (error.config.hideErrorMessage) return
-  
+
   let message;
   const res = error.response.data
 

@@ -21,7 +21,7 @@
         >
           <v-btn
             v-for="link in links"
-            :key="link"
+            :key="link.label"
             text
             :to="{ name: link.label }"
             active-class="primary--text"
@@ -82,11 +82,6 @@
 
           <v-btn icon @click="signOut">
             <v-icon>mdi-logout-variant</v-icon>
-          </v-btn>
-
-          <v-btn text>
-            {{ authenticatedUser.first_name }}
-            {{ authenticatedUser.last_name }}
           </v-btn>
         </div>
 
@@ -160,7 +155,6 @@ export default Vue.extend({
   mounted() {
     const storedUser = localStorage.getItem("authenticatedUser");
     if (storedUser) {
-      console.log(storedUser);
       this.$store.commit("SET_AUTHENTICATED_USER", {
         user: JSON.parse(storedUser),
 			});

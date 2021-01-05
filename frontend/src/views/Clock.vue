@@ -84,16 +84,16 @@
         <transition-group name="scroll-y-transition">
           <div v-for="event in clockHistory" :key="event.id || event.label">
             <v-timeline-item v-if="event.label" hide-dot>
-              <span>{{ event.label }}</span>
+              <span>{{ event.label | date('dddd, MMM D') }}</span>
             </v-timeline-item>
 
-            <v-timeline-item v-else :color="event.color" small>
+            <v-timeline-item v-else :color="eventColor(event.action)" small>
               <v-row class="pt-1">
                 <v-col cols="3">
-                  <strong>{{ event.time }}</strong>
+                  <strong>{{ event.time | time }}</strong>
                 </v-col>
                 <v-col>
-                  <strong>{{ event.message }}</strong>
+                  <strong>{{ eventType(event.action) }}</strong>
                   <div class="caption">{{ event.description }}</div>
                 </v-col>
               </v-row>
@@ -105,7 +105,7 @@
       <v-card-actions class="d-flex justify-center">
         <v-btn text color="primary" @click="loadClockHistory">
           <v-icon right dark> mdi-arrow-down </v-icon>
-          Load more
+          Load next week
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -145,9 +145,27 @@ export default {
     this.loadClockHistory()
   },
   computed: {
-    ...mapGetters(['clockHistory'])
+    ...mapGetters(['clockHistory']),
   },
   methods: {
+    eventType(eventEnum) {
+      switch (eventEnum) {
+        case 1: return 'Clocked in'
+        case 2: return 'Clocked out'
+        case 3: return 'Started break'
+        case 4: return 'Ended break'
+        default: return 'Unknown event'
+      }
+    },
+    eventColor(eventEnum) {
+      switch (eventEnum) {
+        case 1: return 'green'
+        case 2: return 'pink'
+        case 3: return 'amber'
+        case 4: return 'green'
+        default: return 'blue'
+      }
+    },
     toggleClock() {
       this.history.splice(1, 0, {
         time: new Date()
@@ -175,7 +193,7 @@ export default {
       this.break = !this.break
     },
     loadClockHistory()  {
-      this.$store.dispatch('getClockHistory', {limit: 1, offset: this.clockHistoryOffset})
+      this.$store.dispatch('loadClockHistory', {limit: 1, offset: this.clockHistoryOffset})
       this.clockHistoryOffset++
     }
   },
