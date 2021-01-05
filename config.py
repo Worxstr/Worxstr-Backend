@@ -17,7 +17,7 @@ class Config(object):
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    ADMINS = ['jackson@worxstr.com', 'alexwohlbruck@gmail.com']
+    ADMINS = ['support@worxstr.com', 'admin@worxstr.com']
 
     # Application threads. A common general assumption is
     # using 2 per available processor cores - to handle

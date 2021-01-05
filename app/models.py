@@ -21,12 +21,17 @@ class Role(db.Model, RoleMixin):
         return '<Role {}>'.format(self.name)
 
 class User(db.Model, UserMixin, SerializerMixin):
+
+    serialize_only = ('id', 'email', 'phone', 'first_name', 'last_name', 'username', 'organization_id')
+    serialize_rules = ()
+
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True)
     phone = db.Column(db.String(10))
     first_name = db.Column(db.String(255))
     last_name = db.Column(db.String(255))
     username = db.Column(db.String(255))
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
     password = db.Column(db.String(255))
     last_login_at = db.Column(db.DateTime())
     current_login_at = db.Column(db.DateTime())
@@ -41,7 +46,10 @@ class Organization(db.Model):
     __tablename__ = 'organization'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
-    primary_manager = db.Column(db.Integer, db.ForeignKey('user.id'))
+    primary_contact_first_name = db.Column(db.String(255))
+    primary_contact_last_name = db.Column(db.String(255))
+    primary_contact_phone = db.Column(db.String(10))
+    primary_contact_email = db.Column(db.String(255))
 
     def __repr__(self):
         return '<Organization {}>'.format(self.name)
@@ -52,13 +60,14 @@ class Job(db.Model):
     name = db.Column(db.String(255))
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
     employee_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    orgizational_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    organizational_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     address = db.Column(db.String(255))
     city = db.Column(db.String(255))
     state = db.Column(db.String(255))
     zip_code = db.Column(db.String(10))
     consultant_name = db.Column(db.String(255))
     consultant_phone = db.Column(db.String(10))
+    consultant_email = db.Column(db.String(255))
     consultant_code = db.Column(db.String(255))
 
     def __repr__(self):
