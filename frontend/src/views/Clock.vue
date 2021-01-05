@@ -105,7 +105,7 @@
       <v-card-actions class="d-flex justify-center">
         <v-btn text color="primary" @click="loadClockHistory">
           <v-icon right dark> mdi-arrow-down </v-icon>
-          Load next week
+          Load previous week
         </v-btn>
       </v-card-actions>
     </v-card>
