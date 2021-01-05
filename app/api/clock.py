@@ -43,7 +43,7 @@ def clock_in():
             db.session.commit()
             return jsonify({
                 'success': 	True,
-                'data':		timeclock.to_dict()
+                'event':		timeclock.to_dict()
             })
 
         # TODO: Return 401 status
@@ -66,7 +66,7 @@ def clock_out():
 
         return jsonify({
             'success': 	True,
-            'data':		timeclock.to_dict()
+            'event':		timeclock.to_dict()
         })
 
 

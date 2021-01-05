@@ -20,9 +20,10 @@ const store = new Vuex.Store({
     },
     authenticatedUser: null,
     clock: {
-      clocked: false,
+      clocked: true,
       break: false,
       history: {
+        lastLoadedOffset: 0,
         all: [],
         byId: {}
       },
@@ -48,6 +49,15 @@ const store = new Vuex.Store({
       Vue.set(state.clock.history.byId, event.id, event)
       if (!state.clock.history.all.includes(event.id))
         state.clock.history.all.push(event.id)
+    },
+    INCREMENT_CLOCK_HISTORY_OFFSET(state) {
+      state.clock.history.lastLoadedOffset++
+    },
+    CLOCK_IN(state) {
+      state.clock.clocked = true
+    },
+    CLOCK_OUT(state) {
+      state.clock.clocked = false
     }
   },
   actions: {
@@ -108,10 +118,10 @@ const store = new Vuex.Store({
       commit('SET_AUTHENTICATED_USER', { user: data.authenticated_user })
     },
 
-    async loadClockHistory({ commit }, { offset }) {
+    async loadClockHistory({ state, commit }) {
       const { data } = await axios.get(`${baseUrl}/clock/history`, {
         params: {
-          'week_offset': offset
+          'week_offset': state.clock.history.lastLoadedOffset + 1
         }
       })
       data.history.forEach(event => {
@@ -121,6 +131,34 @@ const store = new Vuex.Store({
           root: true
         }) */
       })
+      commit('INCREMENT_CLOCK_HISTORY_OFFSET')
+    },
+
+    async clockIn({ commit }) {
+      const { data } = await axios({
+        method: 'POST',
+        url: `${baseUrl}/clock/clock-in`,
+        params: {
+          'shift_id': 1
+        },
+        data: {
+          code: 442
+        }
+      })
+      commit('ADD_CLOCK_EVENT', data.event)
+      commit('CLOCK_IN')
+    },
+
+    async clockOut({ commit }) {
+      const { data } = await axios({
+        method: 'POST',
+        url: `${baseUrl}/clock/clock-out`,
+        params: {
+          'shift_id': 1
+        },
+      })
+      commit('ADD_CLOCK_EVENT', data.event)
+      commit('CLOCK_OUT')
     }
   },
   getters: {
@@ -129,10 +167,14 @@ const store = new Vuex.Store({
       return resolveRelations(state.clock.history.byId[id], [/*'user'*/], rootGetters)
     },
     clockHistory: (state, getters) => {
+      let events = state.clock.history.all.map(eventId => getters.clockEvent(eventId))
+      events = events.sort((a, b) => {
+        return (new Date(b.time)) - (new Date(a.time))
+      })
+      
       let last
 
-      return state.clock.history.all.flatMap((eventId, i) => {
-        const event = getters.clockEvent(eventId)
+      return events.flatMap((event, i) => {
         const current = new Date(event.time)
         const ret = []
 
@@ -143,7 +185,7 @@ const store = new Vuex.Store({
           ret.push(
             {
               label: current,
-              id: `day${i}`
+              id: `day-${i}`
             }
           )
         }
@@ -156,14 +198,6 @@ const store = new Vuex.Store({
   modules: {
   }
 })
-
-/* axios.interceptors.request.use(config => {
-  // Do something before request is sent
-  return config;
-}, function (error) {
-  // Do something with request error
-  return Promise.reject(error);
-}) */
 
 axios.interceptors.response.use(response => {
   return response
