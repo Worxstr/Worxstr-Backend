@@ -3,7 +3,6 @@ import Vuex from 'vuex'
 import axios from 'axios'
 import router from '../router'
 
-import dayjs from 'dayjs'
 import { normalizeRelations, resolveRelations } from '../plugins/helpers'
 
 Vue.use(Vuex)
@@ -100,7 +99,7 @@ const store = new Vuex.Store({
       router.push({ name: 'home' })
     },
 
-    async getAuthenticatedUser({ commit, dispatch }) {
+    async getAuthenticatedUser({ commit }) {
       const { data } = await axios({
         method: 'GET',
         url: `${baseUrl}/users/me`,
@@ -109,7 +108,7 @@ const store = new Vuex.Store({
       commit('SET_AUTHENTICATED_USER', { user: data.authenticated_user })
     },
 
-    async loadClockHistory({ commit }, { limit, offset }) {
+    async loadClockHistory({ commit }, { offset }) {
       const { data } = await axios.get(`${baseUrl}/clock/history`, {
         params: {
           'week_offset': offset
@@ -135,7 +134,6 @@ const store = new Vuex.Store({
       return state.clock.history.all.flatMap((eventId, i) => {
         const event = getters.clockEvent(eventId)
         const current = new Date(event.time)
-        const now = new Date()
         const ret = []
 
         if (!last || !(last.getDate() === current.getDate()
