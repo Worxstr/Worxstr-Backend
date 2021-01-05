@@ -73,7 +73,7 @@ class Job(db.Model):
     def __repr__(self):
         return '<Job {}>'.format(self.name)
 
-class ScheduleShift(db.Model):
+class ScheduleShift(db.Model, SerializerMixin):
     __tablename__ = 'schedule_shift'
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'))

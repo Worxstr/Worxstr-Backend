@@ -25,6 +25,14 @@ def clock_history():
         'history': [i.to_dict() for i in shifts]
     })
 
+@bp.route('/clock/get-shift', methods=['GET'])
+@login_required
+def get_shift():
+    today = datetime.datetime.combine(
+        datetime.date.today(), datetime.datetime.min.time())
+    shift = db.session.query(ScheduleShift).filter(ScheduleShift.employee_id == current_user.get_id(), ScheduleShift.time_begin > today).order_by(ScheduleShift.time_begin).first()
+    return(jsonify(shift.to_dict()))
+
 @bp.route('/clock/clock-in', methods=['POST'])
 @login_required
 def clock_in():
