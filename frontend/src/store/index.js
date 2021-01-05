@@ -134,19 +134,28 @@ const store = new Vuex.Store({
       commit('INCREMENT_CLOCK_HISTORY_OFFSET')
     },
 
-    async clockIn({ commit }) {
-      const { data } = await axios({
-        method: 'POST',
-        url: `${baseUrl}/clock/clock-in`,
-        params: {
-          'shift_id': 1
-        },
-        data: {
-          code: 442
-        }
-      })
-      commit('ADD_CLOCK_EVENT', data.event)
-      commit('CLOCK_IN')
+    async clockIn({ commit, dispatch }, { code }) {
+      console.log(`got code ${code}`)
+      try {
+        const { data } = await axios({
+          method: 'POST',
+          url: `${baseUrl}/clock/clock-in`,
+          params: {
+            'shift_id': 2
+          },
+          data: {
+            code
+          }
+        })
+        console.log('code was correct')
+        commit('ADD_CLOCK_EVENT', data.event)
+        commit('CLOCK_IN')
+        return data
+      }
+      catch (err) {
+        console.log('code was incorrect')
+        return err
+      }
     },
 
     async clockOut({ commit }) {
@@ -154,7 +163,7 @@ const store = new Vuex.Store({
         method: 'POST',
         url: `${baseUrl}/clock/clock-out`,
         params: {
-          'shift_id': 1
+          'shift_id': 2
         },
       })
       commit('ADD_CLOCK_EVENT', data.event)

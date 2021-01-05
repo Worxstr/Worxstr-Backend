@@ -38,12 +38,48 @@
       </p>
 
       <div class="d-flex flex-row">
+        <v-dialog
+          v-model="verifyDialog"
+          fullscreen
+          hide-overlay
+          transition="dialog-bottom-transition"
+        >
+          <v-card
+            class="sign-in fill-height d-flex flex-column justify-center align-center"
+          >
+            <form @submit.prevent="signIn">
+              <v-card-title>Scan your clock in QR code</v-card-title>
+
+              <v-card-text>
+                <v-progress-circular indeterminate v-if="qrLoading" />
+                <qrcode-stream
+                  @decode="onDecode"
+                  @init="qrInit"
+                ></qrcode-stream>
+                <qrcode-drop-zone></qrcode-drop-zone>
+                <qrcode-capture></qrcode-capture>
+              </v-card-text>
+
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text color="primary" type="submit">Sign in</v-btn>
+              </v-card-actions>
+            </form>
+
+            <v-fade-transition>
+              <v-overlay absolute opacity="0.2" v-if="loading">
+                <v-progress-circular indeterminate />
+              </v-overlay>
+            </v-fade-transition>
+          </v-card>
+        </v-dialog>
+
         <v-expand-x-transition>
-          <div v-if="!this.break" class="py-2">
+          <div v-if="!this.clock.break" class="py-2">
             <v-btn
               raised
               :color="clock.clocked ? 'pink' : 'green'"
-              @click="clock.clocked ? clockOut() : clockIn()"
+              @click="clock.clocked ? clockOut() : openVerifyDialog()"
               class="pa-6 mr-2"
               width="130px"
               dark
@@ -58,14 +94,14 @@
           <div v-if="clock.clocked" class="py-2">
             <v-btn
               raised
-              :color="this.break ? 'green' : 'amber'"
+              :color="this.clock.break ? 'green' : 'amber'"
               @click="toggleBreak()"
               class="pa-6"
               width="130px"
               dark
               style="transition: background-color 0.3s"
             >
-              {{ this.break ? "End" : "Start" }} break
+              {{ this.clock.break ? "End" : "Start" }} break
             </v-btn>
           </div>
         </v-expand-x-transition>
@@ -84,7 +120,7 @@
         <transition-group name="scroll-y-transition">
           <div v-for="event in clockHistory" :key="event.id || event.label">
             <v-timeline-item v-if="event.label" hide-dot>
-              <span>{{ event.label | date('dddd, MMM D') }}</span>
+              <span>{{ event.label | date("dddd, MMM D") }}</span>
             </v-timeline-item>
 
             <v-timeline-item v-else :color="eventColor(event.action)" small>
@@ -113,60 +149,109 @@
 </template>
 
 <script>
-import Vue from "vue"
-import vueAwesomeCountdown from "vue-awesome-countdown"
-import { mapState, mapGetters, mapActions } from 'vuex'
+import Vue from "vue";
+import vueAwesomeCountdown from "vue-awesome-countdown";
+import { QrcodeStream, QrcodeDropZone, QrcodeCapture } from "vue-qrcode-reader";
+import { mapState, mapGetters, mapActions } from "vuex";
 
-Vue.use(vueAwesomeCountdown, "vac")
+Vue.use(vueAwesomeCountdown, "vac");
 
-const shiftBegin = new Date()
+const shiftBegin = new Date();
 // shiftBegin.setDate(shiftBegin.getDate() + 1) // Add a day
-shiftBegin.setHours(9)
-shiftBegin.setMinutes(0)
-shiftBegin.setSeconds(0)
+shiftBegin.setHours(9);
+shiftBegin.setMinutes(0);
+shiftBegin.setSeconds(0);
 
-const shiftEnd = shiftBegin
-shiftEnd.setHours(17)
+const shiftEnd = shiftBegin;
+shiftEnd.setHours(17);
 
 export default {
   name: "Clock",
   data: () => ({
+    verifyDialog: false,
+    qrLoading: false,
     nextEvent: {
       timestamp: shiftEnd,
       type: "shift_end",
     },
   }),
+  components: {
+    QrcodeStream,
+    QrcodeDropZone,
+    QrcodeCapture,
+  },
   mounted() {
-    if (!this.clockHistory.length)
-      this.loadClockHistory()
+    if (!this.clockHistory.length) this.loadClockHistory();
   },
   computed: {
-    ...mapState(['clock']),
-    ...mapGetters(['clockHistory']),
+    ...mapState(["clock"]),
+    ...mapGetters(["clockHistory"]),
   },
   methods: {
-    ...mapActions(['clockIn', 'clockOut']),
+    ...mapActions(["clockIn", "clockOut"]),
+    openVerifyDialog() {
+      this.verifyDialog = true;
+    },
+    async qrInit(promise) {
+      this.qrLoading = true;
+      try {
+        /* const { capabilities } = */ await promise;
+      } catch (error) {
+        // TODO: Handle these errors with toast
+        if (error.name === "NotAllowedError") {
+          // user denied camera access permisson
+        } else if (error.name === "NotFoundError") {
+          // no suitable camera device installed
+        } else if (error.name === "NotSupportedError") {
+          // page is not served over HTTPS (or localhost)
+        } else if (error.name === "NotReadableError") {
+          // maybe camera is already in use
+        } else if (error.name === "OverconstrainedError") {
+          // did you requested the front camera although there is none?
+        } else if (error.name === "StreamApiNotSupportedError") {
+          // browser seems to be lacking features
+        }
+      } finally {
+        this.qrLoading = false;
+      }
+    },
+    async onDecode(decodedString) {
+      console.log(`got string ${decodedString}`)
+      // TODO: Handle incorrect code
+      await this.$store.dispatch("clockIn", { code: decodedString })
+      this.verifyDialog = false
+    },
     eventType(eventEnum) {
       switch (eventEnum) {
-        case 1: return 'Clocked in'
-        case 2: return 'Clocked out'
-        case 3: return 'Started break'
-        case 4: return 'Ended break'
-        default: return 'Unknown event'
+        case 1:
+          return "Clocked in";
+        case 2:
+          return "Clocked out";
+        case 3:
+          return "Started break";
+        case 4:
+          return "Ended break";
+        default:
+          return "Unknown event";
       }
     },
     eventColor(eventEnum) {
       switch (eventEnum) {
-        case 1: return 'green'
-        case 2: return 'pink'
-        case 3: return 'amber'
-        case 4: return 'green'
-        default: return 'blue'
+        case 1:
+          return "green";
+        case 2:
+          return "pink";
+        case 3:
+          return "amber";
+        case 4:
+          return "green";
+        default:
+          return "blue";
       }
     },
-    loadClockHistory()  {
-      this.$store.dispatch('loadClockHistory')
-    }
+    loadClockHistory() {
+      this.$store.dispatch("loadClockHistory");
+    },
   },
 };
 </script>
