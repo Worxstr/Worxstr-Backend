@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueRouter, { RouteConfig } from 'vue-router'
+import VueRouter from 'vue-router'
 
 import Home from '../views/Home.vue'
 import SignIn from '../views/SignIn.vue'
@@ -9,8 +9,6 @@ import Availability from '../views/Availability.vue'
 import Schedule from '../views/Schedule.vue'
 import Messages from '../views/messages/Messages.vue'
 import Conversation from '../views/messages/Conversation.vue'
-
-import store from '../store'
 
 Vue.use(VueRouter)
 

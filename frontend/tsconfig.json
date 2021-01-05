@@ -35,6 +35,7 @@
     "tests/**/*.tsx"
 , "src/router/index.js", "src/store/index.js"  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/main.ts"
   ]
 }
