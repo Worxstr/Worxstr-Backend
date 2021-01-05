@@ -19,7 +19,7 @@ def clock_history():
     num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
     num_weeks_end = today - datetime.timedelta(weeks=int(week_offset)-1)
     shifts = db.session.query(TimeClock).filter(TimeClock.time > num_weeks_begin,
-                                                TimeClock.time < num_weeks_end, TimeClock.employee_id == current_user.get_id()).all()
+                                                TimeClock.time < num_weeks_end, TimeClock.employee_id == current_user.get_id()).order_by(TimeClock.time.desc()).all()
 
     return jsonify({
         'history': [i.to_dict() for i in shifts]
