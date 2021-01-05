@@ -54,7 +54,7 @@ jobs:
         - uses: actions/checkout@v2
 
         # Set up Python 3.9 environment
-        - name: Set up Python 3. Time 9
+        - name: Set up Python 3.9
           uses: actions/setup-python@v1
           with:
             python-version: "3.9"
@@ -90,7 +90,7 @@ jobs:
         # Create the Elastic Beanstalk application
         - name: Create EBS application
           run: |
-            eb init -p python-3.6 hello-world --region us-east-1
+            eb init -p python-3.9 worxstr --region us-east-1
         # Deploy to (or Create) the Elastic Beanstalk environment
         - name: Create test environment & deploy
           run: |
