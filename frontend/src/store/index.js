@@ -3,6 +3,8 @@ import Vuex from 'vuex'
 import axios from 'axios'
 import router from '../router'
 
+import { normalizeRelations, resolveRelations } from '../plugins/helpers'
+
 Vue.use(Vuex)
 
 axios.defaults.withCredentials = true
@@ -18,7 +20,13 @@ const store = new Vuex.Store({
     },
     authenticatedUser: null,
     clock: {
-      history: {}
+      clocked: true,
+      break: false,
+      history: {
+        lastLoadedOffset: 0,
+        all: [],
+        byId: {}
+      },
     }
   },
   mutations: {
@@ -37,14 +45,19 @@ const store = new Vuex.Store({
       state.authenticatedUser = null
       localStorage.removeItem('authenticatedUser')
     },
-    SET_CLOCK_HISTORY(state, { history }) {
-      state.clock.history = {
-        ...state.clock.history,
-        ...history.reduce((obj, item) => {
-          obj[item.id] = item
-          return obj
-        }, {})
-      }
+    ADD_CLOCK_EVENT(state, event) {
+      Vue.set(state.clock.history.byId, event.id, event)
+      if (!state.clock.history.all.includes(event.id))
+        state.clock.history.all.push(event.id)
+    },
+    INCREMENT_CLOCK_HISTORY_OFFSET(state) {
+      state.clock.history.lastLoadedOffset++
+    },
+    CLOCK_IN(state) {
+      state.clock.clocked = true
+    },
+    CLOCK_OUT(state) {
+      state.clock.clocked = false
     }
   },
   actions: {
@@ -96,47 +109,102 @@ const store = new Vuex.Store({
       router.push({ name: 'home' })
     },
 
-    async getAuthenticatedUser({ commit, dispatch }) {
+    async getAuthenticatedUser({ commit }) {
       const { data } = await axios({
         method: 'GET',
         url: `${baseUrl}/users/me`,
-        
+
       })
       commit('SET_AUTHENTICATED_USER', { user: data.authenticated_user })
     },
 
-    async getClockHistory({ commit }, { limit, offset }) {
+    async loadClockHistory({ state, commit }) {
       const { data } = await axios.get(`${baseUrl}/clock/history`, {
         params: {
-          limit,
-          offset
+          'week_offset': state.clock.history.lastLoadedOffset + 1
         }
       })
-      commit('SET_CLOCK_HISTORY', data)
+      data.history.forEach(event => {
+        // TODO: Normalize nested data
+        commit('ADD_CLOCK_EVENT', normalizeRelations(event, [/*'user'*/]))
+        /* commit('ADD_USER', event.user, {
+          root: true
+        }) */
+      })
+      commit('INCREMENT_CLOCK_HISTORY_OFFSET')
+    },
+
+    async clockIn({ commit }) {
+      const { data } = await axios({
+        method: 'POST',
+        url: `${baseUrl}/clock/clock-in`,
+        params: {
+          'shift_id': 1
+        },
+        data: {
+          code: 442
+        }
+      })
+      commit('ADD_CLOCK_EVENT', data.event)
+      commit('CLOCK_IN')
+    },
+
+    async clockOut({ commit }) {
+      const { data } = await axios({
+        method: 'POST',
+        url: `${baseUrl}/clock/clock-out`,
+        params: {
+          'shift_id': 1
+        },
+      })
+      commit('ADD_CLOCK_EVENT', data.event)
+      commit('CLOCK_OUT')
     }
   },
   getters: {
     // TODO: Transform this and add labels, separated by day of week
-    clockHistory: state => state.clock.history
+    clockEvent: (state, _, __, rootGetters) => id => {
+      return resolveRelations(state.clock.history.byId[id], [/*'user'*/], rootGetters)
+    },
+    clockHistory: (state, getters) => {
+      let events = state.clock.history.all.map(eventId => getters.clockEvent(eventId))
+      events = events.sort((a, b) => {
+        return (new Date(b.time)) - (new Date(a.time))
+      })
+      
+      let last
+
+      return events.flatMap((event, i) => {
+        const current = new Date(event.time)
+        const ret = []
+
+        if (!last || !(last.getDate() === current.getDate()
+          && last.getMonth() === current.getMonth()
+          && last.getFullYear() === current.getFullYear())) {
+
+          ret.push(
+            {
+              label: current,
+              id: `day-${i}`
+            }
+          )
+        }
+        ret.push(event)
+        last = current
+        return ret
+      })
+    }
   },
   modules: {
   }
 })
-
-/* axios.interceptors.request.use(config => {
-  // Do something before request is sent
-  return config;
-}, function (error) {
-  // Do something with request error
-  return Promise.reject(error);
-}) */
 
 axios.interceptors.response.use(response => {
   return response
 }, error => {
 
   // if (error.config.hideErrorMessage) return
-  
+
   let message;
   const res = error.response.data
 

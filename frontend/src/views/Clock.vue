@@ -42,20 +42,20 @@
           <div v-if="!this.break" class="py-2">
             <v-btn
               raised
-              :color="clocked ? 'pink' : 'green'"
-              @click="toggleClock()"
+              :color="clock.clocked ? 'pink' : 'green'"
+              @click="clock.clocked ? clockOut() : clockIn()"
               class="pa-6 mr-2"
               width="130px"
               dark
               style="transition: background-color 0.3s"
             >
-              Clock {{ clocked ? "out" : "in" }}
+              Clock {{ clock.clocked ? "out" : "in" }}
             </v-btn>
           </div>
         </v-expand-x-transition>
 
         <v-expand-x-transition>
-          <div v-if="clocked" class="py-2">
+          <div v-if="clock.clocked" class="py-2">
             <v-btn
               raised
               :color="this.break ? 'green' : 'amber'"
@@ -84,16 +84,16 @@
         <transition-group name="scroll-y-transition">
           <div v-for="event in clockHistory" :key="event.id || event.label">
             <v-timeline-item v-if="event.label" hide-dot>
-              <span>{{ event.label }}</span>
+              <span>{{ event.label | date('dddd, MMM D') }}</span>
             </v-timeline-item>
 
-            <v-timeline-item v-else :color="event.color" small>
+            <v-timeline-item v-else :color="eventColor(event.action)" small>
               <v-row class="pt-1">
                 <v-col cols="3">
-                  <strong>{{ event.time }}</strong>
+                  <strong>{{ event.time | time }}</strong>
                 </v-col>
                 <v-col>
-                  <strong>{{ event.message }}</strong>
+                  <strong>{{ eventType(event.action) }}</strong>
                   <div class="caption">{{ event.description }}</div>
                 </v-col>
               </v-row>
@@ -105,7 +105,7 @@
       <v-card-actions class="d-flex justify-center">
         <v-btn text color="primary" @click="loadClockHistory">
           <v-icon right dark> mdi-arrow-down </v-icon>
-          Load more
+          Load previous week
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -115,7 +115,7 @@
 <script>
 import Vue from "vue"
 import vueAwesomeCountdown from "vue-awesome-countdown"
-import { mapGetters } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 
 Vue.use(vueAwesomeCountdown, "vac")
 
@@ -128,8 +128,6 @@ shiftBegin.setSeconds(0)
 const shiftEnd = shiftBegin
 shiftEnd.setHours(17)
 
-let id = 0
-
 export default {
   name: "Clock",
   data: () => ({
@@ -137,46 +135,37 @@ export default {
       timestamp: shiftEnd,
       type: "shift_end",
     },
-    clocked: true,
-    break: false,
-    clockHistoryOffset: 0
   }),
   mounted() {
-    this.loadClockHistory()
+    if (!this.clockHistory.length)
+      this.loadClockHistory()
   },
   computed: {
-    ...mapGetters(['clockHistory'])
+    ...mapState(['clock']),
+    ...mapGetters(['clockHistory']),
   },
   methods: {
-    toggleClock() {
-      this.history.splice(1, 0, {
-        time: new Date()
-          .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          .replace(/^0(?:0:0?)?/, ""),
-        message: `Clocked ${this.clocked ? "out" : "in"}`,
-        color: this.clocked ? "pink" : "green",
-        description: "Blah",
-        id
-      })
-      id++
-      this.clocked = !this.clocked
+    ...mapActions(['clockIn', 'clockOut']),
+    eventType(eventEnum) {
+      switch (eventEnum) {
+        case 1: return 'Clocked in'
+        case 2: return 'Clocked out'
+        case 3: return 'Started break'
+        case 4: return 'Ended break'
+        default: return 'Unknown event'
+      }
     },
-    toggleBreak() {
-      this.history.splice(1, 0, {
-        time: new Date()
-          .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          .replace(/^0(?:0:0?)?/, ""),
-        message: `${this.break ? "Finished" : "Started"} break`,
-        color: this.break ? "green" : "amber",
-        description: "Blah",
-        id
-      })
-      id++
-      this.break = !this.break
+    eventColor(eventEnum) {
+      switch (eventEnum) {
+        case 1: return 'green'
+        case 2: return 'pink'
+        case 3: return 'amber'
+        case 4: return 'green'
+        default: return 'blue'
+      }
     },
     loadClockHistory()  {
-      this.$store.dispatch('getClockHistory', {limit: 1, offset: this.clockHistoryOffset})
-      this.clockHistoryOffset++
+      this.$store.dispatch('loadClockHistory')
     }
   },
 };

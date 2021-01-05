@@ -33,8 +33,9 @@
     "src/**/*.vue",
     "tests/**/*.ts",
     "tests/**/*.tsx"
-, "src/router/index.js"  ],
+, "src/router/index.js", "src/store/index.js"  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/main.ts"
   ]
 }

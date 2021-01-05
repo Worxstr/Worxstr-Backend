@@ -1,4 +1,6 @@
 
+from random import randint
+
 from flask import jsonify, request, render_template, current_app
 from flask_security import login_required, current_user
 import pyqrcode
@@ -40,7 +42,7 @@ def add_job():
 		consultant_name = request.json.get('consultant_name')
 		consultant_phone = request.json.get('consultant_phone')
 		consultant_email = request.json.get('consultant_email')
-		consultant_code = hash(''.join([name, consultant_name, consultant_phone]))
+		consultant_code = str(randint(000000, 999999))
 
 		job = Job(name=name, organization_id=organization_id, employee_manager_id=employee_manager_id, 
 			organizational_manager_id=organizational_manager_id, address=address, city=city, 
@@ -56,9 +58,9 @@ def add_job():
                sender=current_app.config['ADMINS'][0],
                recipients=[consultant_email],
                text_body=render_template('email/consultant_code.txt',
-                                         user=consultant_name, job=name),
+                                         user=consultant_name, job=name, code=consultant_code),
                html_body=render_template('email/consultant_code.html',
-                                         user=consultant_name, job=name),
+                                         user=consultant_name, job=name, code=consultant_code),
 				attachment='../codes/qr_code.png')
 
 		return jsonify({
