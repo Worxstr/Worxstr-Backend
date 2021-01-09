@@ -24,29 +24,6 @@ Web platform for Worxstr
     pip install -r requirements.txt
     ```
 
-2. Frontend
-    1. Navigate to `/frontend`
-    ```shell
-    cd frontend
-    ```
-
-    2. Install packages
-    ```shell
-    yarn install
-    ```
-
-## Development
-### Vue development server
-1. Navigate to `/frontend`
-```shell
-cd frontend
-```
-
-2. Run the dev server
-```shell
-yarn serve
-```
-
 ### Flask development server
 
 1. Ensure that the vue server is still running on port 8080
@@ -57,17 +34,4 @@ yarn serve
     ```shell
     FLASK_APP=main.py FLASK_ENV=development flask run
     ```
-
-## Production
-Write this when we actually have something to deploy
-
-1. Build the latest frontend code
-    1. Navigate to `frontend`
-    ```shell
-    cd frontend
-    ```
-
-    2. Build the app
-    ```shell
-    yarn build
-    ```
+    
