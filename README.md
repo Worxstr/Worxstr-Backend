@@ -1,5 +1,5 @@
-# Worxstr-Website
-Web platform for Worxstr
+# Worxstr-Backend
+Web API for Worxstr
 
 ## Installation
 
