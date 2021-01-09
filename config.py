@@ -4,6 +4,9 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
 class Config(object):
+
+    BASE_URL = os.environ.get('BASE_URL') or 'localhost:8080/{}'
+
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
 
     # Database config
@@ -57,11 +60,9 @@ class Config(object):
     SECURITY_CSRF_IGNORE_UNAUTH_ENDPOINTS = True
 
     # Send Cookie with csrf-token. This is the default for Axios and Angular.
-    SECURITY_CSRF_COOKIE = {"key": "XSRF-TOKEN"}
+    SECURITY_CSRF_COOKIE = {"key": os.environ.get("SECURITY_PASSWORD_SALT") or '146585145368132386173505678016728509634ebeb'}
     WTF_CSRF_CHECK_DEFAULT = False
     WTF_CSRF_TIME_LIMIT = None
-
-    CORS_HEADERS = 'Content-Type'
 
     SWAGGER_CONFIG = {
         "headers": [
