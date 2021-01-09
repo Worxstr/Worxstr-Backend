@@ -13,6 +13,7 @@ from flasgger import Swagger
 
 from config import Config
 
+cors = CORS()
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
@@ -27,9 +28,9 @@ def create_app(config_class=Config):
         __name__,
         static_folder = "./frontend/dist"
     )
-    
-    cors = CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
+
     app.config.from_object(config_class)
+    cors.init_app(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)

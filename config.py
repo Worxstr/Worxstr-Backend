@@ -64,8 +64,6 @@ class Config(object):
     WTF_CSRF_CHECK_DEFAULT = False
     WTF_CSRF_TIME_LIMIT = None
 
-    CORS_HEADERS = 'Content-Type'
-
     SWAGGER_CONFIG = {
         "headers": [
         ],
