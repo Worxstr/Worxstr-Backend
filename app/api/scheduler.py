@@ -23,7 +23,7 @@ def list_shifts(job_id):
 	result = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job_id).all()
 	return jsonify(shifts=[x.to_dict() for x in result])
 
-@bp.route('/shifts/add-shift', methods=['POST'])
+@bp.route('/shifts/add-shift/<job_id>', methods=['POST'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def add_shift(job_id):
