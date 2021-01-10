@@ -1,0 +1,47 @@
+import json
+
+from flask import jsonify, current_app, request
+from flask_security import current_user, login_required, roles_required, roles_accepted
+
+from app import db
+from app.api import bp
+from app.models import ScheduleShift
+
+@bp.route('/shifts/<job_id>')
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
+def list_shifts(job_id):
+	""" Returns list of shifts associated with a given job
+	---
+	
+	responses:
+		200:
+			description: A list of shifts
+			schema:
+				$ref: '#/definitions/ScheduleShift'
+	"""
+	result = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job_id).all()
+	return jsonify(shifts=[x.to_dict() for x in result])
+
+@bp.route('/shifts/add-shift', methods=['POST'])
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
+def add_shift(job_id):
+	if request.method == 'POST' and request.json:
+		time_begin = request.json.get('timeBegin')
+		time_end = request.json.get('timeEnd')
+		site_location = request.json.get('siteLocation')
+
+		shift = ScheduleShift(
+			job_id=job_id, time_begin=time_begin, time_end=time_end, site_location=site_location
+		)
+		db.session.add(shift)
+		db.session.commit()
+
+		return jsonify({
+			'success': 	True,
+			'event':	shift.to_dict()
+		})
+	return jsonify({
+		'success':	False
+	})

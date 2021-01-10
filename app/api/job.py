@@ -2,7 +2,7 @@
 from random import randint
 
 from flask import jsonify, request, render_template, current_app
-from flask_security import login_required, current_user
+from flask_security import login_required, current_user, roles_required, roles_accepted
 import pyqrcode
 import png
 from pyqrcode import QRCode
@@ -14,6 +14,7 @@ from app.email import send_email
 
 @bp.route('/job')
 @login_required
+@roles_accepted('employee_manager', 'organization_manager')
 def list_jobs():
 	""" Returns list of registered jobs
 	---
@@ -27,8 +28,9 @@ def list_jobs():
 	result = db.session.query(Job).all()
 	return jsonify(jobs=[x.to_dict() for x in result])
 
-@bp.route('/job/add_job', methods=['POST'])
+@bp.route('/job/add-job', methods=['POST'])
 @login_required
+@roles_required('organization_manager')
 def add_job():
 	if request.method == 'POST' and request.json:
 		name = request.json.get('name')
@@ -38,10 +40,10 @@ def add_job():
 		address = request.json.get('address')
 		city = request.json.get('city')
 		state = request.json.get('state')
-		zip_code = request.json.get('zip_code')
-		consultant_name = request.json.get('consultant_name')
-		consultant_phone = request.json.get('consultant_phone')
-		consultant_email = request.json.get('consultant_email')
+		zip_code = request.json.get('zipCode')
+		consultant_name = request.json.get('consultantName')
+		consultant_phone = request.json.get('consultantPhone')
+		consultant_email = request.json.get('consultantEmail')
 		consultant_code = str(randint(000000, 999999))
 
 		job = Job(name=name, organization_id=organization_id, employee_manager_id=employee_manager_id, 
