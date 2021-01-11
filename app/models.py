@@ -101,8 +101,9 @@ class TimeCard(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     time_in = db.Column(db.DateTime)
     time_out = db.Column(db.DateTime)
-    time_break = db.Column(db.Integer)
+    time_break = db.Column(db.Numeric)
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    total_payment = db.Column(db.Numeric)
     approved = db.Column(db.Boolean)
     paid = db.Column(db.Boolean)
 
@@ -114,3 +115,4 @@ class EmployeeInfo(db.Model):
     city = db.Column(db.String(255))
     state = db.Column(db.String(255))
     zip_code = db.Column(db.String(10))
+    hourly_rate = db.Column(db.Numeric)

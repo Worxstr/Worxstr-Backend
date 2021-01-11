@@ -5,7 +5,7 @@ from flask_security import login_required, current_user, roles_accepted
 
 from app.api import bp
 from app import db, security
-from app.models import Job, ScheduleShift, TimeClock, TimeClockAction, TimeCard, User
+from app.models import Job, ScheduleShift, TimeClock, TimeClockAction, TimeCard, User, EmployeeInfo
 
 
 @bp.route('/clock/history', methods=['GET'])
@@ -90,12 +90,19 @@ def create_timecard(time_out):
         y = next(breaks)
         if(x.action==TimeClockAction.start_break and y.action==TimeClockAction.end_break):
             break_time = break_time + (y.time-x.time)
+    break_time_minutes = round(break_time.total_seconds() / 60.0, 2)
+    total_time = time_out[0] - time_in[0]
+    total_time_hours = total_time.total_seconds() / 60.0 / 60.0
+
+    rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == current_user.get_id()).one()
+    wage = round(float(rate[0]) * total_time_hours, 2)
 
     timecard = TimeCard(
         time_in=time_in,
         time_out=time_out,
-        time_break=break_time,
+        time_break=break_time_minutes,
         employee_id=current_user.get_id(),
+        total_payment=wage,
         approved=False,
         paid=False
     )
