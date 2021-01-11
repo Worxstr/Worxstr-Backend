@@ -55,7 +55,7 @@ def get_next_shift():
 		if result == None:
 			return jsonify({
 				'success': True,
-				'event': ""
+				'event': None
 			})
 		return jsonify({
 			'success': True,
