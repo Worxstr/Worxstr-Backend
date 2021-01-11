@@ -1,11 +1,11 @@
 import datetime
 
 from flask import jsonify, request
-from flask_security import login_required, current_user
+from flask_security import login_required, current_user, roles_accepted
 
 from app.api import bp
 from app import db, security
-from app.models import Job, ScheduleShift, TimeClock, TimeClockAction, TimeCard
+from app.models import Job, ScheduleShift, TimeClock, TimeClockAction, TimeCard, User
 
 
 @bp.route('/clock/history', methods=['GET'])
@@ -78,6 +78,9 @@ def clock_out():
             'success': 	True,
             'event':		timeclock.to_dict()
         })
+    return jsonify({
+        'success': False
+    })
 
 def create_timecard(time_out):
     time_in = db.session.query(TimeClock.time).filter(TimeClock.employee_id == current_user.get_id(), TimeClock.action == TimeClockAction.clock_in).order_by(TimeClock.time.desc()).first()
@@ -101,6 +104,20 @@ def create_timecard(time_out):
 
     return
 
+@bp.route('/clock/timecards', methods=['GET'])
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
+def get_timecards():
+    if request.method == 'GET':
+        timecards = db.session.query(TimeCard).join(
+            User).filter(TimeCard.approved == False, User.manager_id == current_user.get_id()).all()
+        return jsonify({
+            'success': True,
+            'timecards': [i.to_dict() for i in timecards]
+        })
+    return jsonify({
+        'success': False
+    })
 
 @bp.route('/clock/start-break', methods=['POST'])
 @login_required
