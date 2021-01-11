@@ -46,7 +46,7 @@ def add_shift(job_id):
 		'success':	False
 	})
 
-@bp.route('/shifts/get-next-shift', methods=['GET'])
+@bp.route('/shifts/next', methods=['GET'])
 @login_required
 def get_next_shift():
 	if request.method == 'GET':
