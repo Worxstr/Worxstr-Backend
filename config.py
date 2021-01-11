@@ -33,7 +33,7 @@ class Config(object):
 
     # Need to be able to route backend flask API calls. Use 'auth'
     # to be the Flask-Security endpoints.
-    SECURITY_URL_PREFIX = '/api/auth'
+    SECURITY_URL_PREFIX = '/auth'
 
     # Turn on all the great Flask-Security features
     SECURITY_RECOVERABLE = True
