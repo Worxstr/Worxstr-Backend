@@ -66,6 +66,10 @@ def add_job():
 				attachment='../codes/qr_code.png')
 
 		return jsonify({
-			'success': True
+			'success': True,
+			'event': job.to_dict()
 		})
+	return jsonify({
+		'success': False
+	})
 	

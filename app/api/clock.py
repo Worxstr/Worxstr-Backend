@@ -5,7 +5,7 @@ from flask_security import login_required, current_user
 
 from app.api import bp
 from app import db, security
-from app.models import Job, ScheduleShift, TimeClock, TimeClockAction
+from app.models import Job, ScheduleShift, TimeClock, TimeClockAction, TimeCard
 
 
 @bp.route('/clock/history', methods=['GET'])
@@ -72,10 +72,34 @@ def clock_out():
         db.session.add(timeclock)
         db.session.commit()
 
+        create_timecard(timeclock.time)
+
         return jsonify({
             'success': 	True,
             'event':		timeclock.to_dict()
         })
+
+def create_timecard(time_out):
+    time_in = db.session.query(TimeClock.time).filter(TimeClock.employee_id == current_user.get_id(), TimeClock.action == TimeClockAction.clock_in).order_by(TimeClock.time.desc()).first()
+    breaks = iter(db.session.query(TimeClock).filter(TimeClock.employee_id == current_user.get_id(), TimeClock.time > time_in, TimeClock.time < time_out).order_by(TimeClock.time).all())
+    break_time = datetime.timedelta(0)
+    for x in breaks:
+        y = next(breaks)
+        if(x.action==TimeClockAction.start_break and y.action==TimeClockAction.end_break):
+            break_time = break_time + (y.time-x.time)
+
+    timecard = TimeCard(
+        time_in=time_in,
+        time_out=time_out,
+        time_break=break_time,
+        employee_id=current_user.get_id(),
+        approved=False,
+        paid=False
+    )
+    db.session.add(timecard)
+    db.session.commit()
+
+    return
 
 
 @bp.route('/clock/start-break', methods=['POST'])

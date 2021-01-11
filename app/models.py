@@ -96,6 +96,16 @@ class TimeClock(db.Model, SerializerMixin):
     action = db.Column(db.Enum(TimeClockAction))
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
+class TimeCard(db.Model, SerializerMixin):
+    __tablename__ = 'time_card'
+    id = db.Column(db.Integer, primary_key=True)
+    time_in = db.Column(db.DateTime)
+    time_out = db.Column(db.DateTime)
+    time_break = db.Column(db.Integer)
+    employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    approved = db.Column(db.Boolean)
+    paid = db.Column(db.Boolean)
+
 class EmployeeInfo(db.Model):
     __tablename__ = 'employee_info'
     id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)

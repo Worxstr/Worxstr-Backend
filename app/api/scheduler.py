@@ -1,4 +1,4 @@
-import json
+import json, datetime
 
 from flask import jsonify, current_app, request
 from flask_security import current_user, login_required, roles_required, roles_accepted
@@ -44,4 +44,18 @@ def add_shift(job_id):
 		})
 	return jsonify({
 		'success':	False
+	})
+
+@bp.route('/shifts/get-next-shift', methods=['GET'])
+@login_required
+def get_next_shift():
+	if request.method == 'GET':
+		current_time = datetime.datetime.now()
+		result = db.session.query(ScheduleShift).filter(ScheduleShift.employee_id == current_user.get_id(), ScheduleShift.time_end > current_time).order_by(ScheduleShift.time_end).first()
+		return jsonify({
+			'success': True,
+			'event': result.to_dict()
+		})
+	return jsonify({
+		'success': False
 	})
