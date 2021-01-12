@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 from flask_security import UserMixin, RoleMixin
@@ -112,7 +113,7 @@ class TimeClock(db.Model, SerializerMixin):
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 class TimeCard(db.Model, SerializerMixin):
-    __tablename__ = 'time_cards'
+    __tablename__ = 'time_card'
     id = db.Column(db.Integer, primary_key=True)
     time_in = db.Column(db.DateTime)
     time_out = db.Column(db.DateTime)
@@ -137,7 +138,7 @@ class Message(db.Model, SerializerMixin):
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     body = db.Column(db.String(140))
-    timestamp = db.Column(db.DateTime, index=True)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 
     def __repr__(self):
         return '<Message {}>'.format(self.body)
