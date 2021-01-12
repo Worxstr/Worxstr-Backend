@@ -8,6 +8,8 @@ from app.api import bp
 from app.models import User, EmployeeInfo
 
 @bp.route('/users')
+@login_required
+@roles_required('organization_manager')
 def list_users():
 	""" Returns list of registered users
 	---
@@ -22,6 +24,8 @@ def list_users():
 	return jsonify(users=[x.to_dict() for x in result])
 
 @bp.route('/users/add-manager', methods=['POST'])
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
 def add_manager():
 	if request.method == 'POST' and request.json:
 		first_name = request.json.get('firstName')
@@ -112,12 +116,14 @@ def get_user(id):
 			schema:
 				$ref: '#/definitions/User'
 	"""
-	result = db.session.query(User).filter(User.id == id).one_or_none()
-	return jsonify(result.to_dict())
+	user = db.session.query(User).filter(User.id == id).one_or_none()
+	return jsonify(user.to_dict())
 
 @bp.route('/users/me')
 @login_required
 def get_authenticated_user():
 	""" Returns the currently authenticated user
 	"""
-	return jsonify(authenticated_user=current_user.to_dict())
+	authenticated_user = current_user.to_dict()
+	authenticated_user["roles"] = [x.to_dict() for x in current_user.roles]
+	return jsonify(authenticated_user)

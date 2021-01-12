@@ -11,7 +11,10 @@ class RolesUsers(db.Model):
     user_id = db.Column('user_id', db.Integer(), db.ForeignKey('user.id'))
     role_id = db.Column('role_id', db.Integer(), db.ForeignKey('role.id'))
 
-class Role(db.Model, RoleMixin):
+class Role(db.Model, RoleMixin, SerializerMixin):
+
+    serialize_only = ('id', 'name')
+
     __tablename__ = 'role'
     id = db.Column(db.Integer(), primary_key=True)
     name = db.Column(db.String(80), unique=True)
@@ -97,7 +100,7 @@ class TimeClock(db.Model, SerializerMixin):
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 class TimeCard(db.Model, SerializerMixin):
-    __tablename__ = 'time_card'
+    __tablename__ = 'time_cards'
     id = db.Column(db.Integer, primary_key=True)
     time_in = db.Column(db.DateTime)
     time_out = db.Column(db.DateTime)
