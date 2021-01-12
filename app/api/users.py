@@ -91,6 +91,7 @@ def check_email(email):
 	})
 
 @bp.route('/users/<id>')
+@login_required
 @roles_accepted('employee_manager', 'organization_manager')
 def get_user(id):
 	""" Returns a user by their ID
@@ -126,4 +127,4 @@ def get_authenticated_user():
 	"""
 	authenticated_user = current_user.to_dict()
 	authenticated_user["roles"] = [x.to_dict() for x in current_user.roles]
-	return jsonify(authenticated_user)
+	return jsonify(authenticated_user=authenticated_user)
