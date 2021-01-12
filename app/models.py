@@ -100,7 +100,7 @@ class TimeClock(db.Model, SerializerMixin):
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 class TimeCard(db.Model, SerializerMixin):
-    __tablename__ = 'time_cards'
+    __tablename__ = 'time_card'
     id = db.Column(db.Integer, primary_key=True)
     time_in = db.Column(db.DateTime)
     time_out = db.Column(db.DateTime)
