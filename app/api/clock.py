@@ -116,11 +116,17 @@ def create_timecard(time_out):
 @roles_accepted('organization_manager', 'employee_manager')
 def get_timecards():
     if request.method == 'GET':
-        timecards = db.session.query(TimeCard).join(
+        timecards = db.session.query(TimeCard, User.first_name, User.last_name).join(
             User).filter(TimeCard.approved == False, User.manager_id == current_user.get_id()).all()
+        result = []
+        for i in timecards:
+            timecard = i[0].to_dict()
+            timecard["firstName"] = i[1]
+            timecard["lastName"] = i[2]
+            result.append(timecard)
         return jsonify({
             'success': True,
-            'timecards': [i.to_dict() for i in timecards]
+            'timecards': result
         })
     return jsonify({
         'success': False
