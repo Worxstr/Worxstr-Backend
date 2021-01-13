@@ -72,7 +72,7 @@ def clock_out():
         db.session.add(timeclock)
         db.session.commit()
 
-        create_timecard(timeclock.time)
+        create_timecard(timeclock.time, employee_id=current_user.get_id())
 
         return jsonify({
             'success': 	True,
@@ -82,26 +82,26 @@ def clock_out():
         'success': False
     })
 
-def create_timecard(time_out):
-    time_in = db.session.query(TimeClock.time).filter(TimeClock.employee_id == current_user.get_id(), TimeClock.action == TimeClockAction.clock_in).order_by(TimeClock.time.desc()).first()
-    breaks = iter(db.session.query(TimeClock).filter(TimeClock.employee_id == current_user.get_id(), TimeClock.time > time_in, TimeClock.time < time_out).order_by(TimeClock.time).all())
+def create_timecard(time_out, employee_id):
+    time_in = db.session.query(TimeClock.time).filter(TimeClock.employee_id == employee_id, TimeClock.action == TimeClockAction.clock_in).order_by(TimeClock.time.desc()).first()
+    breaks = iter(db.session.query(TimeClock).filter(TimeClock.employee_id == employee_id, TimeClock.time > time_in, TimeClock.time < time_out).order_by(TimeClock.time).all())
     break_time = datetime.timedelta(0)
     for x in breaks:
         y = next(breaks)
         if(x.action==TimeClockAction.start_break and y.action==TimeClockAction.end_break):
             break_time = break_time + (y.time-x.time)
     break_time_minutes = round(break_time.total_seconds() / 60.0, 2)
-    total_time = time_out[0] - time_in[0]
+    total_time = time_out - time_in[0]
     total_time_hours = total_time.total_seconds() / 60.0 / 60.0
 
-    rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == current_user.get_id()).one()
+    rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == employee_id).one()
     wage = round(float(rate[0]) * total_time_hours, 2)
 
     timecard = TimeCard(
         time_in=time_in,
         time_out=time_out,
         time_break=break_time_minutes,
-        employee_id=current_user.get_id(),
+        employee_id=employee_id,
         total_payment=wage,
         approved=False,
         paid=False
@@ -109,7 +109,43 @@ def create_timecard(time_out):
     db.session.add(timecard)
     db.session.commit()
 
-    return
+    return jsonify({
+        "timecard": timecard.to_dict()
+    })
+
+@bp.route('/clock/timecard/detail', methods=['POST'])
+@login_required
+@roles_accepted('employee_manager')
+def detail_timecard():
+    if request.method == 'POST' and request.json:
+        timecard_id = request.json.get('id')
+        timecard = db.session.query(TimeCard.employee_id, TimeCard.time_in, TimeCard.time_out).filter(TimeCard.id == timecard_id).one()
+        timeclocks = db.session.query(TimeClock).filter(TimeClock.employee_id == timecard[0], TimeClock.time >= timecard[1], TimeClock.time <= timecard[2]).order_by(TimeClock.time).all()
+        return jsonify({
+            "event": [timeclock.to_dict() for timeclock in timeclocks]
+        })
+
+@bp.route('/clock/timecard/edit', methods=['POST'])
+@login_required
+@roles_accepted('employee_manager')
+def edit_timecard():
+    if request.method == 'POST' and request.json:
+        timecard_id = request.json.get('id')
+        timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
+        time_out = timecard.time_out
+        changes = request.json.get('changes')
+        for i in changes:
+            timeclock_action = db.session.query(TimeClock.action).filter(TimeClock.id == i["id"]).one()
+            if timeclock_action == 2:
+                time_out = i["time"]
+            db.session.query(TimeClock).filter(TimeClock.id == i["id"]).update({TimeClock.time:i["time"]}, synchronize_session = False)
+        db.session.commit()
+
+        result = create_timecard(time_out, employee_id=timecard.employee_id)
+        db.session.delete(timecard)
+        db.session.commit()
+        return result
+
 
 @bp.route('/clock/timecards', methods=['GET'])
 @login_required
