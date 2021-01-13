@@ -82,7 +82,7 @@ def clock_out():
         'success': False
     })
 
-def create_timecard(time_out, employee_id):
+def create_timecard(time_out, employee_id, timecard_id=None):
     time_in = db.session.query(TimeClock.time).filter(TimeClock.employee_id == employee_id, TimeClock.action == TimeClockAction.clock_in).order_by(TimeClock.time.desc()).first()
     breaks = iter(db.session.query(TimeClock).filter(TimeClock.employee_id == employee_id, TimeClock.time > time_in, TimeClock.time < time_out).order_by(TimeClock.time).all())
     break_time = datetime.timedelta(0)
@@ -96,16 +96,27 @@ def create_timecard(time_out, employee_id):
 
     rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == employee_id).one()
     wage = round(float(rate[0]) * total_time_hours, 2)
-
-    timecard = TimeCard(
-        time_in=time_in,
-        time_out=time_out,
-        time_break=break_time_minutes,
-        employee_id=employee_id,
-        total_payment=wage,
-        approved=False,
-        paid=False
-    )
+    if timecard_id == None:
+        timecard = TimeCard(
+            time_in=time_in,
+            time_out=time_out,
+            time_break=break_time_minutes,
+            employee_id=employee_id,
+            total_payment=wage,
+            approved=False,
+            paid=False
+        )
+    else:
+        timecard = TimeCard(
+            id = timecard_id,
+            time_in=time_in,
+            time_out=time_out,
+            time_break=break_time_minutes,
+            employee_id=employee_id,
+            total_payment=wage,
+            approved=False,
+            paid=False
+        )
     db.session.add(timecard)
     db.session.commit()
 
@@ -132,6 +143,7 @@ def edit_timecard():
     if request.method == 'POST' and request.json:
         timecard_id = request.json.get('id')
         timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
+        employee_id = timecard.employee_id
         time_out = timecard.time_out
         changes = request.json.get('changes')
         for i in changes:
@@ -140,10 +152,10 @@ def edit_timecard():
                 time_out = i["time"]
             db.session.query(TimeClock).filter(TimeClock.id == i["id"]).update({TimeClock.time:i["time"]}, synchronize_session = False)
         db.session.commit()
-
-        result = create_timecard(time_out, employee_id=timecard.employee_id)
         db.session.delete(timecard)
         db.session.commit()
+
+        result = create_timecard(time_out, employee_id, timecard_id)
         return result
 
 
