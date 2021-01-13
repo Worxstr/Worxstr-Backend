@@ -1,17 +1,44 @@
 import datetime
 
 from flask import jsonify, request
-from flask_security import login_required, current_user, roles_accepted
+from flask_security import login_required, current_user, roles_accepted, roles_required
 
 from app.api import bp
-from app import db, security
+from app import db, security, swagger
 from app.models import Job, ScheduleShift, TimeClock, TimeClockAction, TimeCard, User, EmployeeInfo
 
 
 @bp.route('/clock/history', methods=['GET'])
 @login_required
 def clock_history():
-
+    """Endpoint returning a list of TimeClock events based on the current user and week_offset.
+    ---
+    parameters:
+      - name: week_offset
+        in: path
+        type: int
+        required: false
+        default: 0
+    definitions:
+      TimeClock:
+        type: object
+        properties:
+          id:
+            type: int
+          time:
+            type: datetime
+          action:
+            type: enum
+          employee_id:
+            type: int
+    responses:
+      200:
+        description: A list of TimeClock events. Ordered by the time of the event.
+        schema:
+          $ref: '#/definitions/TimeClock'
+        examples:
+          week_offset: 2
+    """
     # ? Week offset should begin at 0. There is probably a better way to write this
     week_offset = int(request.args.get('week_offset') or 0) + 1
     today = datetime.datetime.combine(
@@ -27,7 +54,32 @@ def clock_history():
 
 @bp.route('/clock/get-shift', methods=['GET'])
 @login_required
+@roles_required('employee')
 def get_shift():
+    """Endpoint returning the current user's next shift.
+    ---
+    definitions:
+      ScheduleShift:
+        type: object
+        properties:
+          id:
+            type: int
+          job_id:
+            type: int
+          time_begin:
+            type: datetime
+          time_end:
+            type: datetime
+          employee_id:
+            type: int
+          site_location:
+            type: string
+    responses:
+      200:
+        description: A single ScheduleShift object. This is the current users next shift.
+        schema:
+          $ref: '#/definitions/ScheduleShift'
+    """
     today = datetime.datetime.combine(
         datetime.date.today(), datetime.datetime.min.time())
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.employee_id == current_user.get_id(), ScheduleShift.time_begin > today).order_by(ScheduleShift.time_begin).first()
@@ -35,7 +87,37 @@ def get_shift():
 
 @bp.route('/clock/clock-in', methods=['POST'])
 @login_required
+@roles_required('employee')
 def clock_in():
+    """Endpoint to clock the current user in.
+    ---
+    parameters:
+      - name: shift_id
+        in: body
+        type: int
+        required: true
+      - name: code
+        in: body
+        type: int
+        required: true
+    definitions:
+      TimeClock:
+        type: object
+        properties:
+          id:
+            type: int
+          time:
+            type: datetime
+          action:
+            type: enum
+          employee_id:
+            type: int
+    responses:
+      200:
+        description: Returns the clock in TimeClock event
+        schema:
+          $ref: '#/definitions/TimeClock'
+    """
     shift_id = request.args.get('shift_id')
 
     if request.method == 'POST' and request.json:
@@ -63,6 +145,27 @@ def clock_in():
 @bp.route('/clock/clock-out', methods=['POST'])
 @login_required
 def clock_out():
+    """Endpoint to clock the current user out. This method also creates a
+    timecard for the shift. Clock in - Clock out.
+    ---
+    definitions:
+      TimeClock:
+        type: object
+        properties:
+          id:
+            type: int
+          time:
+            type: datetime
+          action:
+            type: enum
+          employee_id:
+            type: int
+    responses:
+      200:
+        description: Returns the clock out TimeClock event
+        schema:
+          $ref: '#/definitions/TimeClock'
+    """
     if request.method == 'POST':
         timeclock = TimeClock(
             time=datetime.datetime.now(),
@@ -75,8 +178,8 @@ def clock_out():
         create_timecard(timeclock.time, employee_id=current_user.get_id())
 
         return jsonify({
-            'success': 	True,
-            'event':		timeclock.to_dict()
+            'success': True,
+            'event': timeclock.to_dict()
         })
     return jsonify({
         'success': False
@@ -128,6 +231,32 @@ def create_timecard(time_out, employee_id, timecard_id=None):
 @login_required
 @roles_accepted('employee_manager')
 def detail_timecard():
+    """Endpoint returning a list of TimeClock events associated with a TimeCard.
+    ---
+    parameters:
+      - name: id
+        description: TimeCard.id for identifying time clock events
+        in: body
+        type: int
+        required: true
+    definitions:
+      TimeClock:
+        type: object
+        properties:
+          id:
+            type: int
+          time:
+            type: datetime
+          action:
+            type: enum
+          employee_id:
+            type: int
+    responses:
+      200:
+        description: A list of TimeClock events. Ordered by the time of the event.
+        schema:
+          $ref: '#/definitions/TimeClock'
+    """
     if request.method == 'POST' and request.json:
         timecard_id = request.json.get('id')
         timecard = db.session.query(TimeCard.employee_id, TimeCard.time_in, TimeCard.time_out).filter(TimeCard.id == timecard_id).one()
@@ -140,6 +269,54 @@ def detail_timecard():
 @login_required
 @roles_accepted('employee_manager')
 def edit_timecard():
+    """Endpoint to edit a given timecard.
+    ---
+    parameters:
+      - name: id
+        in: body
+        type: int
+        required: true
+        description: TimeCard.id
+      - name: changes
+        in: body
+        type: array
+        items:
+          $ref: '#/definitions/Change'
+        required: true
+    definitions:
+      Change:
+        type: object
+        properties:
+          id:
+            type: int
+            description: id of the TimeClock event to be modified
+          time:
+            type: datetime
+      TimeCard:
+        type: object
+        properties:
+          id:
+            type: int
+          time_in:
+            type: datetime
+          time_out:
+            type: datetime
+          time_break:
+            type: int
+          employee_id:
+            type: int
+          total_payment:
+            type: float/numeric
+          approved:
+            type: bool
+          paid:
+            type: bool
+    responses:
+      200:
+        description: An updated TimeCard showing the new changes.
+        schema:
+          $ref: '#/definitions/TimeCard'
+    """
     if request.method == 'POST' and request.json:
         timecard_id = request.json.get('id')
         timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
@@ -163,6 +340,34 @@ def edit_timecard():
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def get_timecards():
+    """Endpoint to get all unapproved timecards associated with the current logged in manager.
+    ---
+    definitions:
+      TimeCard:
+        type: object
+        properties:
+          id:
+            type: int
+          time_in:
+            type: datetime
+          time_out:
+            type: datetime
+          time_break:
+            type: int
+          employee_id:
+            type: int
+          total_payment:
+            type: float/numeric
+          approved:
+            type: bool
+          paid:
+            type: bool
+    responses:
+      200:
+        description: Returns the unapproved timecards associated with a manager
+        schema:
+          $ref: '#/definitions/TimeCard'
+    """
     if request.method == 'GET':
         timecards = db.session.query(TimeCard, User.first_name, User.last_name).join(
             User).filter(TimeCard.approved == False, User.manager_id == current_user.get_id()).all()
@@ -183,6 +388,26 @@ def get_timecards():
 @bp.route('/clock/start-break', methods=['POST'])
 @login_required
 def start_break():
+    """Endpoint to start the current user's break.
+    ---
+    definitions:
+      TimeClock:
+        type: object
+        properties:
+          id:
+            type: int
+          time:
+            type: datetime
+          action:
+            type: enum
+          employee_id:
+            type: int
+    responses:
+      200:
+        description: Returns the start break TimeClock event
+        schema:
+          $ref: '#/definitions/TimeClock'
+    """
     if request.method == 'POST':
         timeclock = TimeClock(
             time=datetime.datetime.now(),
@@ -201,6 +426,26 @@ def start_break():
 @bp.route('/clock/end-break', methods=['POST'])
 @login_required
 def end_break():
+    """Endpoint to end the current user's break.
+    ---
+    definitions:
+      TimeClock:
+        type: object
+        properties:
+          id:
+            type: int
+          time:
+            type: datetime
+          action:
+            type: enum
+          employee_id:
+            type: int
+    responses:
+      200:
+        description: Returns the end break TimeClock event
+        schema:
+          $ref: '#/definitions/TimeClock'
+    """
     if request.method == 'POST':
         timeclock = TimeClock(
             time=datetime.datetime.now(),
