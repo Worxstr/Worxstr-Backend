@@ -48,6 +48,7 @@ def add_shift(job_id):
 
 @bp.route('/shifts/next', methods=['GET'])
 @login_required
+@roles_accepted('employee')
 def get_next_shift():
 	if request.method == 'GET':
 		current_time = datetime.datetime.now()

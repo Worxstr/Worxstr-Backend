@@ -11,8 +11,13 @@ from app.models import TimeCard
 @roles_accepted('organization_manager', 'employee_manager')
 def approve_payment():
     if request.method == 'POST' and request.json:
-        db.session.query(TimeCard).filter(TimeCard.id == request.json.get('id')).update({TimeCard.approved:request.json.get('approved'), TimeCard.paid: (not request.json.get('paypal'))}, synchronize_session = False)
+        ids = []
+        for i in request.json.get('timecards'):
+            ids.append(i['id'])
+            db.session.query(TimeCard).filter(TimeCard.id == i['id']).update({TimeCard.approved:i['approved'], TimeCard.paid: (not i['paypal'])}, synchronize_session = False)
         db.session.commit()
+        timecards = db.session.query(TimeCard).filter(TimeCard.id.in_(ids)).all()
         return jsonify({
-            'success': True
+            'success': True,
+            'event': [timecard.to_dict() for timecard in timecards]
         })
