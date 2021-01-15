@@ -265,7 +265,7 @@ def detail_timecard():
             "event": [timeclock.to_dict() for timeclock in timeclocks]
         })
 
-@bp.route('/clock/timecard/edit', methods=['POST'])
+@bp.route('/clock/timecard/edit', methods=['PUT'])
 @login_required
 @roles_accepted('employee_manager')
 def edit_timecard():
@@ -317,7 +317,7 @@ def edit_timecard():
         schema:
           $ref: '#/definitions/TimeCard'
     """
-    if request.method == 'POST' and request.json:
+    if request.method == 'PUT' and request.json:
         timecard_id = request.json.get('id')
         timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
         employee_id = timecard.employee_id
