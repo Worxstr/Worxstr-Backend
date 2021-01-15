@@ -51,7 +51,7 @@ def add_shift(job_id):
 @roles_accepted('employee')
 def get_next_shift():
 	if request.method == 'GET':
-		current_time = datetime.datetime.now()
+		current_time = datetime.datetime.utcnow()
 		result = db.session.query(ScheduleShift).filter(ScheduleShift.employee_id == current_user.get_id(), ScheduleShift.time_end > current_time).order_by(ScheduleShift.time_end).first()
 		if result == None:
 			return jsonify({
