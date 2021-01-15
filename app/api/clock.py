@@ -227,44 +227,6 @@ def create_timecard(time_out, employee_id, timecard_id=None):
         "timecard": timecard.to_dict()
     })
 
-@bp.route('/clock/timecard/detail', methods=['POST'])
-@login_required
-@roles_accepted('employee_manager')
-def detail_timecard():
-    """Endpoint returning a list of TimeClock events associated with a TimeCard.
-    ---
-    parameters:
-      - name: id
-        description: TimeCard.id for identifying time clock events
-        in: body
-        type: int
-        required: true
-    definitions:
-      TimeClock:
-        type: object
-        properties:
-          id:
-            type: int
-          time:
-            type: datetime
-          action:
-            type: enum
-          employee_id:
-            type: int
-    responses:
-      200:
-        description: A list of TimeClock events. Ordered by the time of the event.
-        schema:
-          $ref: '#/definitions/TimeClock'
-    """
-    if request.method == 'POST' and request.json:
-        timecard_id = request.json.get('id')
-        timecard = db.session.query(TimeCard.employee_id, TimeCard.time_in, TimeCard.time_out).filter(TimeCard.id == timecard_id).one()
-        timeclocks = db.session.query(TimeClock).filter(TimeClock.employee_id == timecard[0], TimeClock.time >= timecard[1], TimeClock.time <= timecard[2]).order_by(TimeClock.time).all()
-        return jsonify({
-            "event": [timeclock.to_dict() for timeclock in timeclocks]
-        })
-
 @bp.route('/clock/timecard/edit', methods=['POST'])
 @login_required
 @roles_accepted('employee_manager')
@@ -362,6 +324,25 @@ def get_timecards():
             type: bool
           paid:
             type: bool
+          first_name:
+            type: string
+          last_name:
+            type: string
+          time_clocks:
+            type: array
+            items :
+              $ref: '#/definitions/TimeClock'
+      TimeClock:
+        type: object
+        properties:
+          id:
+            type: int
+          time:
+            type: datetime
+          action:
+            type: enum
+          employee_id:
+            type: int
     responses:
       200:
         description: Returns the unapproved timecards associated with a manager
@@ -376,10 +357,13 @@ def get_timecards():
             timecard = i[0].to_dict()
             timecard["first_name"] = i[1]
             timecard["last_name"] = i[2]
+            timecard["time_clocks"] = [timeclock.to_dict() for timeclock in db.session.query(TimeClock).filter(TimeClock.employee_id == timecard['employee_id'], TimeClock.time >= timecard['time_in'], TimeClock.time <= timecard['time_out']).order_by(TimeClock.time).all()]
             result.append(timecard)
+        pay_rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == result[0]["employee_id"]).one()
         return jsonify({
             'success': True,
-            'timecards': result
+            'timecards': result,
+            'pay_rate': float(pay_rate[0])
         })
     return jsonify({
         'success': False
