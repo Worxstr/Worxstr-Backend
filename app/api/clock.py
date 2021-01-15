@@ -127,7 +127,7 @@ def clock_in():
 
         if code == correct_code[0]:
             timeclock = TimeClock(
-                time=datetime.datetime.now(), employee_id=current_user.get_id(), action=TimeClockAction.clock_in
+                time=datetime.datetime.utcnow(), employee_id=current_user.get_id(), action=TimeClockAction.clock_in
             )
             db.session.add(timeclock)
             db.session.commit()
@@ -168,7 +168,7 @@ def clock_out():
     """
     if request.method == 'POST':
         timeclock = TimeClock(
-            time=datetime.datetime.now(),
+            time=datetime.datetime.utcnow(),
             employee_id=current_user.get_id(),
             action=TimeClockAction.clock_out
         )
@@ -227,10 +227,10 @@ def create_timecard(time_out, employee_id, timecard_id=None):
         "timecard": timecard.to_dict()
     })
 
-@bp.route('/clock/timecards/<id>', methods=['PUT'])
+@bp.route('/clock/timecards/<timecard_id>', methods=['PUT'])
 @login_required
 @roles_accepted('employee_manager')
-def edit_timecard():
+def edit_timecard(timecard_id):
     """Endpoint to edit a given timecard.
     ---
     parameters:
@@ -280,7 +280,6 @@ def edit_timecard():
           $ref: '#/definitions/TimeCard'
     """
     if request.method == 'PUT' and request.json:
-        timecard_id = request.args.get('id')
         timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
         employee_id = timecard.employee_id
         time_out = timecard.time_out
@@ -394,7 +393,7 @@ def start_break():
     """
     if request.method == 'POST':
         timeclock = TimeClock(
-            time=datetime.datetime.now(),
+            time=datetime.datetime.utcnow(),
             employee_id=current_user.get_id(),
             action=TimeClockAction.start_break
         )
@@ -432,7 +431,7 @@ def end_break():
     """
     if request.method == 'POST':
         timeclock = TimeClock(
-            time=datetime.datetime.now(),
+            time=datetime.datetime.utcnow(),
             employee_id=current_user.get_id(),
             action=TimeClockAction.end_break
         )

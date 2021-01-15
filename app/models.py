@@ -1,3 +1,5 @@
+import pytz
+
 from datetime import datetime
 from enum import Enum
 
@@ -6,13 +8,16 @@ from sqlalchemy_serializer import SerializerMixin
 
 from app import db
 
+class CustomSerializerMixin(SerializerMixin):
+    datetime_format = '%Y-%m-%d %H:%M:%S UTC'
+
 class RolesUsers(db.Model):
     __tablename__ = 'roles_users'
     id = db.Column(db.Integer(), primary_key=True)
     user_id = db.Column('user_id', db.Integer(), db.ForeignKey('user.id'))
     role_id = db.Column('role_id', db.Integer(), db.ForeignKey('role.id'))
 
-class Role(db.Model, RoleMixin, SerializerMixin):
+class Role(db.Model, RoleMixin, CustomSerializerMixin):
 
     serialize_only = ('id', 'name')
 
@@ -24,7 +29,7 @@ class Role(db.Model, RoleMixin, SerializerMixin):
     def __repr__(self):
         return '<Role {}>'.format(self.name)
 
-class User(db.Model, UserMixin, SerializerMixin):
+class User(db.Model, UserMixin, CustomSerializerMixin):
 
     serialize_only = ('id', 'email', 'phone', 'first_name', 'last_name', 'username', 'organization_id')
     serialize_rules = ()
@@ -59,7 +64,7 @@ class User(db.Model, UserMixin, SerializerMixin):
         return Message.query.filter_by(recipient=self).filter(
             Message.timestamp > last_read_time).count()
 
-class Organization(db.Model, SerializerMixin):
+class Organization(db.Model, CustomSerializerMixin):
     __tablename__ = 'organization'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
@@ -71,7 +76,7 @@ class Organization(db.Model, SerializerMixin):
     def __repr__(self):
         return '<Organization {}>'.format(self.name)
 
-class Job(db.Model, SerializerMixin):
+class Job(db.Model, CustomSerializerMixin):
     __tablename__ = 'job'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
@@ -90,7 +95,7 @@ class Job(db.Model, SerializerMixin):
     def __repr__(self):
         return '<Job {}>'.format(self.name)
 
-class ScheduleShift(db.Model, SerializerMixin):
+class ScheduleShift(db.Model, CustomSerializerMixin):
     __tablename__ = 'schedule_shift'
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'))
@@ -105,14 +110,14 @@ class TimeClockAction(Enum):
     start_break = 3
     end_break = 4
 
-class TimeClock(db.Model, SerializerMixin):
+class TimeClock(db.Model, CustomSerializerMixin):
     __tablename__ = 'time_clock'
     id = db.Column(db.Integer, primary_key=True)
     time = db.Column(db.DateTime)
     action = db.Column(db.Enum(TimeClockAction))
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-class TimeCard(db.Model, SerializerMixin):
+class TimeCard(db.Model, CustomSerializerMixin):
     __tablename__ = 'time_card'
     id = db.Column(db.Integer, primary_key=True)
     time_in = db.Column(db.DateTime)
@@ -133,7 +138,7 @@ class EmployeeInfo(db.Model):
     zip_code = db.Column(db.String(10))
     hourly_rate = db.Column(db.Numeric)
 
-class Message(db.Model, SerializerMixin):
+class Message(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'))
