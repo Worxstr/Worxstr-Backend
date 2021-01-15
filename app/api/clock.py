@@ -357,13 +357,13 @@ def get_timecards():
             timecard = i[0].to_dict()
             timecard["first_name"] = i[1]
             timecard["last_name"] = i[2]
+            timecard["pay_rate"] = float(db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == timecard["employee_id"]).one()[0])
             timecard["time_clocks"] = [timeclock.to_dict() for timeclock in db.session.query(TimeClock).filter(TimeClock.employee_id == timecard['employee_id'], TimeClock.time >= timecard['time_in'], TimeClock.time <= timecard['time_out']).order_by(TimeClock.time).all()]
             result.append(timecard)
         pay_rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == result[0]["employee_id"]).one()
         return jsonify({
             'success': True,
-            'timecards': result,
-            'pay_rate': float(pay_rate[0])
+            'timecards': result
         })
     return jsonify({
         'success': False
