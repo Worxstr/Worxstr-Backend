@@ -227,44 +227,6 @@ def create_timecard(time_out, employee_id, timecard_id=None):
         "timecard": timecard.to_dict()
     })
 
-@bp.route('/clock/timecards/<id>', methods=['POST'])
-@login_required
-@roles_accepted('employee_manager')
-def detail_timecard():
-    """Endpoint returning a list of TimeClock events associated with a TimeCard.
-    ---
-    parameters:
-      - name: id
-        description: TimeCard.id for identifying time clock events
-        in: body
-        type: int
-        required: true
-    definitions:
-      TimeClock:
-        type: object
-        properties:
-          id:
-            type: int
-          time:
-            type: datetime
-          action:
-            type: enum
-          employee_id:
-            type: int
-    responses:
-      200:
-        description: A list of TimeClock events. Ordered by the time of the event.
-        schema:
-          $ref: '#/definitions/TimeClock'
-    """
-    if request.method == 'POST' and request.json:
-        timecard_id = request.args.get('id')
-        timecard = db.session.query(TimeCard.employee_id, TimeCard.time_in, TimeCard.time_out).filter(TimeCard.id == timecard_id).one()
-        timeclocks = db.session.query(TimeClock).filter(TimeClock.employee_id == timecard[0], TimeClock.time >= timecard[1], TimeClock.time <= timecard[2]).order_by(TimeClock.time).all()
-        return jsonify({
-            "event": [timeclock.to_dict() for timeclock in timeclocks]
-        })
-
 @bp.route('/clock/timecards/<id>', methods=['PUT'])
 @login_required
 @roles_accepted('employee_manager')
@@ -340,7 +302,7 @@ def edit_timecard():
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def get_timecards():
-    """Endpoint to get all unapproved timecards associated with the current logged in manager.
+    """Endpoint to get all unpaid timecards associated with the current logged in manager.
     ---
     definitions:
       TimeCard:
@@ -389,7 +351,7 @@ def get_timecards():
     """
     if request.method == 'GET':
         timecards = db.session.query(TimeCard, User.first_name, User.last_name).join(
-            User).filter(TimeCard.approved == False, User.manager_id == current_user.get_id()).all()
+            User).filter(TimeCard.paid == False, User.manager_id == current_user.get_id()).all()
         result = []
         for i in timecards:
             timecard = i[0].to_dict()
