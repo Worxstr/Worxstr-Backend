@@ -115,13 +115,13 @@ class TimeClock(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     time = db.Column(db.DateTime)
     action = db.Column(db.Enum(TimeClockAction))
+    timecard_id = db.Column(db.Integer, db.ForeignKey('time_card.id'))
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 class TimeCard(db.Model, CustomSerializerMixin):
     __tablename__ = 'time_card'
     id = db.Column(db.Integer, primary_key=True)
-    time_in = db.Column(db.DateTime)
-    time_out = db.Column(db.DateTime)
+    total_time = db.Column(db.Numeric)
     time_break = db.Column(db.Numeric)
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     total_payment = db.Column(db.Numeric)
