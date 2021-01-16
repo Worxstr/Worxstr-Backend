@@ -198,13 +198,11 @@ def clock_out():
 		'success': False
 	})
 
-@bp.route('/clock/timecards/calculate/<timecard_id>', methods=['POST'])
 def calculate_timecard(timecard_id):
 	timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
-	time_in = db.session.query(TimeClock.time).filter(TimeClock.timecard_id == timecard_id, TimeClock.action == TimeClockAction.clock_in).all()
-	time_out = db.session.query(TimeClock.time).filter(TimeCard.id == timecard_id, TimeClock.action == TimeClockAction.clock_out).all()
-
-	total_time = time_out[0][0] - time_in[0][0]
+	time_in = db.session.query(TimeClock.time).filter(TimeClock.timecard_id == timecard_id, TimeClock.action == TimeClockAction.clock_in).one()
+	time_out = db.session.query(TimeClock.time).filter(TimeClock.timecard_id == timecard_id, TimeClock.action == TimeClockAction.clock_out).one()
+	total_time = time_out[0] - time_in[0]
 	total_time_hours = total_time.total_seconds() / 60.0 / 60.0
 
 	rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == timecard.employee_id).one()
@@ -222,9 +220,8 @@ def calculate_timecard(timecard_id):
 			break_time = break_time + (y.time-x.time)
 	break_time_minutes = round(break_time.total_seconds() / 60.0, 2)
 	db.session.query(TimeCard).filter(TimeCard.id == timecard_id).update({TimeCard.time_break:break_time_minutes, TimeCard.total_time:total_time_hours, TimeCard.total_payment:wage})
-	return jsonify({
-		"event": "Test"
-	})
+	db.session.commit()
+	return
 
 @bp.route('/clock/timecards/<timecard_id>', methods=['PUT'])
 @login_required
