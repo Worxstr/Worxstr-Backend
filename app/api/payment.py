@@ -6,8 +6,8 @@ from app.api import bp
 from app.models import TimeCard
 
 
-@bp.route('/payment/approve', methods=['POST'])
-@bp.route('/payment/deny', methods=['POST'])
+@bp.route('/payments/approve', methods=['POST'])
+@bp.route('/payments/deny', methods=['POST'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def approve_payment():
