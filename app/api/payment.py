@@ -6,12 +6,12 @@ from app.api import bp
 from app.models import TimeCard
 
 
-@bp.route('/payments/approve', methods=['POST'])
-@bp.route('/payments/deny', methods=['POST'])
+@bp.route('/payments/approve', methods=['PUT'])
+@bp.route('/payments/deny', methods=['PUT'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def approve_payment():
-    if request.method == 'POST' and request.json:
+    if request.method == 'PUT' and request.json:
         ids = []
         for i in request.json.get('timecards'):
             ids.append(i['id'])
@@ -22,3 +22,6 @@ def approve_payment():
             'success': True,
             'event': [timecard.to_dict() for timecard in timecards]
         })
+    return jsonify({
+        'success': False
+    })
