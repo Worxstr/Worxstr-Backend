@@ -207,7 +207,7 @@ def calculate_timecard(timecard_id):
 
 	rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == timecard.employee_id).one()
 	wage = round(float(rate[0]) * total_time_hours, 2)
-	transaction_fees = round(wage * 0.025)
+	transaction_fees = round(wage * 0.025, 2)
 	total_payment = wage + transaction_fees
 	breaks = iter(db.session.query(TimeClock).filter(
 		TimeClock.employee_id == timecard.employee_id, 
