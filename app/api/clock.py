@@ -121,11 +121,13 @@ def clock_in():
 	shift_id = request.args.get('shift_id')
 
 	if request.method == 'POST' and request.json:
+
 		code = str(request.json.get('code'))
 		correct_code = db.session.query(Job.consultant_code).join(
 				ScheduleShift).filter(ScheduleShift.id == shift_id).one()
 
 		if code == correct_code[0]:
+
 			time_in = datetime.datetime.utcnow()
 
 			timecard = TimeCard(
@@ -143,7 +145,7 @@ def clock_in():
 			db.session.commit()
 			return jsonify({
 				'success': 	True,
-				'event':	timecard.to_dict()
+				'event':	timeclock.to_dict()
 			})
 
 	# TODO: Return 401 status
@@ -196,6 +198,7 @@ def clock_out():
 		'success': False
 	})
 
+@bp.route('/clock/timecards/calculate/<timecard_id>', methods=['POST'])
 def calculate_timecard(timecard_id):
 	timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
 	time_in = db.session.query(TimeClock.time).filter(TimeClock.timecard_id == timecard_id, TimeClock.action == TimeClockAction.clock_in).all()
@@ -219,6 +222,9 @@ def calculate_timecard(timecard_id):
 			break_time = break_time + (y.time-x.time)
 	break_time_minutes = round(break_time.total_seconds() / 60.0, 2)
 	db.session.query(TimeCard).filter(TimeCard.id == timecard_id).update({TimeCard.time_break:break_time_minutes, TimeCard.total_time:total_time_hours, TimeCard.total_payment:wage})
+	return jsonify({
+		"event": "Test"
+	})
 
 @bp.route('/clock/timecards/<timecard_id>', methods=['PUT'])
 @login_required
