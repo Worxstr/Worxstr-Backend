@@ -124,6 +124,8 @@ class TimeCard(db.Model, CustomSerializerMixin):
     total_time = db.Column(db.Numeric)
     time_break = db.Column(db.Numeric)
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    wage_payment = db.Column(db.Numeric)
+    fees_payment = db.Column(db.Numeric)
     total_payment = db.Column(db.Numeric)
     approved = db.Column(db.Boolean)
     paid = db.Column(db.Boolean)
