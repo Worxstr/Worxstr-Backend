@@ -35,3 +35,16 @@ def approve_payment():
     return jsonify({
         'success': False
     })
+
+@bp.route('/payments/complete', methods=['PUT'])
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
+def add_order_id():
+    if request.method == 'PUT' and request.json:
+        ids = []
+        for i in request.json.get('timecards'):
+            db.session.query(TimeCard).filter(TimeCard.id == i['id']).update({TimeCard.transaction_id:request.json.get('transaction').get("orderId")}, synchronize_session = False)
+        db.session.commit()
+        return jsonify({
+            'success': True
+        })
