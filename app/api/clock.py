@@ -288,7 +288,7 @@ def edit_timecard(timecard_id):
 		result["first_name"] = user[0]
 		result["last_name"] = user[1]
 		result["pay_rate"] = float(rate[0])
-		timecard["time_clocks"] = [timeclock.to_dict() for timeclock in db.session.query(TimeClock).filter(TimeClock.timecard_id == timecard_id).order_by(TimeClock.time).all()]
+		result["time_clocks"] = [timeclock.to_dict() for timeclock in db.session.query(TimeClock).filter(TimeClock.timecard_id == timecard_id).order_by(TimeClock.time).all()]
 		return result
 
 
