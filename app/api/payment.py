@@ -15,7 +15,10 @@ def approve_payment():
         ids = []
         for i in request.json.get('timecards'):
             ids.append(i['id'])
-            db.session.query(TimeCard).filter(TimeCard.id == i['id']).update({TimeCard.approved:i['approved'], TimeCard.paid: (not i['paypal'])}, synchronize_session = False)
+            if request.json.get('denied') == True:
+                db.session.query(TimeCard).filter(TimeCard.id == i['id']).update({TimeCard.denied:i['denied']}, synchronize_session = False)
+            else:
+                db.session.query(TimeCard).filter(TimeCard.id == i['id']).update({TimeCard.approved:i['approved'], TimeCard.paid:(not i['paypal'])}, synchronize_session = False)
         db.session.commit()
         timecards = db.session.query(TimeCard).filter(TimeCard.id.in_(ids)).all()
         result = []

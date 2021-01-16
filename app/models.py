@@ -127,6 +127,8 @@ class TimeCard(db.Model, CustomSerializerMixin):
     total_payment = db.Column(db.Numeric)
     approved = db.Column(db.Boolean)
     paid = db.Column(db.Boolean)
+    denied = db.Column(db.Boolean)
+    transaction_id = db.Column(db.String(255))
 
 class EmployeeInfo(db.Model):
     __tablename__ = 'employee_info'
