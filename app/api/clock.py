@@ -289,7 +289,9 @@ def edit_timecard(timecard_id):
 		result["last_name"] = user[1]
 		result["pay_rate"] = float(rate[0])
 		result["time_clocks"] = [timeclock.to_dict() for timeclock in db.session.query(TimeClock).filter(TimeClock.timecard_id == timecard_id).order_by(TimeClock.time).all()]
-		return result
+		return jsonify({
+			'timecard': result
+		})
 
 
 @bp.route('/clock/timecards', methods=['GET'])
