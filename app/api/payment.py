@@ -49,6 +49,6 @@ def add_order_id():
             'success': True
         })
 
-@bp.route('/payments/complete', methods=['POST'])
+@bp.route('/payments/confirm', methods=['POST'])
 def confirm_payment():
     return Response(status=200)

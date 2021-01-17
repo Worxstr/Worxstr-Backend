@@ -27,10 +27,13 @@ def list_jobs():
 			schema:
 				$ref: '#/definitions/Job'
 	"""
+	managers = get_managers(current_user.manager_id or current_user.get_id())
 	result = {
 		"direct_jobs":[],
-		"indirect_jobs":[]
+		"indirect_jobs":[],
+		"managers": managers
 	}
+
 	direct_ids = []
 	direct_jobs = db.session.query(Job).filter(or_(Job.organizational_manager_id == current_user.get_id(), Job.employee_manager_id == current_user.get_id()), Job.active == True).all()
 	for direct_job in direct_jobs:
@@ -48,7 +51,6 @@ def list_jobs():
 
 	lower_managers = get_lower_managers(current_user.get_id())
 	indirect_jobs = db.session.query(Job).filter(not_(Job.id.in_(direct_ids)), or_(Job.organizational_manager_id.in_(lower_managers), Job.employee_manager_id.in_(lower_managers)), Job.active == True).all()
-
 	for indirect_job in indirect_jobs:
 		job = indirect_job.to_dict()
 		shifts = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == indirect_job.id, ScheduleShift.time_end > datetime.utcnow()).all()
@@ -62,6 +64,17 @@ def list_jobs():
 		result["indirect_jobs"].append(job)
 
 	return jsonify(result)
+
+def get_managers(manager_id):
+	managers = get_lower_managers(manager_id)
+	result = {'organization_managers':[],'employee_managers':[]}
+	for i in managers:
+		user = db.session.query(User).filter(User.id == i).one()
+		if user.has_role('organization_manager'):
+			result['organization_managers'].append(user.to_dict())
+		if user.has_role('employee_manager'):
+			result['employee_managers'].append(user.to_dict())
+	return result
 
 def get_lower_managers(manager_id):
 	users = db.session.query(User).filter(User.manager_id == manager_id).all()
@@ -98,17 +111,7 @@ def add_job():
 		db.session.add(job)
 		db.session.commit()
 
-		url = pyqrcode.create(consultant_code)
-		url.png('codes/qr_code.png', scale = 6)
-
-		send_email('[Worxstr] Consultant Code for ' + name,
-				sender=current_app.config['ADMINS'][0],
-				recipients=[consultant_email],
-				text_body=render_template('email/consultant_code.txt',
-										user=consultant_name, job=name, code=consultant_code),
-				html_body=render_template('email/consultant_code.html',
-										user=consultant_name, job=name, code=consultant_code),
-				attachment='../codes/qr_code.png')
+		send_consultant_code(job.id)
 
 		return jsonify({
 			'success': True,
@@ -118,7 +121,21 @@ def add_job():
 		'success': False
 	})
 
-@bp.route('/job/close/job_id', methods=['PUT'])
+def send_consultant_code(job_id):
+	job = db.session.query(Job).filter(Job.id == job_id).one()
+	url = pyqrcode.create(job.consultant_code)
+	url.png('codes/qr_code.png', scale = 6)
+
+	send_email('[Worxstr] Consultant Code for ' + job.name,
+			sender=current_app.config['ADMINS'][0],
+			recipients=[job.consultant_email],
+			text_body=render_template('email/consultant_code.txt',
+									user=job.consultant_name, job=job.name, code=job.consultant_code),
+			html_body=render_template('email/consultant_code.html',
+									user=job.consultant_name, job=job.name, code=job.consultant_code),
+			attachment='../codes/qr_code.png')
+
+@bp.route('/job/close/<job_id>', methods=['PUT'])
 @login_required
 @roles_required('organization_manager')
 def close_job(job_id):
@@ -138,4 +155,40 @@ def close_job(job_id):
 	db.session.query(Job).filter(Job.id == job_id).update({Job.active:False})
 	return jsonify({
 		'success': True
+	})
+
+@bp.route('/job/edit/<job_id>', methods=['PUT'])
+@login_required
+@roles_required('organization_manager')
+def edit_job(job_id):
+	if request.method == 'PUT' and request.json:
+		job = db.session.query(Job).filter(Job.id == job_id).one()
+		original_email = job.consultant_email
+		original_code = job.consultant_code
+		db.session.query(Job).filter(Job.id == job_id).update({
+			Job.name: request.json.get('name'),
+			Job.employee_manager_id: request.json.get('employeeManager'),
+			Job.organizational_manager_id: request.json.get('organizationManager'),
+			Job.address: request.json.get('address'),
+			Job.city: request.json.get('city'),
+			Job.state: request.json.get('state'),
+			Job.zip_code: request.json.get('zipCode'),
+			Job.consultant_name: request.json.get('consultantName'),
+			Job.consultant_phone: request.json.get('consultantPhone'),
+			Job.consultant_email: request.json.get('consultantEmail')
+		})
+		if request.json.get('generateNewCode'):
+			db.session.query(Job).filter(Job.id == job_id).update({
+				Job.consultant_code: str(randint(000000, 999999))
+			})
+		db.session.commit()
+
+		if job.consultant_email != original_email or job.consultant_code != original_code:
+			send_consultant_code(job.id)
+		return jsonify({
+			'success': True,
+			'event': job.to_dict()
+		})
+	return jsonify({
+		'success': False
 	})

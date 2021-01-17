@@ -282,6 +282,7 @@ def edit_timecard(timecard_id):
 		changes = request.json.get('changes')
 		for i in changes:
 			db.session.query(TimeClock).filter(TimeClock.id == i["id"]).update({TimeClock.time:i["time"]}, synchronize_session = False)
+		db.session.commit()
 		calculate_timecard(timecard.id)
 		rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == employee_id).one()
 		user = db.session.query(User.first_name, User.last_name).filter(User.id == employee_id).one()
