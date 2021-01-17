@@ -7,7 +7,7 @@ from app import db
 from app.api import bp
 from app.models import ScheduleShift
 
-@bp.route('/shifts/<job_id>')
+@bp.route('/shifts/<job_id>', methods=['GET'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def list_shifts(job_id):

@@ -12,7 +12,7 @@ from app.api import bp
 from app.models import Job
 from app.email import send_email
 
-@bp.route('/job')
+@bp.route('/job', methods=['GET'])
 @login_required
 @roles_accepted('employee_manager', 'organization_manager')
 def list_jobs():
@@ -25,7 +25,7 @@ def list_jobs():
 			schema:
 				$ref: '#/definitions/Job'
 	"""
-	result = db.session.query(Job).all()
+	result = db.session.query(Job).filter(Job.organizational_manager_id == current_user.get_id() or Job.employee_manager_id == current_user.get_id()).all()
 	return jsonify(jobs=[x.to_dict() for x in result])
 
 @bp.route('/job/add-job', methods=['POST'])
