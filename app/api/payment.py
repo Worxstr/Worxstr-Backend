@@ -48,3 +48,9 @@ def add_order_id():
         return jsonify({
             'success': True
         })
+
+@bp.route('/payments/complete', methods=['PUT'])
+def confirm_payment():
+    return jsonify({
+        'success': True
+    })
