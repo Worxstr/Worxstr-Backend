@@ -91,6 +91,7 @@ class Job(db.Model, CustomSerializerMixin):
     consultant_phone = db.Column(db.String(10))
     consultant_email = db.Column(db.String(255))
     consultant_code = db.Column(db.String(255))
+    active = db.Column(db.Boolean, default=True)
 
     def __repr__(self):
         return '<Job {}>'.format(self.name)

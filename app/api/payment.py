@@ -1,4 +1,4 @@
-from flask import jsonify, request
+from flask import jsonify, request, Response
 from flask_security import login_required, roles_accepted
 
 from app import db
@@ -49,8 +49,6 @@ def add_order_id():
             'success': True
         })
 
-@bp.route('/payments/complete', methods=['PUT'])
+@bp.route('/payments/complete', methods=['POST'])
 def confirm_payment():
-    return jsonify({
-        'success': True
-    })
+    return Response(status=200)

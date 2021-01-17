@@ -35,8 +35,8 @@ def add_manager():
 		phone = request.json.get('phone')
 		password = request.json.get('password')
 		roles = request.json.get('roles')
-
-		user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, password=hash_password(password))
+		manager_id = request.json.get('managerId')
+		user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, manager_id=manager_id, password=hash_password(password))
 		db.session.commit()
 
 		return jsonify({
