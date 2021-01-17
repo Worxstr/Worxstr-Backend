@@ -46,6 +46,24 @@ def add_shift(job_id):
 		'success':	False
 	})
 
+@bp.route('/shifts/edit/<shift_id>', methods=['PUT'])
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
+def edit_shit(shift_id):
+    if request.method == 'PUT' and request.json:
+        db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update({
+            ScheduleShift.time_begin: request.json.get('timeBegin'),
+            ScheduleShift.time_end: request.json.get('timeEnd'),
+            ScheduleShift.site_location: request.json.get('siteLocation'),
+            ScheduleShift.employee_id: request.json.get('employeeId')
+        })
+        db.session.commit()
+        shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+        return jsonify({
+            'success': True,
+            'event': shift.to_dict()
+        })
+
 @bp.route('/shifts/next', methods=['GET'])
 @login_required
 @roles_accepted('employee')
