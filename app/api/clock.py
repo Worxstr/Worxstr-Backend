@@ -348,7 +348,8 @@ def get_timecards():
 	"""
 	if request.method == 'GET':
 		timecards = db.session.query(TimeCard, User.first_name, User.last_name).join(
-			User).filter(TimeCard.paid == False, User.manager_id == current_user.get_id()).all()
+			User).filter(TimeCard.paid != True, TimeCard.denied != True, TimeCard.transaction_id == None, User.manager_id == current_user.get_id()).all()
+
 		result = []
 		for i in timecards:
 			timecard = i[0].to_dict()
@@ -357,7 +358,6 @@ def get_timecards():
 			timecard["pay_rate"] = float(db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == timecard["employee_id"]).one()[0])
 			timecard["time_clocks"] = [timeclock.to_dict() for timeclock in db.session.query(TimeClock).filter(TimeClock.timecard_id == timecard["id"]).order_by(TimeClock.time).all()]
 			result.append(timecard)
-		pay_rate = db.session.query(EmployeeInfo.hourly_rate).filter(EmployeeInfo.id == result[0]["employee_id"]).one()
 		return jsonify({
 			'success': True,
 			'timecards': result
