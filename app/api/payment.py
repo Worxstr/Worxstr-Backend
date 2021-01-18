@@ -4,6 +4,7 @@ from flask_security import login_required, roles_accepted
 from app import db
 from app.api import bp
 from app.models import TimeCard, User, TimeClock
+from app.api.paypal import GetOrder
 
 
 @bp.route('/payments/approve', methods=['PUT'])
@@ -41,14 +42,25 @@ def approve_payment():
 @roles_accepted('organization_manager', 'employee_manager')
 def add_order_id():
     if request.method == 'PUT' and request.json:
-        ids = []
-        for i in request.json.get('timecards'):
-            db.session.query(TimeCard).filter(TimeCard.id == i['id']).update({TimeCard.transaction_id:request.json.get('transaction').get("orderId")}, synchronize_session = False)
-        db.session.commit()
-        return jsonify({
-            'success': True
-        })
+        
+        order_confirmation = GetOrder().get_order(request.json.get('transaction').get("orderID"))
 
-@bp.route('/payments/confirm', methods=['POST'])
-def confirm_payment():
-    return Response(status=200)
+        if order_confirmation["status"] == GetOrder.ORDER_APPROVED:
+            ids = []
+            total_payment = 0.0
+            for i in request.json.get('timecards'):
+                total_payment = total_payment + float(i['total_payment'])
+                db.session.query(TimeCard).filter(TimeCard.id == i['id']).update({TimeCard.transaction_id:request.json.get('transaction').get("orderID")}, synchronize_session = False)
+            db.session.commit()
+            if float(order_confirmation['gross_amount']) == total_payment:
+                # Implement payouts here
+
+                for i in request.json.get('timecards'):
+                    db.session.query(TimeCard).filter(TimeCard.id == i['id']).update({TimeCard.paid:True}, synchronize_session = False)
+                db.session.commit()
+                return jsonify({
+                    'success': True
+                })
+    return jsonify({
+        'success': False
+    })
