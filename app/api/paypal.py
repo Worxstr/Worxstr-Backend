@@ -76,6 +76,8 @@ class SendPayouts(PayPalClient):
 
 		response = self.client.execute(request)
 
+		return response.result.batch_header.payout_batch_id
+
 class PayoutsGetRequest:
 	"""
 	Shows details for an order, by ID.
@@ -87,14 +89,16 @@ class PayoutsGetRequest:
 		self.headers["Content-Type"] = "application/json"
 		self.body = {}
 		self.body["sender_batch_header"] = {}
-		self.body["sender_batch_header"]["email_subject"] = ""
-		self.body["sender_batch_header"]["email_message"] = ""
+		self.body["sender_batch_header"]["email_subject"] = "Worxstr Shift Payment"
+		self.body["sender_batch_header"]["email_message"] = "You have received payment for your shift. Thank you for using Worxstr!"
 		self.body["items"] = []
 		for i in payments:
 			payment = {}
 			payment["recipient_type"] = "EMAIL"
 			payment["amount"] = {}
-			payment["amount"]["value"] = ""
-			payment["ammount"]["currency"] = "USD"
-			payment["note"] = ""
-			payment["receiver"] = ""
+			print(i["payment"])
+			payment["amount"]["value"] = i["payment"]
+			payment["amount"]["currency"] = "USD"
+			payment["note"] = i["note"]
+			payment["receiver"] = i["email"]
+			self.body["items"].append(payment)
