@@ -31,7 +31,7 @@ class Role(db.Model, RoleMixin, CustomSerializerMixin):
 
 class User(db.Model, UserMixin, CustomSerializerMixin):
 
-    serialize_only = ('id', 'email', 'phone', 'first_name', 'last_name', 'username', 'organization_id')
+    serialize_only = ('id', 'email', 'phone', 'first_name', 'last_name', 'username', 'organization_id', 'manager_id')
     serialize_rules = ()
 
     id = db.Column(db.Integer, primary_key=True)
@@ -134,7 +134,8 @@ class TimeCard(db.Model, CustomSerializerMixin):
     transaction_id = db.Column(db.String(255))
     payout_id = db.Column(db.String(255))
 
-class EmployeeInfo(db.Model):
+class EmployeeInfo(db.Model, CustomSerializerMixin):
+    serialize_only = ('id', 'address', 'city', 'state', 'zip_code', 'hourly_rate')
     __tablename__ = 'employee_info'
     id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     ssn = db.Column(db.String(9), unique=True)

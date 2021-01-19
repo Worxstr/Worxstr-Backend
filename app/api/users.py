@@ -120,11 +120,37 @@ def get_user(id):
 	user = db.session.query(User).filter(User.id == id).one_or_none()
 	return jsonify(user.to_dict())
 
-@bp.route('/users/me')
+@bp.route('/users/me', methods=['GET'])
 @login_required
 def get_authenticated_user():
 	""" Returns the currently authenticated user
 	"""
 	authenticated_user = current_user.to_dict()
 	authenticated_user["roles"] = [x.to_dict() for x in current_user.roles]
+	if current_user.has_role('employee'):
+		authenticated_user["employee_info"] = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == current_user.get_id()).one().to_dict()
 	return jsonify(authenticated_user=authenticated_user)
+
+@bp.route('/users/edit', methods=['PUT'])
+@login_required
+def edit_user():
+	if request.method == 'PUT' and request.json:
+		db.session.query(User).filter(User.id == current_user.get_id()).update({User.phone:request.json.get('phone'), User.email:request.json.get('email')})
+		if current_user.has_role('employee'):
+			db.session.query(EmployeeInfo).filter(EmployeeInfo.id == current_user.get_id()).update({
+				EmployeeInfo.address: request.json.get('address'),
+				EmployeeInfo.city: request.json.get('city'),
+				EmployeeInfo.state: request.json.get('state'),
+				EmployeeInfo.zip_code: request.json.get('zipCode')
+			})
+		db.session.commit()
+		result = current_user.to_dict()
+		if current_user.has_role('employee'):
+			result["employee_info"] = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == current_user.get_id()).one().to_dict()
+		return jsonify({
+			"success": True,
+			"event": result
+		})
+	return jsonify({
+		"success": False
+	})
