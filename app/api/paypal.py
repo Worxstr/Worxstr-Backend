@@ -96,7 +96,6 @@ class PayoutsGetRequest:
 			payment = {}
 			payment["recipient_type"] = "EMAIL"
 			payment["amount"] = {}
-			print(i["payment"])
 			payment["amount"]["value"] = i["payment"]
 			payment["amount"]["currency"] = "USD"
 			payment["note"] = i["note"]
