@@ -27,43 +27,41 @@ def list_jobs():
 			schema:
 				$ref: '#/definitions/Job'
 	"""
-	managers = get_managers(current_user.manager_id or current_user.get_id())
 	result = {
 		"direct_jobs":[],
-		"indirect_jobs":[],
-		"managers": managers
+		"indirect_jobs":[]
 	}
 
 	direct_ids = []
 	direct_jobs = db.session.query(Job).filter(or_(Job.organizational_manager_id == current_user.get_id(), Job.employee_manager_id == current_user.get_id()), Job.active == True).all()
 	for direct_job in direct_jobs:
-		direct_ids.append(direct_job.id)
 		job = direct_job.to_dict()
-		shifts = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == direct_job.id, ScheduleShift.time_end > datetime.utcnow()).all()
-		job["shifts"] = [shift.to_dict() for shift in shifts]
-		employees = db.session.query(User).filter(User.manager_id == direct_job.employee_manager_id)
-		employees_verify = []
-		for i in employees:
-			if i.has_role('employee'):
-				employees_verify.append(i.to_dict())
-		job["employees"] = employees_verify
 		result["direct_jobs"].append(job)
+		direct_ids.append(direct_job.id)
 
 	lower_managers = get_lower_managers(current_user.get_id())
 	indirect_jobs = db.session.query(Job).filter(not_(Job.id.in_(direct_ids)), or_(Job.organizational_manager_id.in_(lower_managers), Job.employee_manager_id.in_(lower_managers)), Job.active == True).all()
+
 	for indirect_job in indirect_jobs:
 		job = indirect_job.to_dict()
-		shifts = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == indirect_job.id, ScheduleShift.time_end > datetime.utcnow()).all()
-		job["shifts"] = [shift.to_dict() for shift in shifts]
-		employees = db.session.query(User).filter(User.manager_id == indirect_job.employee_manager_id)
-		employees_verify = []
-		for i in employees:
-			if i.has_role('employee'):
-				employees_verify.append(i.to_dict())
-		job["employees"] = employees_verify
 		result["indirect_jobs"].append(job)
 
 	return jsonify(result)
+
+@bp.route('/job/detail/<job_id>', methods=['GET'])
+@login_required
+@roles_accepted('employee_manager', 'organization_manager')
+def job_detail(job_id):
+	job = db.session.query(Job).filter(Job.id == job_id).one().to_dict()
+	shifts = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job['id'], ScheduleShift.time_end > datetime.utcnow()).all()
+	job["shifts"] = [shift.to_dict() for shift in shifts]
+	job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
+	job["employees"] = []
+	employees = db.session.query(User).filter(User.manager_id == job['employee_manager_id'])
+	for i in employees:
+		if i.has_role('employee'):
+			job["employees"].append(i.to_dict())
+	return jsonify(job)
 
 def get_managers(manager_id):
 	managers = get_lower_managers(manager_id)
