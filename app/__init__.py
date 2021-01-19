@@ -38,7 +38,7 @@ def create_app(config_class=Config):
     mail.init_app(app)
     swagger.init_app(app)
     security.init_app(app, user_datastore)
-    socketio.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
 
     @security.login_manager.unauthorized_handler
     def unauthorized_handler():

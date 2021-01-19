@@ -1,12 +1,22 @@
 from datetime import datetime
 
 from flask import jsonify, request
+from flask_socketio import emit
 from flask_security import current_user, login_required
 
 from app.models import Message, User
 from app.api import bp
 from app import db, socketio
 
+@socketio.on('message')
+def handle_message(data):
+    print(data)
+
+
+@socketio.on('connect')
+def test_connect():
+    print("Connected")
+    emit('my response', {'data': 'Connected'})
 
 @bp.route('/send_message/<recipient>', methods=['GET', 'POST'])
 @login_required
@@ -15,6 +25,10 @@ def send_message(recipient):
     message = Message(author=current_user, recipient=user, body=request.json.get('body'))
     db.session.add(message)
     db.session.commit()
+
+    #! Socket.io
+    socketio.emit('newMessage', {'message': request.json.get('body')})
+
     return jsonify({
         "success": True,
         "event": message.to_dict()
