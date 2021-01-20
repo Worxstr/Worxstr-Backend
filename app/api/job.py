@@ -61,7 +61,7 @@ def job_detail(job_id):
 	for i in employees:
 		if i.has_role('employee'):
 			job["employees"].append(i.to_dict())
-	return jsonify(job)
+	return jsonify(job = job)
 
 def get_managers(manager_id):
 	managers = get_lower_managers(manager_id)
