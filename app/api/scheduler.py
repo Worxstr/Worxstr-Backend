@@ -9,7 +9,7 @@ from app.api import bp
 from app.models import ScheduleShift
 
 
-@bp.route('/shifts', methods=['POST', 'PUT'])
+@bp.route('/shifts', methods=['POST'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def shifts():
@@ -30,8 +30,12 @@ def shifts():
 			'event':	shift.to_dict()
 		})
 
+@bp.route('/shifts/<shift_id>', methods=['PUT'])
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
+def shift(shift_id):
+	
 	if request.method == 'PUT' and request.json:
-		shift_id = request.args.get('shift_id')
 		db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update({
 			ScheduleShift.time_begin: request.json.get('shift').get('timeBegin'),
 			ScheduleShift.time_end: request.json.get('shift').get('timeEnd'),
