@@ -9,17 +9,18 @@ from app.api import bp
 from app.models import ScheduleShift
 
 
-@bp.route('/shifts/<shift_id>', methods=['GET', 'POST', 'PUT'])
+@bp.route('/shifts', methods=['POST', 'PUT'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
-def shifts(shift_id):
+def shifts():
 	if request.method == 'POST' and request.json:
-		time_begin = request.json.get('timeBegin')
-		time_end = request.json.get('timeEnd')
-		site_location = request.json.get('siteLocation')
-
+		job_id = request.args.get('job_id')
+		time_begin = request.json.get('shift').get('timeBegin')
+		time_end = request.json.get('shift').get('timeEnd')
+		site_location = request.json.get('shift').get('siteLocation')
+		employee_id = request.json.get('shift').get('employee')
 		shift = ScheduleShift(
-			job_id=job_id, time_begin=time_begin, time_end=time_end, site_location=site_location
+			job_id=job_id, time_begin=time_begin, time_end=time_end, site_location=site_location, employee_id=employee_id
 		)
 		db.session.add(shift)
 		db.session.commit()
@@ -30,19 +31,20 @@ def shifts(shift_id):
 		})
 
 	if request.method == 'PUT' and request.json:
-        db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update({
-            ScheduleShift.time_begin: request.json.get('timeBegin'),
-            ScheduleShift.time_end: request.json.get('timeEnd'),
-            ScheduleShift.site_location: request.json.get('siteLocation'),
-            ScheduleShift.employee_id: request.json.get('employeeId')
-        })
-        db.session.commit()
-        shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+		shift_id = request.args.get('shift_id')
+		db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update({
+			ScheduleShift.time_begin: request.json.get('shift').get('timeBegin'),
+			ScheduleShift.time_end: request.json.get('shift').get('timeEnd'),
+			ScheduleShift.site_location: request.json.get('shift').get('siteLocation'),
+			ScheduleShift.employee_id: request.json.get('shift').get('employeeId')
+		})
+		db.session.commit()
+		shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
 
-        return jsonify({
-            'success': True,
-            'event': shift.to_dict()
-        })
+		return jsonify({
+			'success': True,
+			'event': shift.to_dict()
+		})
 
 
 @bp.route('/shifts/next', methods=['GET'])
