@@ -48,7 +48,7 @@ def list_jobs():
 
 	return jsonify(result)
 
-@bp.route('/job/detail/<job_id>', methods=['GET'])
+@bp.route('/jobs/<job_id>', methods=['GET'])
 @login_required
 @roles_accepted('employee_manager', 'organization_manager')
 def job_detail(job_id):
@@ -61,7 +61,7 @@ def job_detail(job_id):
 	for i in employees:
 		if i.has_role('employee'):
 			job["employees"].append(i.to_dict())
-	return jsonify(job)
+	return jsonify(job = job)
 
 def get_managers(manager_id):
 	managers = get_lower_managers(manager_id)
@@ -84,7 +84,7 @@ def get_lower_managers(manager_id):
 				lower_managers.append(i)
 	return lower_managers
 
-@bp.route('/job/add', methods=['POST'])
+@bp.route('/jobs', methods=['POST'])
 @login_required
 @roles_required('organization_manager')
 def add_job():
@@ -135,7 +135,7 @@ def send_consultant_code(job_id):
 									user=job.consultant_name, job=job.name, code=job.consultant_code),
 			attachment='../codes/qr_code.png')
 
-@bp.route('/job/close/<job_id>', methods=['PUT'])
+@bp.route('/job/<job_id>/close', methods=['PUT'])
 @login_required
 @roles_required('organization_manager')
 def close_job(job_id):
@@ -157,7 +157,7 @@ def close_job(job_id):
 		'success': True
 	})
 
-@bp.route('/job/edit/<job_id>', methods=['PUT'])
+@bp.route('/job/<job_id>/edit', methods=['PUT'])
 @login_required
 @roles_required('organization_manager')
 def edit_job(job_id):
