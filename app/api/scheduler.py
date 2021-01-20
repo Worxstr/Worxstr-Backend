@@ -9,24 +9,10 @@ from app.api import bp
 from app.models import ScheduleShift
 
 
-@bp.route('/shifts/<job_id>', methods=['GET', 'POST', 'PUT'])
+@bp.route('/shifts/<shift_id>', methods=['GET', 'POST', 'PUT'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
-def shifts(job_id):
-	if request.method == 'GET':
-		""" Returns list of shifts associated with a given job
-		---
-
-		responses:
-			200:
-				description: A list of shifts
-				schema:
-					$ref: '#/definitions/ScheduleShift'
-		"""
-		result = db.session.query(ScheduleShift).filter(
-		    ScheduleShift.job_id == job_id).all()
-		return jsonify(shifts=[x.to_dict() for x in result])
-
+def shifts(shift_id):
 	if request.method == 'POST' and request.json:
 		time_begin = request.json.get('timeBegin')
 		time_end = request.json.get('timeEnd')
