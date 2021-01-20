@@ -11,6 +11,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from flasgger import Swagger
+from geopy.geocoders import Nominatim
 
 from config import Config
 
@@ -24,6 +25,7 @@ user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security()
 csrf = CSRFProtect()
 socketio = SocketIO()
+geolocator = Nominatim(user_agent="worxstr")
 
 def create_app(config_class=Config):
     app = Flask(

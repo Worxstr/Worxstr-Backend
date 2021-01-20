@@ -9,7 +9,7 @@ import pyqrcode
 import png
 from pyqrcode import QRCode
 
-from app import db
+from app import db, geolocator
 from app.api import bp
 from app.models import Job, User, ScheduleShift
 from app.email import send_email
@@ -97,6 +97,7 @@ def add_job():
 		city = request.json.get('city')
 		state = request.json.get('state')
 		zip_code = request.json.get('zipCode')
+		location = geolocator.geocode(address + " " + city + " " + state + " " + zip_code)
 		consultant_name = request.json.get('consultantName')
 		consultant_phone = request.json.get('consultantPhone')
 		consultant_email = request.json.get('consultantEmail')
@@ -105,7 +106,8 @@ def add_job():
 		job = Job(name=name, organization_id=organization_id, employee_manager_id=employee_manager_id, 
 			organizational_manager_id=organizational_manager_id, address=address, city=city, 
 			state=state, zip_code=zip_code, consultant_name=consultant_name, consultant_phone=consultant_phone, 
-			consultant_email=consultant_email, consultant_code=consultant_code)
+			consultant_email=consultant_email, consultant_code=consultant_code,
+			longitude=location.longitude, latitude=location.latitude)
 		db.session.add(job)
 		db.session.commit()
 
@@ -163,6 +165,9 @@ def edit_job(job_id):
 		job = db.session.query(Job).filter(Job.id == job_id).one()
 		original_email = job.consultant_email
 		original_code = job.consultant_code
+		location = geolocator.geocode(
+			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zipCode')
+		)
 		db.session.query(Job).filter(Job.id == job_id).update({
 			Job.name: request.json.get('name'),
 			Job.employee_manager_id: request.json.get('employeeManager'),
@@ -171,6 +176,8 @@ def edit_job(job_id):
 			Job.city: request.json.get('city'),
 			Job.state: request.json.get('state'),
 			Job.zip_code: request.json.get('zipCode'),
+			Job.longitude: location.longitude,
+			Job.latitude: location.latitude,
 			Job.consultant_name: request.json.get('consultantName'),
 			Job.consultant_phone: request.json.get('consultantPhone'),
 			Job.consultant_email: request.json.get('consultantEmail')
