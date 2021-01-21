@@ -102,7 +102,7 @@ def edit_job(job_id):
 			Job.address: request.json.get('address'),
 			Job.city: request.json.get('city'),
 			Job.state: request.json.get('state'),
-			Job.zip_code: request.json.get('zipCode'),
+			Job.zip_code: request.json.get('zip_code'),
 			Job.longitude: location.longitude,
 			Job.latitude: location.latitude,
 			Job.consultant_name: request.json.get('consultant_name'),
