@@ -97,17 +97,17 @@ def edit_job(job_id):
 		)
 		db.session.query(Job).filter(Job.id == job_id).update({
 			Job.name: request.json.get('name'),
-			Job.employee_manager_id: request.json.get('employeeManager'),
-			Job.organizational_manager_id: request.json.get('organizationManager'),
+			Job.employee_manager_id: request.json.get('employee_manager'),
+			Job.organizational_manager_id: request.json.get('organization_manager'),
 			Job.address: request.json.get('address'),
 			Job.city: request.json.get('city'),
 			Job.state: request.json.get('state'),
 			Job.zip_code: request.json.get('zipCode'),
 			Job.longitude: location.longitude,
 			Job.latitude: location.latitude,
-			Job.consultant_name: request.json.get('consultantName'),
-			Job.consultant_phone: request.json.get('consultantPhone'),
-			Job.consultant_email: request.json.get('consultantEmail')
+			Job.consultant_name: request.json.get('consultant_name'),
+			Job.consultant_phone: request.json.get('consultant_phone'),
+			Job.consultant_email: request.json.get('consultant_email')
 		})
 		if request.json.get('generateNewCode'):
 			db.session.query(Job).filter(Job.id == job_id).update({
