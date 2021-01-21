@@ -84,6 +84,48 @@ def get_lower_managers(manager_id):
 				lower_managers.append(i)
 	return lower_managers
 
+@bp.route('/job/<job_id>', methods=['PUT'])
+@login_required
+@roles_required('organization_manager')
+def edit_job(job_id):
+	if request.method == 'PUT' and request.json:
+		job = db.session.query(Job).filter(Job.id == job_id).one()
+		original_email = job.consultant_email
+		original_code = job.consultant_code
+		location = geolocator.geocode(
+			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zipCode')
+		)
+		db.session.query(Job).filter(Job.id == job_id).update({
+			Job.name: request.json.get('name'),
+			Job.employee_manager_id: request.json.get('employee_manager'),
+			Job.organizational_manager_id: request.json.get('organization_manager'),
+			Job.address: request.json.get('address'),
+			Job.city: request.json.get('city'),
+			Job.state: request.json.get('state'),
+			Job.zip_code: request.json.get('zip_code'),
+			Job.longitude: location.longitude,
+			Job.latitude: location.latitude,
+			Job.consultant_name: request.json.get('consultant_name'),
+			Job.consultant_phone: request.json.get('consultant_phone'),
+			Job.consultant_email: request.json.get('consultant_email')
+		})
+		if request.json.get('generateNewCode'):
+			db.session.query(Job).filter(Job.id == job_id).update({
+				Job.consultant_code: str(randint(000000, 999999))
+			})
+		db.session.commit()
+
+		if job.consultant_email != original_email or job.consultant_code != original_code:
+			send_consultant_code(job.id)
+		return jsonify({
+			'success': True,
+			'event': job.to_dict()
+		})
+	return jsonify({
+		'success': False
+	})
+
+
 @bp.route('/jobs', methods=['POST'])
 @login_required
 @roles_required('organization_manager')
@@ -155,45 +197,4 @@ def close_job(job_id):
 	db.session.query(Job).filter(Job.id == job_id).update({Job.active:False})
 	return jsonify({
 		'success': True
-	})
-
-@bp.route('/job/<job_id>/edit', methods=['PUT'])
-@login_required
-@roles_required('organization_manager')
-def edit_job(job_id):
-	if request.method == 'PUT' and request.json:
-		job = db.session.query(Job).filter(Job.id == job_id).one()
-		original_email = job.consultant_email
-		original_code = job.consultant_code
-		location = geolocator.geocode(
-			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zipCode')
-		)
-		db.session.query(Job).filter(Job.id == job_id).update({
-			Job.name: request.json.get('name'),
-			Job.employee_manager_id: request.json.get('employeeManager'),
-			Job.organizational_manager_id: request.json.get('organizationManager'),
-			Job.address: request.json.get('address'),
-			Job.city: request.json.get('city'),
-			Job.state: request.json.get('state'),
-			Job.zip_code: request.json.get('zipCode'),
-			Job.longitude: location.longitude,
-			Job.latitude: location.latitude,
-			Job.consultant_name: request.json.get('consultantName'),
-			Job.consultant_phone: request.json.get('consultantPhone'),
-			Job.consultant_email: request.json.get('consultantEmail')
-		})
-		if request.json.get('generateNewCode'):
-			db.session.query(Job).filter(Job.id == job_id).update({
-				Job.consultant_code: str(randint(000000, 999999))
-			})
-		db.session.commit()
-
-		if job.consultant_email != original_email or job.consultant_code != original_code:
-			send_consultant_code(job.id)
-		return jsonify({
-			'success': True,
-			'event': job.to_dict()
-		})
-	return jsonify({
-		'success': False
 	})
