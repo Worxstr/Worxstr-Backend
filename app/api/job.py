@@ -33,14 +33,14 @@ def list_jobs():
 	}
 
 	direct_ids = []
-	direct_jobs = db.session.query(Job).filter(or_(Job.organizational_manager_id == current_user.get_id(), Job.employee_manager_id == current_user.get_id()), Job.active == True).all()
+	direct_jobs = db.session.query(Job).filter(or_(Job.organization_manager_id == current_user.get_id(), Job.employee_manager_id == current_user.get_id()), Job.active == True).all()
 	for direct_job in direct_jobs:
 		job = direct_job.to_dict()
 		result["direct_jobs"].append(job)
 		direct_ids.append(direct_job.id)
 
 	lower_managers = get_lower_managers(current_user.get_id())
-	indirect_jobs = db.session.query(Job).filter(not_(Job.id.in_(direct_ids)), or_(Job.organizational_manager_id.in_(lower_managers), Job.employee_manager_id.in_(lower_managers)), Job.active == True).all()
+	indirect_jobs = db.session.query(Job).filter(not_(Job.id.in_(direct_ids)), or_(Job.organization_manager_id.in_(lower_managers), Job.employee_manager_id.in_(lower_managers)), Job.active == True).all()
 
 	for indirect_job in indirect_jobs:
 		job = indirect_job.to_dict()
@@ -97,8 +97,8 @@ def edit_job(job_id):
 		)
 		db.session.query(Job).filter(Job.id == job_id).update({
 			Job.name: request.json.get('name'),
-			Job.employee_manager_id: request.json.get('employee_manager'),
-			Job.organizational_manager_id: request.json.get('organization_manager'),
+			Job.employee_manager_id: request.json.get('employee_manager_id'),
+			Job.organization_manager_id: request.json.get('organization_manager_id'),
 			Job.address: request.json.get('address'),
 			Job.city: request.json.get('city'),
 			Job.state: request.json.get('state'),
@@ -134,7 +134,7 @@ def add_job():
 		name = request.json.get('name')
 		organization_id = current_user.organization_id
 		employee_manager_id = request.json.get('employeeManager')
-		organizational_manager_id = current_user.id
+		organization_manager_id = current_user.id
 		address = request.json.get('address')
 		city = request.json.get('city')
 		state = request.json.get('state')
@@ -146,7 +146,7 @@ def add_job():
 		consultant_code = str(randint(000000, 999999))
 
 		job = Job(name=name, organization_id=organization_id, employee_manager_id=employee_manager_id, 
-			organizational_manager_id=organizational_manager_id, address=address, city=city, 
+			organization_manager_id=organization_manager_id, address=address, city=city, 
 			state=state, zip_code=zip_code, consultant_name=consultant_name, consultant_phone=consultant_phone, 
 			consultant_email=consultant_email, consultant_code=consultant_code,
 			longitude=location.longitude, latitude=location.latitude)

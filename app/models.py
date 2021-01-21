@@ -82,7 +82,7 @@ class Job(db.Model, CustomSerializerMixin):
     name = db.Column(db.String(255))
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
     employee_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    organizational_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    organization_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     address = db.Column(db.String(255))
     city = db.Column(db.String(255))
     state = db.Column(db.String(255))
