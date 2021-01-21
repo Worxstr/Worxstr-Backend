@@ -84,7 +84,7 @@ def get_lower_managers(manager_id):
 				lower_managers.append(i)
 	return lower_managers
 
-@bp.route('/job/<job_id>', methods=['PUT'])
+@bp.route('/jobs/<job_id>', methods=['PUT'])
 @login_required
 @roles_required('organization_manager')
 def edit_job(job_id):
@@ -93,7 +93,7 @@ def edit_job(job_id):
 		original_email = job.consultant_email
 		original_code = job.consultant_code
 		location = geolocator.geocode(
-			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zipCode')
+			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zip_code')
 		)
 		db.session.query(Job).filter(Job.id == job_id).update({
 			Job.name: request.json.get('name'),
@@ -103,8 +103,8 @@ def edit_job(job_id):
 			Job.city: request.json.get('city'),
 			Job.state: request.json.get('state'),
 			Job.zip_code: request.json.get('zip_code'),
-			Job.longitude: location.longitude,
-			Job.latitude: location.latitude,
+			Job.longitude: location.longitude if location else None,
+			Job.latitude: location.latitude if location else None,
 			Job.consultant_name: request.json.get('consultant_name'),
 			Job.consultant_phone: request.json.get('consultant_phone'),
 			Job.consultant_email: request.json.get('consultant_email')
@@ -119,7 +119,7 @@ def edit_job(job_id):
 			send_consultant_code(job.id)
 		return jsonify({
 			'success': True,
-			'event': job.to_dict()
+			'job': job.to_dict()
 		})
 	return jsonify({
 		'success': False
@@ -177,7 +177,7 @@ def send_consultant_code(job_id):
 									user=job.consultant_name, job=job.name, code=job.consultant_code),
 			attachment='../codes/qr_code.png')
 
-@bp.route('/job/<job_id>/close', methods=['PUT'])
+@bp.route('/jobs/<job_id>/close', methods=['PUT'])
 @login_required
 @roles_required('organization_manager')
 def close_job(job_id):
