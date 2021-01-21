@@ -15,9 +15,9 @@ from app.models import ScheduleShift
 def shifts():
 	if request.method == 'POST' and request.json:
 		job_id = request.args.get('job_id')
-		time_begin = request.json.get('shift').get('timeBegin')
-		time_end = request.json.get('shift').get('timeEnd')
-		site_location = request.json.get('shift').get('siteLocation')
+		time_begin = request.json.get('shift').get('time_begin')
+		time_end = request.json.get('shift').get('time_end')
+		site_location = request.json.get('shift').get('site_location')
 		employee_id = request.json.get('shift').get('employee')
 		shift = ScheduleShift(
 			job_id=job_id, time_begin=time_begin, time_end=time_end, site_location=site_location, employee_id=employee_id
@@ -27,7 +27,7 @@ def shifts():
 
 		return jsonify({
 			'success': 	True,
-			'event':	shift.to_dict()
+			'shift':	shift.to_dict()
 		})
 
 @bp.route('/shifts/<shift_id>', methods=['PUT'])
@@ -36,18 +36,26 @@ def shifts():
 def shift(shift_id):
 	
 	if request.method == 'PUT' and request.json:
+		
+		shift = request.json.get('shift')
+
+		if not shift:
+			return jsonify({
+				'success': False
+			})
+
 		db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update({
-			ScheduleShift.time_begin: request.json.get('shift').get('timeBegin'),
-			ScheduleShift.time_end: request.json.get('shift').get('timeEnd'),
-			ScheduleShift.site_location: request.json.get('shift').get('siteLocation'),
-			ScheduleShift.employee_id: request.json.get('shift').get('employeeId')
+			ScheduleShift.time_begin: shift.get('time_begin'),
+			ScheduleShift.time_end: shift.get('time_end'),
+			ScheduleShift.site_location: shift.get('site_location'),
+			ScheduleShift.employee_id: shift.get('employee_id')
 		})
 		db.session.commit()
 		shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
 
 		return jsonify({
 			'success': True,
-			'event': shift.to_dict()
+			'shift': shift.to_dict()
 		})
 
 
@@ -61,11 +69,11 @@ def get_next_shift():
 		if result == None:
 			return jsonify({
 				'success': True,
-				'event': None
+				'shift': None
 			})
 		return jsonify({
 			'success': True,
-			'event': result.to_dict()
+			'shift': result.to_dict()
 		})
 	return jsonify({
 		'success': False
