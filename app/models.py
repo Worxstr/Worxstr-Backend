@@ -137,7 +137,7 @@ class TimeCard(db.Model, CustomSerializerMixin):
     payout_id = db.Column(db.String(255))
 
 class EmployeeInfo(db.Model, CustomSerializerMixin):
-    serialize_only = ('id', 'address', 'city', 'state', 'zip_code', 'hourly_rate')
+    serialize_only = ('id', 'address', 'city', 'state', 'zip_code', 'longitude', 'latitude', 'hourly_rate')
     __tablename__ = 'employee_info'
     id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     ssn = db.Column(db.String(9), unique=True)
@@ -145,6 +145,8 @@ class EmployeeInfo(db.Model, CustomSerializerMixin):
     city = db.Column(db.String(255))
     state = db.Column(db.String(255))
     zip_code = db.Column(db.String(10))
+    longitude = db.Column(db.Float(precision=52))
+    latitude = db.Column(db.Float(precision=52))
     hourly_rate = db.Column(db.Numeric)
 
 class Message(db.Model, CustomSerializerMixin):

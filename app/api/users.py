@@ -3,7 +3,7 @@ import json
 from flask import jsonify, current_app, request
 from flask_security import hash_password, current_user, login_required, roles_required, roles_accepted
 
-from app import db, user_datastore
+from app import db, user_datastore, geolocator
 from app.api import bp
 from app.models import User, EmployeeInfo
 
@@ -58,17 +58,16 @@ def add_employee():
 		
 		password = request.json.get('password')
 		roles = ['employee']
-		# TODO: Figure out how to securely store SSNs and addresses
-		ssn = request.json.get('ssn')
 		address = request.json.get('address')
 		city = request.json.get('city')
 		state = request.json.get('state')
 		zip_code = request.json.get('zipCode')
+		location = geolocator.geocode(
+			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zip_code')
+		)
 
 		user = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, password=hash_password(password))
-		db.session.commit()
-
-		employee_info = EmployeeInfo(id=user.id, ssn=ssn, address=address, city=city, state=state, zip_code=zip_code)
+		employee_info = EmployeeInfo(id=user.id, address=address, city=city, state=state, zip_code=zip_code, longitude=location.longitude if location else None, latitude=location.latitude if location else None)
 		db.session.add(employee_info)
 		db.session.commit()
 
@@ -137,11 +136,16 @@ def edit_user():
 	if request.method == 'PUT' and request.json:
 		db.session.query(User).filter(User.id == current_user.get_id()).update({User.phone:request.json.get('phone'), User.email:request.json.get('email')})
 		if current_user.has_role('employee'):
+			location = geolocator.geocode(
+				request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zipCode')
+			)
 			db.session.query(EmployeeInfo).filter(EmployeeInfo.id == current_user.get_id()).update({
 				EmployeeInfo.address: request.json.get('address'),
 				EmployeeInfo.city: request.json.get('city'),
 				EmployeeInfo.state: request.json.get('state'),
-				EmployeeInfo.zip_code: request.json.get('zipCode')
+				EmployeeInfo.zip_code: request.json.get('zipCode'),
+				EmployeeInfo.longitude: location.longitude,
+				EmployeeInfo.latitude: location.latitude
 			})
 		db.session.commit()
 		result = current_user.to_dict()

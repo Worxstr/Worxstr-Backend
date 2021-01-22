@@ -11,7 +11,7 @@ from pyqrcode import QRCode
 
 from app import db, geolocator
 from app.api import bp
-from app.models import Job, User, ScheduleShift
+from app.models import EmployeeInfo, Job, User, ScheduleShift
 from app.email import send_email
 
 @bp.route('/jobs', methods=['GET'])
@@ -29,7 +29,8 @@ def list_jobs():
 	"""
 	result = {
 		"direct_jobs":[],
-		"indirect_jobs":[]
+		"indirect_jobs":[],
+		"managers": get_managers(current_user.manager_id or current_user.get_id())
 	}
 
 	direct_ids = []
@@ -60,7 +61,10 @@ def job_detail(job_id):
 	employees = db.session.query(User).filter(User.manager_id == job['employee_manager_id'])
 	for i in employees:
 		if i.has_role('employee'):
-			job["employees"].append(i.to_dict())
+			employee = i.to_dict()
+			employee_info = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == i.id).one().to_dict()
+			employee["employee_info"] = employee_info
+			job["employees"].append(employee)
 	return jsonify(job = job)
 
 def get_managers(manager_id):
