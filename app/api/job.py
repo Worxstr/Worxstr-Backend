@@ -133,16 +133,16 @@ def add_job():
 	if request.method == 'POST' and request.json:
 		name = request.json.get('name')
 		organization_id = current_user.organization_id
-		employee_manager_id = request.json.get('employeeManager')
+		employee_manager_id = request.json.get('employee_manager')
 		organization_manager_id = current_user.id
 		address = request.json.get('address')
 		city = request.json.get('city')
 		state = request.json.get('state')
-		zip_code = request.json.get('zipCode')
+		zip_code = request.json.get('zip_code')
 		location = geolocator.geocode(address + " " + city + " " + state + " " + zip_code)
-		consultant_name = request.json.get('consultantName')
-		consultant_phone = request.json.get('consultantPhone')
-		consultant_email = request.json.get('consultantEmail')
+		consultant_name = request.json.get('consultant_name')
+		consultant_phone = request.json.get('consultant_phone')
+		consultant_email = request.json.get('consultant_email')
 		consultant_code = str(randint(000000, 999999))
 
 		job = Job(name=name, organization_id=organization_id, employee_manager_id=employee_manager_id, 
