@@ -157,7 +157,7 @@ def add_job():
 
 		return jsonify({
 			'success': True,
-			'event': job.to_dict()
+			'job': job.to_dict()
 		})
 	return jsonify({
 		'success': False
