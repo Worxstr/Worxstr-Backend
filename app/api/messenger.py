@@ -33,7 +33,7 @@ to each user account so that we can filter the broadcasts to certain clients.
 '''
 
 # TODO: Use live database instead
-db = {
+test_db = {
     'conversations': [
         {
             'id': 1,
@@ -166,6 +166,7 @@ def socket_send_message(data):
     message = Message (
         sender_id=data.get('user_id'),
         body=data.get('message').get('text'),
+        conversation_id=data.get('conversation_id')
     )
     db.session.add(message)
     db.session.commit()
