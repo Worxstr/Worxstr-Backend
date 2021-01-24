@@ -54,8 +54,14 @@ def list_jobs():
 @roles_accepted('employee_manager', 'organization_manager')
 def job_detail(job_id):
 	job = db.session.query(Job).filter(Job.id == job_id).one().to_dict()
-	shifts = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job['id'], ScheduleShift.time_end > datetime.utcnow()).all()
-	job["shifts"] = [shift.to_dict() for shift in shifts]
+	scheduled_shifts = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job['id'], ScheduleShift.time_begin > datetime.utcnow()).all()
+	active_shifts = db.session.query(ScheduleShift).filter(
+		ScheduleShift.job_id == job['id'],
+		ScheduleShift.time_begin >= datetime.utcnow(),
+		ScheduleShift.time_end <= datetime.utcnow()
+	)
+	job["shifts"]["scheduled"] = [shift.to_dict() for shift in scheduled_shifts]
+	job["shifts"]["active"] = [shift.to_dict() for shift in active_shifts]
 	job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
 	job["employees"] = []
 	employees = db.session.query(User).filter(User.manager_id == job['employee_manager_id'])
