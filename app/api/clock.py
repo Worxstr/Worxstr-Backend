@@ -190,9 +190,11 @@ def clock_out():
 		db.session.add(timeclock)
 		db.session.commit()
 		calculate_timecard(timecard_id)
+		result = timeclock.to_dict()
+		result["need_info"] = db.session.query(EmployeeInfo.need_info).filter(EmployeeInfo.id == current_user.get_id()).one()[0]
 		return jsonify({
 			'success': True,
-			'event': timeclock.to_dict()
+			'event': result
 		})
 	return jsonify({
 		'success': False
@@ -222,6 +224,16 @@ def calculate_timecard(timecard_id):
 	break_time_minutes = round(break_time.total_seconds() / 60.0, 2)
 	db.session.query(TimeCard).filter(TimeCard.id == timecard_id).update({TimeCard.time_break:break_time_minutes, TimeCard.total_time:total_time_hours, TimeCard.total_payment:total_payment, TimeCard.wage_payment:wage, TimeCard.fees_payment:transaction_fees})
 	db.session.commit()
+	info = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == timecard.employee_id).one()
+	if not info.need_info and (info.ssn == None or info.address == None):
+		total_wage = 0.0
+		begin_year = datetime.date(datetime.date.today().year, 1, 1)
+		timecards = db.session.query(TimeCard).join(TimeClock).filter(TimeCard.employee_id == timecard.employee_id, TimeClock.time >= begin_year).all()
+		for i in timecards:
+			total_wage = total_wage + (float(i.wage_payment) - float(i.fees_payment))
+		if total_wage > 400:
+			db.session.query(EmployeeInfo).filter(EmployeeInfo.id == timecard.employee_id).update({EmployeeInfo.need_info: True})
+			db.session.commit()
 	return jsonify({"success":True})
 
 @bp.route('/clock/timecards/<timecard_id>', methods=['PUT'])
@@ -294,7 +306,6 @@ def edit_timecard(timecard_id):
 		return jsonify({
 			'timecard': result
 		})
-
 
 @bp.route('/clock/timecards', methods=['GET'])
 @login_required
