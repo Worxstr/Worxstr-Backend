@@ -73,7 +73,7 @@ def messages(conversation_id):
     if request.method == 'POST':
         return jsonify({
             'message': send_message(conversation_id, current_user.get_id(), {
-                'text': request.json.get('text')
+                'body': request.json.get('body')
             })
         })
 
@@ -82,7 +82,7 @@ def send_message(conversation_id, user_id, message):
 
     db_message = Message (
         sender_id=user_id,
-        body=message.get('text'),
+        body=message.get('body'),
         conversation_id=conversation_id
     )
     db.session.add(db_message)
@@ -91,8 +91,8 @@ def send_message(conversation_id, user_id, message):
     socket_message = {
         'id': db_message.id,
         'conversation_id': conversation_id,
-        'sender': user_id,
-        'text': message.get('text')
+        'sender_id': user_id,
+        'body': message.get('body')
     }
 
     socketio.emit('message:create', {
