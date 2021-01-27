@@ -60,6 +60,7 @@ def job_detail(job_id):
 		ScheduleShift.time_begin >= datetime.utcnow(),
 		ScheduleShift.time_end <= datetime.utcnow()
 	)
+	job["shifts"] = {}
 	job["shifts"]["scheduled"] = [shift.to_dict() for shift in scheduled_shifts]
 	job["shifts"]["active"] = [shift.to_dict() for shift in active_shifts]
 	job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
