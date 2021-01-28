@@ -57,11 +57,20 @@ def job_detail(job_id):
 	scheduled_shifts = db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job['id'], ScheduleShift.time_begin > datetime.utcnow()).all()
 	active_shifts = db.session.query(ScheduleShift).filter(
 		ScheduleShift.job_id == job['id'],
-		ScheduleShift.time_begin >= datetime.utcnow(),
-		ScheduleShift.time_end <= datetime.utcnow()
-	)
-	job["shifts"]["scheduled"] = [shift.to_dict() for shift in scheduled_shifts]
-	job["shifts"]["active"] = [shift.to_dict() for shift in active_shifts]
+		ScheduleShift.time_begin <= datetime.utcnow(),
+		ScheduleShift.time_end >= datetime.utcnow()
+	).all()
+	shifts = []
+
+	for i in scheduled_shifts:
+		shifts.append(i.to_dict())
+	for i in active_shifts:
+		print("here")
+		shift = i.to_dict()
+		shift["active"] = True
+		shifts.append(shift)
+
+	job["shifts"] = shifts
 	job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
 	job["employees"] = []
 	employees = db.session.query(User).filter(User.manager_id == job['employee_manager_id'])
