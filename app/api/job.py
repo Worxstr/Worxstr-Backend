@@ -102,9 +102,6 @@ def edit_job(job_id):
 		job = db.session.query(Job).filter(Job.id == job_id).one()
 		original_email = job.consultant_email
 		original_code = job.consultant_code
-		location = geolocator.geocode(
-			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zip_code')
-		)
 		db.session.query(Job).filter(Job.id == job_id).update({
 			Job.name: request.json.get('name'),
 			Job.employee_manager_id: request.json.get('employee_manager_id'),
@@ -113,8 +110,8 @@ def edit_job(job_id):
 			Job.city: request.json.get('city'),
 			Job.state: request.json.get('state'),
 			Job.zip_code: request.json.get('zip_code'),
-			Job.longitude: location.longitude if location else None,
-			Job.latitude: location.latitude if location else None,
+			Job.longitude: request.json.get('longitude'),
+			Job.latitude: request.json.get('latitude'),
 			Job.consultant_name: request.json.get('consultant_name'),
 			Job.consultant_phone: request.json.get('consultant_phone'),
 			Job.consultant_email: request.json.get('consultant_email')
@@ -148,8 +145,10 @@ def add_job():
 		address = request.json.get('address')
 		city = request.json.get('city')
 		state = request.json.get('state')
+		country = request.json.get('country')
 		zip_code = request.json.get('zip_code')
-		location = geolocator.geocode(address + " " + city + " " + state + " " + zip_code)
+		longitude = request.json.get('longitude')
+		latitude = request.json.get('latitude')
 		consultant_name = request.json.get('consultant_name')
 		consultant_phone = request.json.get('consultant_phone')
 		consultant_email = request.json.get('consultant_email')
@@ -159,7 +158,7 @@ def add_job():
 			organization_manager_id=organization_manager_id, address=address, city=city, 
 			state=state, zip_code=zip_code, consultant_name=consultant_name, consultant_phone=consultant_phone, 
 			consultant_email=consultant_email, consultant_code=consultant_code,
-			longitude=location.longitude, latitude=location.latitude)
+			longitude=longitude, latitude=latitude)
 		db.session.add(job)
 		db.session.commit()
 
