@@ -9,7 +9,7 @@ import pyqrcode
 import png
 from pyqrcode import QRCode
 
-from app import db, geolocator
+from app import db
 from app.api import bp
 from app.models import EmployeeInfo, Job, User, ScheduleShift
 from app.email import send_email
