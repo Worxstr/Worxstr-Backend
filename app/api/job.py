@@ -49,6 +49,46 @@ def list_jobs():
 
 	return jsonify(result)
 
+	
+@bp.route('/jobs', methods=['POST'])
+@login_required
+@roles_required('organization_manager')
+def add_job():
+	if request.method == 'POST' and request.json:
+		name = request.json.get('name')
+		organization_id = current_user.organization_id
+		employee_manager_id = request.json.get('employee_manager')
+		organization_manager_id = current_user.id
+		address = request.json.get('address')
+		city = request.json.get('city')
+		state = request.json.get('state')
+		country = request.json.get('country')
+		zip_code = request.json.get('zip_code')
+		longitude = request.json.get('longitude')
+		latitude = request.json.get('latitude')
+		consultant_name = request.json.get('consultant_name')
+		consultant_phone = request.json.get('consultant_phone')
+		consultant_email = request.json.get('consultant_email')
+		consultant_code = str(randint(000000, 999999))
+
+		job = Job(name=name, organization_id=organization_id, employee_manager_id=employee_manager_id, 
+			organization_manager_id=organization_manager_id, address=address, city=city, 
+			state=state, zip_code=zip_code, country=country, consultant_name=consultant_name, consultant_phone=consultant_phone, 
+			consultant_email=consultant_email, consultant_code=consultant_code,
+			longitude=longitude, latitude=latitude)
+		db.session.add(job)
+		db.session.commit()
+
+		# send_consultant_code(job.id)
+
+		return jsonify({
+			'success': True,
+			'job': job.to_dict()
+		})
+	return jsonify({
+		'success': False
+	})
+
 @bp.route('/jobs/<job_id>', methods=['GET'])
 @login_required
 @roles_accepted('employee_manager', 'organization_manager')
@@ -133,46 +173,6 @@ def edit_job(job_id):
 
 		if job.consultant_email != original_email or job.consultant_code != original_code:
 			send_consultant_code(job.id)
-		return jsonify({
-			'success': True,
-			'job': job.to_dict()
-		})
-	return jsonify({
-		'success': False
-	})
-
-
-@bp.route('/jobs', methods=['POST'])
-@login_required
-@roles_required('organization_manager')
-def add_job():
-	if request.method == 'POST' and request.json:
-		name = request.json.get('name')
-		organization_id = current_user.organization_id
-		employee_manager_id = request.json.get('employee_manager')
-		organization_manager_id = current_user.id
-		address = request.json.get('address')
-		city = request.json.get('city')
-		state = request.json.get('state')
-		country = request.json.get('country')
-		zip_code = request.json.get('zip_code')
-		longitude = request.json.get('longitude')
-		latitude = request.json.get('latitude')
-		consultant_name = request.json.get('consultant_name')
-		consultant_phone = request.json.get('consultant_phone')
-		consultant_email = request.json.get('consultant_email')
-		consultant_code = str(randint(000000, 999999))
-
-		job = Job(name=name, organization_id=organization_id, employee_manager_id=employee_manager_id, 
-			organization_manager_id=organization_manager_id, address=address, city=city, 
-			state=state, zip_code=zip_code, consultant_name=consultant_name, consultant_phone=consultant_phone, 
-			consultant_email=consultant_email, consultant_code=consultant_code,
-			longitude=longitude, latitude=latitude)
-		db.session.add(job)
-		db.session.commit()
-
-		send_consultant_code(job.id)
-
 		return jsonify({
 			'success': True,
 			'job': job.to_dict()
