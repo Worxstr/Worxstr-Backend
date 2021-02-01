@@ -75,6 +75,7 @@ class Job(db.Model, CustomSerializerMixin):
     city = db.Column(db.String(255))
     state = db.Column(db.String(255))
     zip_code = db.Column(db.String(10))
+    country = db.Column(db.String(255))
     consultant_name = db.Column(db.String(255))
     consultant_phone = db.Column(db.String(10))
     consultant_email = db.Column(db.String(255))

@@ -1,6 +1,7 @@
 
 from datetime import datetime
 from random import randint
+import os
 
 from flask import json, jsonify, request, render_template, current_app
 from flask_security import login_required, current_user, roles_required, roles_accepted
@@ -79,7 +80,7 @@ def add_job():
 		db.session.add(job)
 		db.session.commit()
 
-		# send_consultant_code(job.id)
+		send_consultant_code(job.id)
 
 		return jsonify({
 			'success': True,
@@ -105,7 +106,6 @@ def job_detail(job_id):
 	for i in scheduled_shifts:
 		shifts.append(i.to_dict())
 	for i in active_shifts:
-		print("here")
 		shift = i.to_dict()
 		shift["active"] = True
 		shifts.append(shift)
@@ -184,6 +184,8 @@ def edit_job(job_id):
 def send_consultant_code(job_id):
 	job = db.session.query(Job).filter(Job.id == job_id).one()
 	url = pyqrcode.create(job.consultant_code)
+	if not os.path.exists('codes'):
+		os.makedirs('codes')
 	url.png('codes/qr_code.png', scale = 6)
 
 	send_email('[Worxstr] Consultant Code for ' + job.name,
