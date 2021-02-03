@@ -30,7 +30,7 @@ def shifts():
 			'shift':	shift.to_dict()
 		})
 
-@bp.route('/shifts/<shift_id>', methods=['PUT'])
+@bp.route('/shifts/<shift_id>', methods=['PUT', 'DELETE'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def shift(shift_id):
@@ -56,6 +56,12 @@ def shift(shift_id):
 		return jsonify({
 			'success': True,
 			'shift': shift.to_dict()
+		})
+	if request.method == 'DELETE':
+		db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
+		db.session.commit()
+		return jsonify({
+			'success': True
 		})
 
 
