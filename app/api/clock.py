@@ -135,7 +135,7 @@ def clock_in():
 			)
 			db.session.add(timecard)
 			db.session.commit()
-
+			db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update({ScheduleShift.time_card_id:timecard.id})
 			timeclock = TimeClock(
 					time=time_in, employee_id=current_user.get_id(), 
 					action=TimeClockAction.clock_in, timecard_id = timecard.id

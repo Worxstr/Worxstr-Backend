@@ -95,6 +95,7 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
     time_end = db.Column(db.DateTime)
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     site_location = db.Column(db.String(255))
+    timecard_id = db.Column(db.Integer, db.ForeignKey('time_card.id'))
 
 class TimeClockAction(Enum):
     clock_in = 1
