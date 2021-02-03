@@ -18,7 +18,7 @@ def shifts():
 		time_begin = request.json.get('shift').get('time_begin')
 		time_end = request.json.get('shift').get('time_end')
 		site_location = request.json.get('shift').get('site_location')
-		employee_id = request.json.get('shift').get('employee')
+		employee_id = request.json.get('shift').get('employee_id')
 		shift = ScheduleShift(
 			job_id=job_id, time_begin=time_begin, time_end=time_end, site_location=site_location, employee_id=employee_id
 		)
