@@ -27,15 +27,33 @@ Right now the new messages are broadcasted to all clients. We need to attach the
 to each user account so that we can filter the broadcasts to certain clients.
 '''
 
-@bp.route('/conversations', methods=['GET'])
+@bp.route('/conversations', methods=['GET', 'POST'])
 @login_required
 def conversations():
-    conversations = db.session.query(Conversation).all()
-
     # List conversations
     if request.method == 'GET':
+        conversations = db.session.query(Conversation).all()
         return jsonify({
             'conversations': [conversation.to_dict() for conversation in conversations]
+        })
+    if request.method == 'POST':
+        participants = [current_user]
+        for i in request.json.get('users'):
+            participants.append(db.session.query(User).filter(User.id==i).one())
+        conversation = Conversation(participants=participants)
+        db.session.add(conversation)
+        db.session.commit()
+        return jsonify({
+            "conversation": conversation.to_dict()
+        })
+
+@bp.route('/conversations/contacts', methods=['GET'])
+@login_required
+def contacts():
+    if request.method == 'GET':
+        contacts = db.session.query(User).filter(User.organization_id==current_user.organization_id).all()
+        return jsonify({
+            'contacts': [contact.to_dict() for contact in contacts]
         })
 
 @bp.route('/conversations/<conversation_id>', methods=['GET'])
