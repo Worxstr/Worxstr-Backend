@@ -5,7 +5,7 @@ from flask_security import hash_password, current_user, login_required, roles_re
 
 from app import db, user_datastore, geolocator
 from app.api import bp
-from app.models import User, EmployeeInfo
+from app.models import User, EmployeeInfo, Organization
 
 @bp.route('/users')
 @login_required
@@ -126,6 +126,7 @@ def get_authenticated_user():
 	"""
 	authenticated_user = current_user.to_dict()
 	authenticated_user["roles"] = [x.to_dict() for x in current_user.roles]
+	authenticated_user["organization_info"] = db.session.query(Organization).filter(Organization.id == current_user.organization_id).one().to_dict()
 	if current_user.has_role('employee'):
 		authenticated_user["employee_info"] = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == current_user.get_id()).one().to_dict()
 	return jsonify(authenticated_user=authenticated_user)
