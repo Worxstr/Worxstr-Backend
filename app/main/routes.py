@@ -9,7 +9,4 @@ from flask_security import current_user
 @bp.route('/', defaults={'path': ''})
 @bp.route('/<path:path>')
 def catch_all(path):
-    url = 'http://' + current_app._get_current_object().config['BASE_URL']
-    if current_app._get_current_object().debug:
-        return requests.get(url.format(path)).text
     return "API Endpoint"

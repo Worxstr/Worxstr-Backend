@@ -9,7 +9,9 @@ from flask_mail import Mail
 from flask_security import Security, SQLAlchemyUserDatastore
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from flasgger import Swagger
+from geopy.geocoders import Nominatim
 
 from config import Config
 
@@ -22,6 +24,8 @@ from app.models import User, Role
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security()
 csrf = CSRFProtect()
+socketio = SocketIO()
+geolocator = Nominatim(user_agent="worxstr")
 
 def create_app(config_class=Config):
     app = Flask(
@@ -36,6 +40,7 @@ def create_app(config_class=Config):
     mail.init_app(app)
     swagger.init_app(app)
     security.init_app(app, user_datastore)
+    socketio.init_app(app, cors_allowed_origins="*")
 
     @security.login_manager.unauthorized_handler
     def unauthorized_handler():

@@ -1,3 +1,6 @@
+import pytz
+
+from datetime import datetime
 from enum import Enum
 
 from flask_security import UserMixin, RoleMixin
@@ -5,13 +8,19 @@ from sqlalchemy_serializer import SerializerMixin
 
 from app import db
 
+class CustomSerializerMixin(SerializerMixin):
+    datetime_format = '%Y-%m-%d %H:%M:%S UTC'
+
 class RolesUsers(db.Model):
     __tablename__ = 'roles_users'
     id = db.Column(db.Integer(), primary_key=True)
     user_id = db.Column('user_id', db.Integer(), db.ForeignKey('user.id'))
     role_id = db.Column('role_id', db.Integer(), db.ForeignKey('role.id'))
 
-class Role(db.Model, RoleMixin):
+class Role(db.Model, RoleMixin, CustomSerializerMixin):
+
+    serialize_only = ('id', 'name')
+
     __tablename__ = 'role'
     id = db.Column(db.Integer(), primary_key=True)
     name = db.Column(db.String(80), unique=True)
@@ -20,9 +29,9 @@ class Role(db.Model, RoleMixin):
     def __repr__(self):
         return '<Role {}>'.format(self.name)
 
-class User(db.Model, UserMixin, SerializerMixin):
+class User(db.Model, UserMixin, CustomSerializerMixin):
 
-    serialize_only = ('id', 'email', 'phone', 'first_name', 'last_name', 'username', 'organization_id')
+    serialize_only = ('id', 'email', 'phone', 'first_name', 'last_name', 'username', 'organization_id', 'manager_id')
     serialize_rules = ()
 
     id = db.Column(db.Integer, primary_key=True)
@@ -32,6 +41,7 @@ class User(db.Model, UserMixin, SerializerMixin):
     last_name = db.Column(db.String(255))
     username = db.Column(db.String(255))
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     password = db.Column(db.String(255))
     last_login_at = db.Column(db.DateTime())
     current_login_at = db.Column(db.DateTime())
@@ -42,7 +52,7 @@ class User(db.Model, UserMixin, SerializerMixin):
     confirmed_at = db.Column(db.DateTime())
     roles = db.relationship('Role', secondary='roles_users', backref=db.backref('users', lazy='dynamic'))
 
-class Organization(db.Model):
+class Organization(db.Model, CustomSerializerMixin):
     __tablename__ = 'organization'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
@@ -54,26 +64,30 @@ class Organization(db.Model):
     def __repr__(self):
         return '<Organization {}>'.format(self.name)
 
-class Job(db.Model):
+class Job(db.Model, CustomSerializerMixin):
     __tablename__ = 'job'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
     employee_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    organizational_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    organization_manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     address = db.Column(db.String(255))
     city = db.Column(db.String(255))
     state = db.Column(db.String(255))
     zip_code = db.Column(db.String(10))
+    country = db.Column(db.String(255))
     consultant_name = db.Column(db.String(255))
     consultant_phone = db.Column(db.String(10))
     consultant_email = db.Column(db.String(255))
     consultant_code = db.Column(db.String(255))
+    longitude = db.Column(db.Float(precision=52))
+    latitude = db.Column(db.Float(precision=52))
+    active = db.Column(db.Boolean, default=True)
 
     def __repr__(self):
         return '<Job {}>'.format(self.name)
 
-class ScheduleShift(db.Model, SerializerMixin):
+class ScheduleShift(db.Model, CustomSerializerMixin):
     __tablename__ = 'schedule_shift'
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey('job.id'))
@@ -81,6 +95,7 @@ class ScheduleShift(db.Model, SerializerMixin):
     time_end = db.Column(db.DateTime)
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     site_location = db.Column(db.String(255))
+    timecard_id = db.Column(db.Integer, db.ForeignKey('time_card.id'))
 
 class TimeClockAction(Enum):
     clock_in = 1
@@ -88,14 +103,31 @@ class TimeClockAction(Enum):
     start_break = 3
     end_break = 4
 
-class TimeClock(db.Model, SerializerMixin):
+class TimeClock(db.Model, CustomSerializerMixin):
     __tablename__ = 'time_clock'
     id = db.Column(db.Integer, primary_key=True)
     time = db.Column(db.DateTime)
     action = db.Column(db.Enum(TimeClockAction))
+    timecard_id = db.Column(db.Integer, db.ForeignKey('time_card.id'))
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-class EmployeeInfo(db.Model):
+class TimeCard(db.Model, CustomSerializerMixin):
+    __tablename__ = 'time_card'
+    id = db.Column(db.Integer, primary_key=True)
+    total_time = db.Column(db.Numeric)
+    time_break = db.Column(db.Numeric)
+    employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    wage_payment = db.Column(db.Numeric)
+    fees_payment = db.Column(db.Numeric)
+    total_payment = db.Column(db.Numeric)
+    approved = db.Column(db.Boolean, default=False)
+    paid = db.Column(db.Boolean, default=False)
+    denied = db.Column(db.Boolean, default=False)
+    transaction_id = db.Column(db.String(255))
+    payout_id = db.Column(db.String(255))
+
+class EmployeeInfo(db.Model, CustomSerializerMixin):
+    serialize_only = ('id', 'address', 'city', 'state', 'zip_code', 'longitude', 'latitude', 'hourly_rate', 'need_info')
     __tablename__ = 'employee_info'
     id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     ssn = db.Column(db.String(9), unique=True)
@@ -103,3 +135,28 @@ class EmployeeInfo(db.Model):
     city = db.Column(db.String(255))
     state = db.Column(db.String(255))
     zip_code = db.Column(db.String(10))
+    longitude = db.Column(db.Float(precision=52))
+    latitude = db.Column(db.Float(precision=52))
+    hourly_rate = db.Column(db.Numeric)
+    need_info = db.Column(db.Boolean, default=False)
+
+class Message(db.Model, CustomSerializerMixin):
+    __tablename__ = 'message'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    body = db.Column(db.String(140))
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'))
+    def __repr__(self):
+        return '<Message {}>'.format(self.body)
+
+class Conversation(db.Model, CustomSerializerMixin):
+    __tablename__ = 'conversation'
+    id = db.Column(db.Integer, primary_key=True)
+    participants = db.relationship('User', secondary='user_conversation')
+    messages = db.relationship('Message')
+
+user_conversation_table = db.Table('user_conversation', db.Model.metadata,
+    db.Column('conversation_id', db.Integer, db.ForeignKey('conversation.id')),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'))
+)
