@@ -55,19 +55,12 @@ def add_employee():
 		username = request.json.get('username')
 		email = request.json.get('email')
 		phone = request.json.get('phone')
-		
 		password = request.json.get('password')
 		roles = ['employee']
-		address = request.json.get('address')
-		city = request.json.get('city')
-		state = request.json.get('state')
-		zip_code = request.json.get('zipCode')
-		location = geolocator.geocode(
-			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zip_code')
-		)
 
 		user = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, password=hash_password(password))
-		employee_info = EmployeeInfo(id=user.id, address=address, city=city, state=state, zip_code=zip_code, longitude=location.longitude if location else None, latitude=location.latitude if location else None)
+		db.session.commit()
+		employee_info = EmployeeInfo(id=user.id)
 		db.session.add(employee_info)
 		db.session.commit()
 
