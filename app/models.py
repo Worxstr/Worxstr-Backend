@@ -1,8 +1,5 @@
-import pytz
-from random import randint
-
 from datetime import datetime
-from enum import Enum, unique
+from enum import Enum
 
 from flask_security import UserMixin, RoleMixin
 from sqlalchemy_serializer import SerializerMixin

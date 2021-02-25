@@ -125,6 +125,17 @@ def get_user(id):
 	user = db.session.query(User).filter(User.id == id).one_or_none()
 	return jsonify(user.to_dict())
 
+@bp.route('/users/me/ssn', methods=['PUT'])
+@login_required
+def set_user_ssn():
+	db.session.query(EmployeeInfo).filter(EmployeeInfo.id == current_user.get_id()).update({
+		EmployeeInfo.ssn: request.json.get("ssn")
+	})
+	db.session.commit()
+	return jsonify({
+		"success": True
+	})
+
 @bp.route('/users/me', methods=['GET'])
 @login_required
 def get_authenticated_user():
