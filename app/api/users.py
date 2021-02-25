@@ -1,11 +1,12 @@
 import json
+from random import randint
 
 from flask import jsonify, current_app, request
 from flask_security import hash_password, current_user, login_required, roles_required, roles_accepted
 
 from app import db, user_datastore, geolocator
 from app.api import bp
-from app.models import User, EmployeeInfo, Organization
+from app.models import ManagerReference, User, EmployeeInfo, Organization
 
 @bp.route('/users')
 @login_required
@@ -36,15 +37,27 @@ def add_manager():
 		password = request.json.get('password')
 		roles = request.json.get('roles')
 		manager_id = request.json.get('managerId')
-		user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, manager_id=manager_id, password=hash_password(password))
+		manager = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, manager_id=manager_id, password=hash_password(password))
 		db.session.commit()
-
+		manager_reference = ManagerReference(user_id=manager.id, reference_number=manager_reference_generator())
+		db.session.add(manager_reference)
+		db.session.commit()
 		return jsonify({
+			'event': manager.to_dict(),
 			'success': True
 		})
 	return jsonify({
 		'success': False
 	})
+
+def manager_reference_generator():
+	min_ = 10000
+	max_ = 1000000000
+	rand = str(randint(min_, max_))
+
+	while db.session.query(ManagerReference).filter(ManagerReference.reference_number == rand).limit(1).first() is not None:
+		rand = str(randint(min_, max_))
+	return rand
 
 @bp.route('/users/add-employee', methods=['POST'])
 def add_employee():
