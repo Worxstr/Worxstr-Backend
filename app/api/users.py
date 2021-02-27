@@ -24,6 +24,16 @@ def list_users():
 	result = db.session.query(User).all()
 	return jsonify(users=[x.to_dict() for x in result])
 
+@bp.route('/users/reset-password', methods=['PUT'])
+@login_required
+def reset_password():
+    if request.method == 'PUT' and request.json:
+        db.session.query(User).filter(User.id == current_user.get_id()).update({User.password:hash_password(request.json.get('password'))})
+        db.session.commit()
+        return jsonify({
+		'success': True
+	})
+
 @bp.route('/users/add-manager', methods=['POST'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')

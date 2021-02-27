@@ -122,6 +122,9 @@ def job_detail(job_id):
 			job["employees"].append(employee)
 	return jsonify(job = job)
 
+@login_required
+@roles_accepted('employee_manager', 'organization_manager')
+@bp.route('/jobs/managers', methods=['GET'])
 def get_managers(manager_id):
 	managers = get_lower_managers(manager_id)
 	result = {'organization_managers':[],'employee_managers':[]}
