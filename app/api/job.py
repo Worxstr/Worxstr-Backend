@@ -59,8 +59,8 @@ def add_job():
 	if request.method == 'POST' and request.json:
 		name = request.json.get('name')
 		organization_id = current_user.organization_id
-		employee_manager_id = request.json.get('employee_manager_id')
-		organization_manager_id = request.json.get('organization_manager_id')
+		employee_manager_id = request.json.get('employee_manager')
+		organization_manager_id = current_user.id
 		address = request.json.get('address')
 		city = request.json.get('city')
 		state = request.json.get('state')
@@ -112,6 +112,7 @@ def job_detail(job_id):
 		shifts.append(shift)
 
 	job["shifts"] = shifts
+	job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
 	job["employees"] = []
 	employees = db.session.query(User).filter(User.manager_id == job['employee_manager_id'])
 	for i in employees:
@@ -120,14 +121,13 @@ def job_detail(job_id):
 			employee_info = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == i.id).one().to_dict()
 			employee["employee_info"] = employee_info
 			job["employees"].append(employee)
-	job["employee_manager"] = db.session.query(User).filter(User.id == job['organization_manager_id']).one().to_dict()
-	job["organization_manager"] = db.session.query(User).filter(User.id == job['employee_manager_id']).one().to_dict()
 	return jsonify(job = job)
 
 @login_required
 @roles_accepted('employee_manager', 'organization_manager')
 @bp.route('/jobs/managers', methods=['GET'])
-def get_managers(manager_id):
+def get_managers():
+	manager_id = request.args['manager_id']
 	managers = get_lower_managers(manager_id)
 	result = {'organization_managers':[],'employee_managers':[]}
 	for i in managers:

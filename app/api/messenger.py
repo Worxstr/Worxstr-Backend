@@ -9,7 +9,6 @@ from app.models import Message, User, Conversation
 from app.api import bp
 from app import db, socketio
 
-
 @socketio.on('connect')
 def on_connect():
     # TODO: Attach the client session id to the user data in DB
