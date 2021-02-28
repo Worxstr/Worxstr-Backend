@@ -9,7 +9,6 @@ from app.models import Message, User, Conversation
 from app.api import bp
 from app import db, socketio
 
-
 @socketio.on('connect')
 def on_connect():
     # TODO: Attach the client session id to the user data in DB
@@ -33,8 +32,13 @@ def conversations():
     # List conversations
     if request.method == 'GET':
         conversations = db.session.query(Conversation).all()
+        user_conversations = []
+        for i in conversations:
+            for participant in i.participants:
+                if int(current_user.get_id()) == participant.id:
+                    user_conversations.append(i)
         return jsonify({
-            'conversations': [conversation.to_dict() for conversation in conversations]
+            'conversations': [conversation.to_dict() for conversation in user_conversations]
         })
     if request.method == 'POST':
         participants = [current_user]

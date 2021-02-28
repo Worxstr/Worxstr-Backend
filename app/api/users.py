@@ -1,11 +1,14 @@
-import json
+import json, random, string
+from random import randint
+import datetime
 
-from flask import jsonify, current_app, request
+from flask import jsonify, current_app, request, render_template
 from flask_security import hash_password, current_user, login_required, roles_required, roles_accepted
 
 from app import db, user_datastore, geolocator
 from app.api import bp
-from app.models import User, EmployeeInfo, Organization
+from app.models import ManagerReference, User, EmployeeInfo, Organization
+from app.email import send_email
 
 @bp.route('/users')
 @login_required
@@ -23,53 +26,101 @@ def list_users():
 	result = db.session.query(User).all()
 	return jsonify(users=[x.to_dict() for x in result])
 
+@bp.route('/users/reset-password', methods=['PUT'])
+@login_required
+def reset_password():
+	if request.method == 'PUT' and request.json:
+		db.session.query(User).filter(User.id == current_user.get_id()).update({User.password:hash_password(request.json.get('password'))})
+		db.session.commit()
+		return jsonify({
+		'success': True
+	})
+
 @bp.route('/users/add-manager', methods=['POST'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def add_manager():
 	if request.method == 'POST' and request.json:
-		first_name = request.json.get('firstName')
-		last_name = request.json.get('lastName')
+		first_name = request.json.get('first_name')
+		last_name = request.json.get('last_name')
 		username = request.json.get('username')
 		email = request.json.get('email')
 		phone = request.json.get('phone')
-		password = request.json.get('password')
+		password = ''.join(random.choices(string.ascii_letters + string.digits, k = 10))
+		confirmed_at = datetime.datetime.utcnow()
 		roles = request.json.get('roles')
-		manager_id = request.json.get('managerId')
-		user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, manager_id=manager_id, password=hash_password(password))
+		manager_id = request.json.get('manager_id')
+		organization_id = current_user.organization_id
+		manager = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, manager_id=manager_id, organization_id=organization_id, confirmed_at=confirmed_at, password=hash_password(password))
 		db.session.commit()
-
+		manager_reference = ManagerReference(user_id=manager.id, reference_number=manager_reference_generator())
+		db.session.add(manager_reference)
+		db.session.commit()
+		organization_name = db.session.query(Organization.name).filter(Organization.id == 2).one()[0]
+		send_email('[Worxstr] Welcome!',
+			sender=current_app.config['ADMINS'][0],
+			recipients=[email],
+			text_body=render_template('email/temp_password.txt',
+									user=first_name, organization=organization_name, password=password),
+			html_body=render_template('email/temp_password.html',
+									user=first_name, organization=organization_name, password=password
+									))
 		return jsonify({
+			'event': manager.to_dict(),
 			'success': True
 		})
 	return jsonify({
 		'success': False
 	})
 
+def manager_reference_generator():
+	min_ = 10000
+	max_ = 1000000000
+	rand = str(randint(min_, max_))
+
+	while db.session.query(ManagerReference).filter(ManagerReference.reference_number == rand).limit(1).first() is not None:
+		rand = str(randint(min_, max_))
+	return rand
+
 @bp.route('/users/add-employee', methods=['POST'])
 def add_employee():
 	if request.method == 'POST' and request.json:
 
-		first_name = request.json.get('firstName')
-		last_name = request.json.get('lastName')
+		first_name = request.json.get('first_name')
+		last_name = request.json.get('last_name')
 		username = request.json.get('username')
 		email = request.json.get('email')
 		phone = request.json.get('phone')
-		
 		password = request.json.get('password')
 		roles = ['employee']
-		address = request.json.get('address')
-		city = request.json.get('city')
-		state = request.json.get('state')
-		zip_code = request.json.get('zipCode')
-		location = geolocator.geocode(
-			request.json.get('address') + " " + request.json.get('city') + " " + request.json.get('state') + " " + request.json.get('zip_code')
-		)
 
-		user = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, password=hash_password(password))
-		employee_info = EmployeeInfo(id=user.id, address=address, city=city, state=state, zip_code=zip_code, longitude=location.longitude if location else None, latitude=location.latitude if location else None)
+		organization_id = None
+		manager_id = None
+		confirmed_at = None
+		if current_user:
+			organization_id = current_user.organization_id
+			organization_name = db.session.query(Organization.name).filter(Organization.id == 2).one()[0]
+			manager_id = request.json.get('manager_id')
+			confirmed_at = datetime.datetime.utcnow()
+			password = ''.join(random.choices(string.ascii_letters +
+                             string.digits, k = 10))
+
+		user = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, organization_id=organization_id, manager_id=manager_id, confirmed_at=confirmed_at, roles=roles, password=hash_password(password))
+		db.session.commit()
+		hourly_rate = request.json.get('hourly_rate')
+		employee_info = EmployeeInfo(id=user.id, hourly_rate=float(hourly_rate))
 		db.session.add(employee_info)
 		db.session.commit()
+
+		if current_user:
+			send_email('[Worxstr] Welcome!',
+				sender=current_app.config['ADMINS'][0],
+				recipients=[email],
+				text_body=render_template('email/temp_password.txt',
+										user=first_name, organization=organization_name, password=password),
+				html_body=render_template('email/temp_password.html',
+										user=first_name, organization=organization_name, password=password
+										))
 
 		return jsonify({
 			'success': True
@@ -118,6 +169,17 @@ def get_user(id):
 	"""
 	user = db.session.query(User).filter(User.id == id).one_or_none()
 	return jsonify(user.to_dict())
+
+@bp.route('/users/me/ssn', methods=['PUT'])
+@login_required
+def set_user_ssn():
+	db.session.query(EmployeeInfo).filter(EmployeeInfo.id == current_user.get_id()).update({
+		EmployeeInfo.ssn: request.json.get("ssn")
+	})
+	db.session.commit()
+	return jsonify({
+		"success": True
+	})
 
 @bp.route('/users/me', methods=['GET'])
 @login_required

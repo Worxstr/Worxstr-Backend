@@ -1,5 +1,3 @@
-import pytz
-
 from datetime import datetime
 from enum import Enum
 
@@ -51,6 +49,12 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
     active = db.Column(db.Boolean())
     confirmed_at = db.Column(db.DateTime())
     roles = db.relationship('Role', secondary='roles_users', backref=db.backref('users', lazy='dynamic'))
+
+class ManagerReference(db.Model):
+    __tablename__ = 'manager_reference'
+    id = db.Column(db.Integer(), primary_key=True)
+    user_id = db.Column('user_id', db.Integer(), db.ForeignKey('user.id'))
+    reference_number = db.Column('reference_number', db.String(), unique=True)
 
 class Organization(db.Model, CustomSerializerMixin):
     __tablename__ = 'organization'
