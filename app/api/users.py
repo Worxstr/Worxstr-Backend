@@ -27,10 +27,10 @@ def list_users():
 @bp.route('/users/reset-password', methods=['PUT'])
 @login_required
 def reset_password():
-    if request.method == 'PUT' and request.json:
-        db.session.query(User).filter(User.id == current_user.get_id()).update({User.password:hash_password(request.json.get('password'))})
-        db.session.commit()
-        return jsonify({
+	if request.method == 'PUT' and request.json:
+		db.session.query(User).filter(User.id == current_user.get_id()).update({User.password:hash_password(request.json.get('password'))})
+		db.session.commit()
+		return jsonify({
 		'success': True
 	})
 
@@ -39,14 +39,14 @@ def reset_password():
 @roles_accepted('organization_manager', 'employee_manager')
 def add_manager():
 	if request.method == 'POST' and request.json:
-		first_name = request.json.get('firstName')
-		last_name = request.json.get('lastName')
+		first_name = request.json.get('first_name')
+		last_name = request.json.get('last_name')
 		username = request.json.get('username')
 		email = request.json.get('email')
 		phone = request.json.get('phone')
 		password = request.json.get('password')
 		roles = request.json.get('roles')
-		manager_id = request.json.get('managerId')
+		manager_id = request.json.get('manager_id')
 		manager = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, manager_id=manager_id, password=hash_password(password))
 		db.session.commit()
 		manager_reference = ManagerReference(user_id=manager.id, reference_number=manager_reference_generator())
@@ -73,8 +73,8 @@ def manager_reference_generator():
 def add_employee():
 	if request.method == 'POST' and request.json:
 
-		first_name = request.json.get('firstName')
-		last_name = request.json.get('lastName')
+		first_name = request.json.get('first_name')
+		last_name = request.json.get('last_name')
 		username = request.json.get('username')
 		email = request.json.get('email')
 		phone = request.json.get('phone')
@@ -83,7 +83,8 @@ def add_employee():
 
 		user = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, password=hash_password(password))
 		db.session.commit()
-		employee_info = EmployeeInfo(id=user.id)
+		hourly_rate = request.json.get('hourly_rate')
+		employee_info = EmployeeInfo(id=user.id, hourly_rate=float(hourly_rate))
 		db.session.add(employee_info)
 		db.session.commit()
 
