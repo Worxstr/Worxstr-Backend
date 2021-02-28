@@ -126,8 +126,7 @@ def job_detail(job_id):
 @login_required
 @roles_accepted('employee_manager', 'organization_manager')
 @bp.route('/jobs/managers/', methods=['GET'])
-def get_managers():
-	manager_id = request.args.get('manager_id')
+def get_managers(manager_id):
 	managers = get_lower_managers(manager_id)
 	result = {'organization_managers':[],'employee_managers':[]}
 	for i in managers:
