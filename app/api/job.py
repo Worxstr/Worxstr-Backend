@@ -29,16 +29,16 @@ def list_jobs():
 				$ref: '#/definitions/Job'
 	"""
 	result = {
-		"direct_jobs":[],
-		"indirect_jobs":[],
+		"jobs":[],
 		"managers": get_managers(current_user.manager_id or current_user.get_id())
 	}
 
 	direct_ids = []
-	direct_jobs = db.session.query(Job).filter(or_(Job.organization_manager_id == current_user.get_id(), Job.employee_manager_id == current_user.get_id()), Job.active == True).all()
+	direct_jobs = db.session.query(Job).filter(Job.employee_manager_id == current_user.get_id(), Job.active == True).all()
 	for direct_job in direct_jobs:
 		job = direct_job.to_dict()
-		result["direct_jobs"].append(job)
+		job["direct"] = True
+		result["jobs"].append(job)
 		direct_ids.append(direct_job.id)
 
 	lower_managers = get_lower_managers(current_user.get_id())
@@ -46,7 +46,8 @@ def list_jobs():
 
 	for indirect_job in indirect_jobs:
 		job = indirect_job.to_dict()
-		result["indirect_jobs"].append(job)
+		job["direct"] = False
+		result["jobs"].append(job)
 
 	return jsonify(result)
 
@@ -134,10 +135,14 @@ def get_managers(manager_id):
 			result['organization_managers'].append(user.to_dict())
 		if user.has_role('employee_manager'):
 			result['employee_managers'].append(user.to_dict())
+	if current_user.has_role('organization_manager'):
+		result['organization_managers'].append(current_user.to_dict())
+	if current_user.has_role('employee_manager'):
+		result['employee_managers'].append(current_user.to_dict())
 	return result
 
 def get_lower_managers(manager_id):
-	users = db.session.query(User).filter(User.manager_id == manager_id).all()
+	users = db.session.query(User).filter(User.manager_id == manager_id, User.organization_id == current_user.organization_id).all()
 	lower_managers = []
 	for user in users:
 		if user.has_role('employee_manager') or user.has_role('organization_manager'):
