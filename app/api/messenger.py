@@ -33,8 +33,13 @@ def conversations():
     # List conversations
     if request.method == 'GET':
         conversations = db.session.query(Conversation).all()
+        user_conversations = []
+        for i in conversations:
+            for participant in i.participants:
+                if int(current_user.get_id()) == participant.id:
+                    user_conversations.append(i)
         return jsonify({
-            'conversations': [conversation.to_dict() for conversation in conversations]
+            'conversations': [conversation.to_dict() for conversation in user_conversations]
         })
     if request.method == 'POST':
         participants = [current_user]
