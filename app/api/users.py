@@ -1,12 +1,14 @@
-import json
+import json, random, string
 from random import randint
+import datetime
 
-from flask import jsonify, current_app, request
+from flask import jsonify, current_app, request, render_template
 from flask_security import hash_password, current_user, login_required, roles_required, roles_accepted
 
 from app import db, user_datastore, geolocator
 from app.api import bp
 from app.models import ManagerReference, User, EmployeeInfo, Organization
+from app.email import send_email
 
 @bp.route('/users')
 @login_required
@@ -44,14 +46,25 @@ def add_manager():
 		username = request.json.get('username')
 		email = request.json.get('email')
 		phone = request.json.get('phone')
-		password = request.json.get('password')
+		password = ''.join(random.choices(string.ascii_letters + string.digits, k = 10))
+		confirmed_at = datetime.datetime.utcnow()
 		roles = request.json.get('roles')
 		manager_id = request.json.get('manager_id')
-		manager = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, manager_id=manager_id, password=hash_password(password))
+		organization_id = current_user.organization_id
+		manager = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, manager_id=manager_id, organization_id=organization_id, confirmed_at=confirmed_at, password=hash_password(password))
 		db.session.commit()
 		manager_reference = ManagerReference(user_id=manager.id, reference_number=manager_reference_generator())
 		db.session.add(manager_reference)
 		db.session.commit()
+		organization_name = db.session.query(Organization.name).filter(Organization.id == 2).one()[0]
+		send_email('[Worxstr] Welcome!',
+			sender=current_app.config['ADMINS'][0],
+			recipients=[email],
+			text_body=render_template('email/temp_password.txt',
+									user=first_name, organization=organization_name, password=password),
+			html_body=render_template('email/temp_password.html',
+									user=first_name, organization=organization_name, password=password
+									))
 		return jsonify({
 			'event': manager.to_dict(),
 			'success': True
@@ -81,12 +94,33 @@ def add_employee():
 		password = request.json.get('password')
 		roles = ['employee']
 
-		user = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, roles=roles, password=hash_password(password))
+		organization_id = None
+		manager_id = None
+		confirmed_at = None
+		if current_user:
+			organization_id = current_user.organization_id
+			organization_name = db.session.query(Organization.name).filter(Organization.id == 2).one()[0]
+			manager_id = request.json.get('manager_id')
+			confirmed_at = datetime.datetime.utcnow()
+			password = ''.join(random.choices(string.ascii_letters +
+                             string.digits, k = 10))
+
+		user = user_datastore.create_user(first_name=first_name, last_name=last_name, username=username, email=email, phone=phone, organization_id=organization_id, manager_id=manager_id, confirmed_at=confirmed_at, roles=roles, password=hash_password(password))
 		db.session.commit()
 		hourly_rate = request.json.get('hourly_rate')
 		employee_info = EmployeeInfo(id=user.id, hourly_rate=float(hourly_rate))
 		db.session.add(employee_info)
 		db.session.commit()
+
+		if current_user:
+			send_email('[Worxstr] Welcome!',
+				sender=current_app.config['ADMINS'][0],
+				recipients=[email],
+				text_body=render_template('email/temp_password.txt',
+										user=first_name, organization=organization_name, password=password),
+				html_body=render_template('email/temp_password.html',
+										user=first_name, organization=organization_name, password=password
+										))
 
 		return jsonify({
 			'success': True

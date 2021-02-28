@@ -58,9 +58,9 @@ def list_jobs():
 def add_job():
 	if request.method == 'POST' and request.json:
 		name = request.json.get('name')
-		organization_id = request.json.get('organization_manager_id')
+		organization_id = current_user.organization_id
 		employee_manager_id = request.json.get('employee_manager_id')
-		organization_manager_id = current_user.id
+		organization_manager_id = request.json.get('organization_manager_id')
 		address = request.json.get('address')
 		city = request.json.get('city')
 		state = request.json.get('state')
@@ -114,7 +114,7 @@ def job_detail(job_id):
 	job["shifts"] = shifts
 	job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
 	job["employees"] = []
-	employees = db.session.query(User).filter(User.manager_id == job['employee_manager_id'])
+	employees = db.session.query(User).filter(User.manager_id == current_user.id)
 	for i in employees:
 		if i.has_role('employee'):
 			employee = i.to_dict()
