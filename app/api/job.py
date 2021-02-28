@@ -223,6 +223,7 @@ def close_job(job_id):
 				$ref: '#/definitions/Job'
 	"""
 	db.session.query(Job).filter(Job.id == job_id).update({Job.active:False})
+	db.session.commit()
 	return jsonify({
 		'success': True
 	})
