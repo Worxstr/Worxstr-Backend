@@ -24,10 +24,13 @@ def shifts():
 		)
 		db.session.add(shift)
 		db.session.commit()
+		result = shift.to_dict()
+		if shift.time_begin <= datetime.datetime.utcnow() and shift.time_end >= datetime.datetime.utcnow():
+			result["active"] = True
 
 		return jsonify({
 			'success': 	True,
-			'shift':	shift.to_dict()
+			'shift':	result
 		})
 
 @bp.route('/shifts/<shift_id>', methods=['PUT', 'DELETE'])
