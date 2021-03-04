@@ -12,7 +12,7 @@ from pyqrcode import QRCode
 
 from app import db
 from app.api import bp
-from app.models import EmployeeInfo, Job, User, ScheduleShift
+from app.models import EmployeeInfo, Job, User, ScheduleShift, TimeClock
 from app.email import send_email
 
 @bp.route('/jobs', methods=['GET'])
@@ -109,6 +109,8 @@ def job_detail(job_id):
 	for i in active_shifts:
 		shift = i.to_dict()
 		shift["active"] = True
+		timeclocks = db.session.query(TimeClock).filter(TimeClock.timecard_id == shift["timecard_id"]).order_by(TimeClock.time.desc()).all()
+		shift["timeclock_actions"] = [timeclock.to_dict() for timeclock in timeclocks]
 		shifts.append(shift)
 
 	job["shifts"] = shifts

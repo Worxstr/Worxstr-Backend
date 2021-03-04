@@ -56,7 +56,7 @@ def add_manager():
 		manager_reference = ManagerReference(user_id=manager.id, reference_number=manager_reference_generator())
 		db.session.add(manager_reference)
 		db.session.commit()
-		organization_name = db.session.query(Organization.name).filter(Organization.id == 2).one()[0]
+		organization_name = db.session.query(Organization.name).filter(Organization.id == organization_id).one()[0]
 		send_email('[Worxstr] Welcome!',
 			sender=current_app.config['ADMINS'][0],
 			recipients=[email],
@@ -99,7 +99,7 @@ def add_employee():
 		confirmed_at = None
 		if current_user:
 			organization_id = current_user.organization_id
-			organization_name = db.session.query(Organization.name).filter(Organization.id == 2).one()[0]
+			organization_name = db.session.query(Organization.name).filter(Organization.id == organization_id).one()[0]
 			manager_id = request.json.get('manager_id')
 			confirmed_at = datetime.datetime.utcnow()
 			password = ''.join(random.choices(string.ascii_letters +
