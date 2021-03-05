@@ -7,7 +7,7 @@ from sqlalchemy_serializer import SerializerMixin
 from app import db
 
 class CustomSerializerMixin(SerializerMixin):
-    datetime_format = '%Y-%m-%d %H:%M:%S UTC'
+    datetime_format = '%Y-%m-%dT%H:%M:%SZ'
 
 class RolesUsers(db.Model):
     __tablename__ = 'roles_users'
