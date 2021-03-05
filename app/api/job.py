@@ -123,8 +123,8 @@ def job_detail(job_id):
 			employee_info = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == i.id).one().to_dict()
 			employee["employee_info"] = employee_info
 			job["employees"].append(employee)
-	job["employee_manager"] = db.session.query(User).filter(User.id == job['organization_manager_id']).one().to_dict()
-	job["organization_manager"] = db.session.query(User).filter(User.id == job['employee_manager_id']).one().to_dict()
+	job["employee_manager"] = db.session.query(User).filter(User.id == job['employee_manager_id']).one().to_dict()
+	job["organization_manager"] = db.session.query(User).filter(User.id == job['organization_manager_id']).one().to_dict()
 	return jsonify(job = job)
 
 @login_required
