@@ -6,7 +6,7 @@ from flask_security import current_user, login_required, roles_required, roles_a
 
 from app import db
 from app.api import bp
-from app.models import ScheduleShift
+from app.models import ScheduleShift, User
 
 
 @bp.route('/shifts', methods=['POST'])
@@ -25,6 +25,7 @@ def shifts():
 		db.session.add(shift)
 		db.session.commit()
 		result = shift.to_dict()
+		result["employee"] = db.session.query(User).filter(User.id == shift.employee_id).one().to_dict()
 		if shift.time_begin <= datetime.datetime.utcnow() and shift.time_end >= datetime.datetime.utcnow():
 			result["active"] = True
 
