@@ -168,10 +168,14 @@ def get_user(id):
 				$ref: '#/definitions/User'
 	"""
 	user = db.session.query(User).filter(User.id == id).one_or_none()
-	return jsonify(user.to_dict())
+	result = user.to_dict()
+	if user.has_role('employee'):
+		result["employee_info"] = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == id).one().to_dict()
+	return jsonify(result)
 
 @bp.route('/users/me/ssn', methods=['PUT'])
 @login_required
+@roles_accepted('employee')
 def set_user_ssn():
 	db.session.query(EmployeeInfo).filter(EmployeeInfo.id == current_user.get_id()).update({
 		EmployeeInfo.ssn: request.json.get("ssn")
@@ -195,6 +199,7 @@ def get_authenticated_user():
 
 @bp.route('/users/edit', methods=['PUT'])
 @login_required
+@roles_accepted('employee')
 def edit_user():
 	if request.method == 'PUT' and request.json:
 		db.session.query(User).filter(User.id == current_user.get_id()).update({User.phone:request.json.get('phone'), User.email:request.json.get('email')})
@@ -220,4 +225,41 @@ def edit_user():
 		})
 	return jsonify({
 		"success": False
+	})
+
+@bp.route('/users/employees', methods=['GET'])
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
+def list_employees():
+	""" Returns list of employees associated with the current manager
+	---
+
+	responses:
+		200:
+			description: A list of users
+			schema:
+				$ref: '#/definitions/User'
+	"""
+	result = db.session.query(User).filter(User.manager_id==current_user.get_id(), User.roles.any(name='employee')).all()
+	return jsonify(users=[x.to_dict() for x in result])
+
+@bp.route('/users/employees/<id>', methods=['PUT'])
+@login_required
+@roles_accepted('organization_manager', 'employee_manager')
+def edit_employee(id):
+	""" Gives manager the ability to edit an employee's pay and direct manager
+	---
+
+	responses:
+		200:
+	"""
+	db.session.query(EmployeeInfo).filter(EmployeeInfo.id == id).update({
+		EmployeeInfo.hourly_rate: request.json.get('hourly_rate')
+	})
+	db.session.commit()
+	result = db.session.query(User).filter(User.id == id).one().to_dict()
+	result["employee_info"] = db.session.query(EmployeeInfo).filter(EmployeeInfo.id == id).one().to_dict()
+	return jsonify({
+		"success": True,
+		"event": result
 	})

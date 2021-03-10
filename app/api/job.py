@@ -105,12 +105,15 @@ def job_detail(job_id):
 	shifts = []
 
 	for i in scheduled_shifts:
-		shifts.append(i.to_dict())
+		shift = i.to_dict()
+		shift["employee"] = db.session.query(User).filter(User.id == shift["employee_id"]).one().to_dict()
+		shifts.append(shift)
 	for i in active_shifts:
 		shift = i.to_dict()
 		shift["active"] = True
 		timeclocks = db.session.query(TimeClock).filter(TimeClock.timecard_id == shift["timecard_id"]).order_by(TimeClock.time.desc()).all()
 		shift["timeclock_actions"] = [timeclock.to_dict() for timeclock in timeclocks]
+		shift["employee"] = db.session.query(User).filter(User.id == shift["employee_id"]).one().to_dict()
 		shifts.append(shift)
 
 	job["shifts"] = shifts
