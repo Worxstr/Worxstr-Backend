@@ -29,9 +29,9 @@ Web API for Worxstr
 1. Ensure that the vue server is still running on port 8080
 
 2. Run the server
-    1. Open a new terminal to the root directory
+    1. Open a new terminal to the repository root directory
     2. Run flask
     ```shell
-    FLASK_APP=main.py FLASK_ENV=development flask run
+    FLASK_APP=application.py FLASK_ENV=development flask run
     ```
     
