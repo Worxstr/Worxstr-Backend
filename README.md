@@ -32,6 +32,5 @@ Web API for Worxstr
     1. Open a new terminal to the repository root directory
     2. Run flask
     ```shell
-    FLASK_APP=application.py FLASK_ENV=development flask run
+    FLASK_APP=application.py flask run
     ```
-    
