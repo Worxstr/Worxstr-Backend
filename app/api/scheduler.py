@@ -1,8 +1,7 @@
-import json
 import datetime
 
-from flask import jsonify, current_app, request
-from flask_security import current_user, login_required, roles_required, roles_accepted
+from flask import abort, request
+from flask_security import current_user, login_required,  roles_accepted
 
 from app import db
 from app.api import bp
@@ -13,78 +12,92 @@ from app.models import ScheduleShift, User
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def shifts():
-	if request.method == 'POST' and request.json:
-		job_id = request.args.get('job_id')
-		time_begin = request.json.get('shift').get('time_begin')
-		time_end = request.json.get('shift').get('time_end')
-		site_location = request.json.get('shift').get('site_location')
-		employee_id = request.json.get('shift').get('employee_id')
-		shift = ScheduleShift(
-			job_id=job_id, time_begin=time_begin, time_end=time_end, site_location=site_location, employee_id=employee_id
-		)
-		db.session.add(shift)
-		db.session.commit()
-		result = shift.to_dict()
-		result["employee"] = db.session.query(User).filter(User.id == shift.employee_id).one().to_dict()
-		if shift.time_begin <= datetime.datetime.utcnow() and shift.time_end >= datetime.datetime.utcnow():
-			result["active"] = True
+	if not request.json:
+		abort(400)
 
-		return jsonify({
-			'success': 	True,
-			'shift':	result
-		})
+	try:
+		job_id = request.args['job_id']
+		time_begin = request.json['shift']['time_begin']
+		time_end = request.json['shift']['time_end']
+		site_location = request.json['shift']['site_location']
+		employee_id = request.json['shift']['employee_id']
+	except KeyError as key:
+		abort(400, f"Request attribute not found: {key}")
+
+	shift = ScheduleShift(
+		job_id=job_id,
+		time_begin=time_begin,
+		time_end=time_end,
+		site_location=site_location,
+		employee_id=employee_id
+	)
+
+	db.session.add(shift)
+	db.session.commit()
+	result = shift.to_dict()
+	result["employee"] = db.session \
+		.query(User) \
+		.filter(User.id == shift.employee_id) \
+		.one() \
+		.to_dict()
+	if shift.time_begin <= datetime.datetime.utcnow() and shift.time_end >= datetime.datetime.utcnow():
+		result["active"] = True
+
+	return {'shift': result}
 
 @bp.route('/shifts/<shift_id>', methods=['PUT', 'DELETE'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
-def shift(shift_id):
-	
+def modify_shift(shift_id):
+	response = None
 	if request.method == 'PUT' and request.json:
-		
-		shift = request.json.get('shift')
+		try:
+			shift = request.json['shift']
+		except KeyError as key:
+			abort(400, f"Request attribute not found: {key}")
 
-		if not shift:
-			return jsonify({
-				'success': False
+		db.session \
+			.query(ScheduleShift) \
+			.filter(ScheduleShift.id == shift_id) \
+			.update({
+				ScheduleShift.time_begin: shift.get('time_begin'),
+				ScheduleShift.time_end: shift.get('time_end'),
+				ScheduleShift.site_location: shift.get('site_location'),
+				ScheduleShift.employee_id: shift.get('employee_id')
 			})
 
-		db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update({
-			ScheduleShift.time_begin: shift.get('time_begin'),
-			ScheduleShift.time_end: shift.get('time_end'),
-			ScheduleShift.site_location: shift.get('site_location'),
-			ScheduleShift.employee_id: shift.get('employee_id')
-		})
 		db.session.commit()
-		shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
 
-		return jsonify({
-			'success': True,
-			'shift': shift.to_dict()
-		})
-	if request.method == 'DELETE':
-		db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
+		shift = db.session \
+		.query(ScheduleShift) \
+		.filter(ScheduleShift.id == shift_id) \
+		.one()
+
+		response = {'shift': shift.to_dict()}
+
+	elif request.method == 'DELETE':
+		db.session \
+			.query(ScheduleShift) \
+			.filter(ScheduleShift.id == shift_id) \
+			.delete()
 		db.session.commit()
-		return jsonify({
-			'success': True
-		})
+	else:
+		abort(400)
+
+	return response
 
 
 @bp.route('/shifts/next', methods=['GET'])
 @login_required
 @roles_accepted('employee')
 def get_next_shift():
-	if request.method == 'GET':
-		current_time = datetime.datetime.utcnow()
-		result = db.session.query(ScheduleShift).filter(ScheduleShift.employee_id == current_user.get_id(), ScheduleShift.time_end > current_time).order_by(ScheduleShift.time_end).first()
-		if result == None:
-			return jsonify({
-				'success': True,
-				'shift': None
-			})
-		return jsonify({
-			'success': True,
-			'shift': result.to_dict()
-		})
-	return jsonify({
-		'success': False
-	})
+	current_time = datetime.datetime.utcnow()
+	result = db.session \
+		.query(ScheduleShift) \
+		.filter(
+			ScheduleShift.employee_id == current_user.get_id(),
+			ScheduleShift.time_end > current_time
+		) \
+		.order_by(ScheduleShift.time_end) \
+		.first()
+	return {'shift': result.to_dict() if result else None}
