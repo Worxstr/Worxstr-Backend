@@ -11,8 +11,8 @@ from app import db, socketio
 
 @socketio.on('connect')
 def on_connect():
-    # TODO: Attach the client session id to the user data in DB
-    print("Client connected")
+	# TODO: Attach the client session id to the user data in DB
+	print("Client connected")
 
 '''
 TODO:
@@ -29,97 +29,97 @@ to each user account so that we can filter the broadcasts to certain clients.
 @bp.route('/conversations', methods=['GET', 'POST'])
 @login_required
 def conversations():
-    # List conversations
-    if request.method == 'GET':
-        conversations = db.session.query(Conversation).all()
-        user_conversations = []
-        for i in conversations:
-            for participant in i.participants:
-                if int(current_user.get_id()) == participant.id:
-                    user_conversations.append(i)
-        return jsonify({
-            'conversations': [conversation.to_dict() for conversation in user_conversations]
-        })
-    if request.method == 'POST':
-        participants = [current_user]
-        for i in request.json.get('users'):
-            participants.append(db.session.query(User).filter(User.id==i).one())
-        conversation = Conversation(participants=participants)
-        db.session.add(conversation)
-        db.session.commit()
-        return jsonify({
-            "conversation": conversation.to_dict()
-        })
+	# List conversations
+	if request.method == 'GET':
+		conversations = db.session.query(Conversation).all()
+		user_conversations = []
+		for i in conversations:
+			for participant in i.participants:
+				if int(current_user.get_id()) == participant.id:
+					user_conversations.append(i)
+		return jsonify({
+			'conversations': [conversation.to_dict() for conversation in user_conversations]
+		})
+	if request.method == 'POST':
+		participants = [current_user]
+		for i in request.json.get('users'):
+			participants.append(db.session.query(User).filter(User.id==i).one())
+		conversation = Conversation(participants=participants)
+		db.session.add(conversation)
+		db.session.commit()
+		return jsonify({
+			"conversation": conversation.to_dict()
+		})
 
 @bp.route('/conversations/contacts', methods=['GET'])
 @login_required
 def contacts():
-    if request.method == 'GET':
-        contacts = db.session.query(User).filter(User.organization_id==current_user.organization_id).all()
-        return jsonify({
-            'contacts': [contact.to_dict() for contact in contacts]
-        })
+	if request.method == 'GET':
+		contacts = db.session.query(User).filter(User.organization_id==current_user.organization_id).all()
+		return jsonify({
+			'contacts': [contact.to_dict() for contact in contacts]
+		})
 
 @bp.route('/conversations/<conversation_id>', methods=['GET'])
 @login_required
 def conversation(conversation_id):
-    # Get conversation data along with messages
-    if request.method == 'GET':
+	# Get conversation data along with messages
+	if request.method == 'GET':
 
-        conversation = db.session.query(Conversation).filter(Conversation.id == conversation_id).one()
-        return jsonify({
-            'conversation': conversation.to_dict()
-        })
+		conversation = db.session.query(Conversation).filter(Conversation.id == conversation_id).one()
+		return jsonify({
+			'conversation': conversation.to_dict()
+		})
 
 @bp.route('/conversations/<conversation_id>/messages', methods=['GET', 'POST'])
 @login_required
 def messages(conversation_id):
 
-    # List messages in a conversation
-    if request.method == 'GET':
-        # The last message id that was recieved by the client.
-        # Return the most recent if not set
-        last_id = request.args.get('last_id')
+	# List messages in a conversation
+	if request.method == 'GET':
+		# The last message id that was recieved by the client.
+		# Return the most recent if not set
+		last_id = request.args.get('last_id')
 
-        # The amount of messages to return
-        limit = request.args.get('limit')
+		# The amount of messages to return
+		limit = request.args.get('limit')
 
-        # TODO: Query the messages for a given last_id and limit
-        messages = db.session.query(Message).filter(Message.conversation_id == conversation_id).all()
+		# TODO: Query the messages for a given last_id and limit
+		messages = db.session.query(Message).filter(Message.conversation_id == conversation_id).all()
 
-        return jsonify({
-            'messages': [message.to_dict() for message in messages]
-        }) 
+		return jsonify({
+			'messages': [message.to_dict() for message in messages]
+		}) 
 
-    # Send a message
-    if request.method == 'POST':
-        return jsonify({
-            'message': send_message(conversation_id, current_user.get_id(), {
-                'body': request.json.get('body')
-            })
-        })
+	# Send a message
+	if request.method == 'POST':
+		return jsonify({
+			'message': send_message(conversation_id, current_user.get_id(), {
+				'body': request.json.get('body')
+			})
+		})
 
 def send_message(conversation_id, user_id, message):
-    # TODO: Get user ID from database by querying for socket session id
+	# TODO: Get user ID from database by querying for socket session id
 
-    db_message = Message (
-        sender_id=user_id,
-        body=message.get('body'),
-        conversation_id=conversation_id
-    )
-    db.session.add(db_message)
-    db.session.commit()
+	db_message = Message (
+		sender_id=user_id,
+		body=message.get('body'),
+		conversation_id=conversation_id
+	)
+	db.session.add(db_message)
+	db.session.commit()
 
-    socket_message = {
-        'id': db_message.id,
-        'conversation_id': conversation_id,
-        'sender_id': user_id,
-        'body': message.get('body')
-    }
+	socket_message = {
+		'id': db_message.id,
+		'conversation_id': conversation_id,
+		'sender_id': user_id,
+		'body': message.get('body')
+	}
 
-    socketio.emit('message:create', {
-        'message': socket_message,
-        'conversation_id': conversation_id
-    })
+	socketio.emit('message:create', {
+		'message': socket_message,
+		'conversation_id': conversation_id
+	})
 
-    return socket_message
+	return socket_message
