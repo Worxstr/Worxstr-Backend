@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from random import randint
 import os
@@ -10,9 +9,9 @@ import pyqrcode
 
 from app import db
 from app.api import bp
-from app.models import EmployeeInfo, Job, User, ScheduleShift, TimeClock
 from app.email import send_email
-from app.utils import OK_RESPONSE
+from app.models import EmployeeInfo, Job, User, ScheduleShift, TimeClock
+from app.utils import get_request_arg, get_request_json
 
 @bp.route('/jobs', methods=['GET'])
 @login_required
@@ -64,29 +63,23 @@ def list_jobs():
 @login_required
 @roles_required('organization_manager')
 def add_job():
-	if not  request.json:
-		abort(400)
-
-	try:
-		job = Job(
-			name = request.json['name'],
-			organization_id = current_user.organization_id,
-			employee_manager_id = request.json['employee_manager_id'],
-			organization_manager_id = request.json['organization_manager_id'],
-			address = request.json['address'],
-			city = request.json['city'],
-			state = request.json['state'],
-			country = request.json['country'],
-			zip_code = request.json['zip_code'],
-			longitude = request.json['longitude'],
-			latitude = request.json['latitude'],
-			consultant_name = request.json['consultant_name'],
-			consultant_phone = request.json['consultant_phone'],
-			consultant_email = request.json['consultant_email'],
-			consultant_code = str(randint(000000, 999999)),
-		)
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	job = Job(
+		name = get_request_json(request, 'name'),
+		organization_id = current_user.organization_id,
+		employee_manager_id = get_request_json(request, 'employee_manager_id'),
+		organization_manager_id = get_request_json(request, 'organization_manager_id'),
+		address = get_request_json(request, 'address'),
+		city = get_request_json(request, 'city'),
+		state = get_request_json(request, 'state'),
+		country = get_request_json(request, 'country'),
+		zip_code = get_request_json(request, 'zip_code'),
+		longitude = get_request_json(request, 'longitude'),
+		latitude = get_request_json(request, 'latitude'),
+		consultant_name = get_request_json(request, 'consultant_name'),
+		consultant_phone = get_request_json(request, 'consultant_phone'),
+		consultant_email = get_request_json(request, 'consultant_email'),
+		consultant_code = str(randint(000000, 999999)),
+	)
 
 	db.session.add(job)
 	db.session.commit()
@@ -162,7 +155,7 @@ def job_detail(job_id):
 @bp.route('/jobs/managers', methods=['GET'])
 def get_managers(manager_id=None):
 	if not manager_id:
-		manager_id = request.args.get('manager_id')
+		manager_id = get_request_arg(request, 'manager_id')
 	managers = get_lower_managers(manager_id)
 	result = {'organization_managers':[],'employee_managers':[]}
 
@@ -203,9 +196,6 @@ def get_lower_managers(manager_id):
 @login_required
 @roles_required('organization_manager')
 def edit_job(job_id):
-	if not  request.json:
-		abort(400, "No JSON body")
-
 	job = db.session.query(Job).filter(Job.id == job_id).one()
 
 	original_email = job.consultant_email
@@ -213,29 +203,27 @@ def edit_job(job_id):
 
 	try:
 		db.session.query(Job).filter(Job.id == job_id).update({
-			Job.name: request.json['name'],
-			Job.employee_manager_id: request.json['employee_manager_id'],
-			Job.organization_manager_id: request.json['organization_manager_id'],
-			Job.address: request.json['address'],
-			Job.city: request.json['city'],
-			Job.state: request.json['state'],
-			Job.zip_code: request.json['zip_code'],
-			Job.longitude: request.json['longitude'],
-			Job.latitude: request.json['latitude'],
-			Job.consultant_name: request.json['consultant_name'],
-			Job.consultant_phone: request.json['consultant_phone'],
-			Job.consultant_email: request.json['consultant_email']
+			Job.name: get_request_json(request, 'name'),
+			Job.employee_manager_id: get_request_json(request, 'employee_manager_id'),
+			Job.organization_manager_id: get_request_json(request, 'organization_manager_id'),
+			Job.address: get_request_json(request, 'address'),
+			Job.city: get_request_json(request, 'city'),
+			Job.state: get_request_json(request, 'state'),
+			Job.zip_code: get_request_json(request, 'zip_code'),
+			Job.longitude: get_request_json(request, 'longitude'),
+			Job.latitude: get_request_json(request, 'latitude'),
+			Job.consultant_name: get_request_json(request, 'consultant_name'),
+			Job.consultant_phone: get_request_json(request, 'consultant_phone'),
+			Job.consultant_email: get_request_json(request, 'consultant_email')
 		})
 
-		if request.json.get('generateNewCode'):
+		if get_request_json(request, 'generateNewCode', optional=True):
 			db.session.query(Job).filter(Job.id == job_id).update({
 				# TODO: This should probably be unique
 				Job.consultant_code: str(randint(000000, 999999))
 			})
 
 		db.session.commit()
-	except KeyError as key:
-		abort(400, f"Could not find request attribute {key}")
 	except Exception:
 		abort(500)
 

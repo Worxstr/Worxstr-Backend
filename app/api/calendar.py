@@ -1,10 +1,11 @@
-from flask import abort, request
+from flask import request
 from flask_security import current_user
 from sqlalchemy.sql.elements import Null
 
 from app import db
 from app.api import bp
 from app.models import ScheduleShift, TimeClock, User
+from app.utils import get_request_arg
 
 
 def get_events(user_id, date_begin, date_end):
@@ -44,11 +45,8 @@ def get_events(user_id, date_begin, date_end):
 
 @bp.route("/calendar", methods=["GET"])
 def get_calendar_events():
-	try:
-		date_begin = request.args["date_begin"]
-		date_end = request.args["date_end"]
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	date_begin = get_request_arg(request, "date_begin")
+	date_end = get_request_arg(request, "date_end")
 
 	events = []
 	if current_user.has_role("employee"):

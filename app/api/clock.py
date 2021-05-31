@@ -3,8 +3,8 @@ import datetime
 from flask import abort, request
 from flask_security import login_required, current_user, roles_accepted, roles_required
 
-from app.api import bp
 from app import db
+from app.api import bp
 from app.models import (
 	Job,
 	ScheduleShift,
@@ -14,6 +14,7 @@ from app.models import (
 	User,
 	EmployeeInfo
 )
+from app.utils import get_request_arg, get_request_json
 
 
 @bp.route('/clock/history', methods=['GET'])
@@ -48,7 +49,7 @@ def clock_history():
 				week_offset: 2
 	"""
 	# ? Week offset should begin at 0. There is probably a better way to write this
-	week_offset = int(request.args.get('week_offset') or 0) + 1
+	week_offset = int(get_request_arg(request, 'week_offset') or 0) + 1
 	today = datetime.datetime.combine(
 		datetime.date.today(), datetime.datetime.max.time())
 	num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
@@ -140,15 +141,8 @@ def clock_in():
 			schema:
 				$ref: '#/definitions/TimeClock'
 	"""
-	shift_id = request.args.get('shift_id')
-
-	if not request.json:
-		abort(400)
-
-	try:
-		code = str(request.json['code'])
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	shift_id = get_request_args(request, 'shift_id')
+	code = str(get_request_json(request, 'code'))
 
 	correct_code = db.session \
 		.query(Job.consultant_code) \
@@ -361,13 +355,7 @@ def edit_timecard(timecard_id):
 			schema:
 				$ref: '#/definitions/TimeCard'
 	"""
-	if not request.json:
-		abort(400)
-
-	try:
-		changes = request.json['changes']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	changes = get_request_json(request, 'changes')
 
 	timecard = db.session \
 		.query(TimeCard) \

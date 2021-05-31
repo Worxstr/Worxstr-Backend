@@ -13,12 +13,14 @@ the socket.io session ids to each user account so that we can filter the
 broadcasts to certain clients.
 """
 
-from flask import abort, request
+from flask import request
 from flask_security import current_user, login_required
 
-from app.models import Message, User, Conversation
-from app.api import bp
 from app import db, socketio
+from app.api import bp
+from app.models import Message, User, Conversation
+from app.utils import get_request_arg, get_request_json
+
 
 @socketio.on('connect')
 def on_connect():
@@ -41,10 +43,7 @@ def conversations():
 	# POST request
 	participants = [current_user]
 
-	try:
-		recipients = request.json['users']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	recipients = get_request_json(request, 'users')
 
 	for recipient_id in recipients:
 		participants.append(
@@ -101,10 +100,7 @@ def messages(conversation_id):
 		return {'messages': [message.to_dict() for message in conversation_messages]}
 
 	# POST request: Send a message
-	try:
-		message_body = request.json['body']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	message_body = get_request_json(request, 'body')
 
 	return {
 		'message': send_message(

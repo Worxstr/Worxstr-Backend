@@ -4,7 +4,7 @@ import datetime
 
 from random import randint
 
-from flask import abort, current_app, request, render_template
+from flask import current_app, request, render_template
 from flask_security import (
 	hash_password,
 	current_user,
@@ -15,8 +15,8 @@ from flask_security import (
 
 from app import db, user_datastore, geolocator
 from app.api import bp
-from app.models import ManagerReference, User, EmployeeInfo, Organization
 from app.email import send_email
+from app.models import ManagerReference, User, EmployeeInfo, Organization
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 @bp.route('/users', methods=['GET'])
@@ -47,13 +47,7 @@ def reset_password():
 		200:
 			description: Password reset successfully
 	"""
-	if not request.json:
-		abort(400)
-
-	try:
-		new_password = request.json['password']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	new_password = get_request_json(request, 'password')
 
 	db.session \
 		.query(User) \
@@ -75,19 +69,13 @@ def add_manager():
 			schema:
 				$ref: '#/definitions/User'
 	"""
-	if not request.json:
-		abort(400)
-
-	try:
-		first_name = request.json['first_name']
-		last_name = request.json['last_name']
-		username = request.json['username']
-		email = request.json['email']
-		phone = request.json['phone']
-		roles = request.json['roles']
-		manager_id = request.json['manager_id']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	first_name = get_request_json(request, 'first_name')
+	last_name = get_request_json(request, 'last_name')
+	username = get_request_json(request, 'username')
+	email = get_request_json(request, 'email')
+	phone = get_request_json(request, 'phone')
+	roles = get_request_json(request, 'roles')
+	manager_id = get_request_json(request, 'manager_id')
 
 	password = ''.join(random.choices(string.ascii_letters + string.digits, k = 10))
 	confirmed_at = datetime.datetime.utcnow()
@@ -159,21 +147,15 @@ def manager_reference_generator():
 
 @bp.route('/users/add-employee', methods=['POST'])
 def add_employee():
-	if not request.json:
-		abort(400)
-
-	try:
-		first_name = request.json['first_name']
-		last_name = request.json['last_name']
-		username = request.json['username']
-		email = request.json['email']
-		phone = request.json['phone']
-		password = request.json['password']
-		hourly_rate = request.json['hourly_rate']
-		roles = ['employee']
-		manager_id = request.json.get('manager_id', None)
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	first_name = get_request_json(request, 'first_name')
+	last_name = get_request_json(request, 'last_name')
+	username = get_request_json(request, 'username')
+	email = get_request_json(request, 'email')
+	phone = get_request_json(request, 'phone')
+	password = get_request_json(request, 'password')
+	hourly_rate = get_request_json(request, 'hourly_rate')
+	roles = ['employee']
+	manager_id = get_request_json(request, 'manager_id', optional=True)
 
 	organization_id = None
 	confirmed_at = None
@@ -291,7 +273,7 @@ def set_user_ssn():
 		.query(EmployeeInfo) \
 		.filter(EmployeeInfo.id == current_user.get_id()) \
 		.update({
-			EmployeeInfo.ssn: request.json.get("ssn")
+			EmployeeInfo.ssn: get_request_json(request, "ssn")
 		})
 	db.session.commit()
 	return OK_RESPONSE
@@ -321,20 +303,13 @@ def get_authenticated_user():
 @login_required
 @roles_accepted('employee')
 def edit_user():
-	if not request.json:
-		abort(400)
-
 	# TODO: Are all of the fields required?
-	try:
-		phone = request.json['phone']
-		email = request.json['email']
-		address = request.json['address']
-		city = request.json['city']
-		state = request.json['state']
-		zip_code = request.json['zip_code']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
-
+	phone = get_request_json(request, 'phone')
+	email = get_request_json(request, 'email')
+	address = get_request_json(request, 'address')
+	city = get_request_json(request, 'city')
+	state = get_request_json(request, 'state')
+	zip_code = get_request_json(request, 'zip_code')
 
 	db.session \
 		.query(User) \
@@ -401,10 +376,7 @@ def edit_employee(id):
 	responses:
 		200:
 	"""
-	try:
-		hourly_rate = request.json['hourly_rate']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	hourly_rate = get_request_json(request, 'hourly_rate')
 
 	db.session.query(EmployeeInfo).filter(EmployeeInfo.id == id).update({
 		EmployeeInfo.hourly_rate: hourly_rate

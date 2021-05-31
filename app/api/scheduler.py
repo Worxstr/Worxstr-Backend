@@ -6,31 +6,14 @@ from flask_security import current_user, login_required,  roles_accepted
 from app import db
 from app.api import bp
 from app.models import ScheduleShift, User
+from app.utils import get_request_arg, get_request_json
 
 
 @bp.route('/shifts', methods=['POST'])
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def shifts():
-	if not request.json:
-		abort(400)
-
-	try:
-		job_id = request.args['job_id']
-		time_begin = request.json['shift']['time_begin']
-		time_end = request.json['shift']['time_end']
-		site_location = request.json['shift']['site_location']
-		employee_id = request.json['shift']['employee_id']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
-
-	shift = ScheduleShift(
-		job_id=job_id,
-		time_begin=time_begin,
-		time_end=time_end,
-		site_location=site_location,
-		employee_id=employee_id
-	)
+	shift = ScheduleShift.from_request(request)
 
 	db.session.add(shift)
 	db.session.commit()
@@ -50,11 +33,8 @@ def shifts():
 @roles_accepted('organization_manager', 'employee_manager')
 def modify_shift(shift_id):
 	response = None
-	if request.method == 'PUT' and request.json:
-		try:
-			shift = request.json['shift']
-		except KeyError as key:
-			abort(400, f"Request attribute not found: {key}")
+	if request.method == 'PUT':
+		shift = get_request_json(request, 'shift')
 
 		db.session \
 			.query(ScheduleShift) \
@@ -75,14 +55,12 @@ def modify_shift(shift_id):
 
 		response = {'shift': shift.to_dict()}
 
-	elif request.method == 'DELETE':
+	if request.method == 'DELETE':
 		db.session \
 			.query(ScheduleShift) \
 			.filter(ScheduleShift.id == shift_id) \
 			.delete()
 		db.session.commit()
-	else:
-		abort(400)
 
 	return response
 

@@ -1,10 +1,12 @@
-from flask import abort, request
+from flask import request
 from flask_security import login_required, roles_accepted
 
 from app import db
 from app.api import bp
-from app.models import TimeCard, User, TimeClock
 from app.api.paypal import GetOrder, SendPayouts
+from app.errors.customs import MissingParameterException
+from app.models import TimeCard, User, TimeClock
+from app.utils import get_request_arg, get_request_json
 
 
 @bp.route('/payments/approve', methods=['PUT'])
@@ -12,13 +14,7 @@ from app.api.paypal import GetOrder, SendPayouts
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def approve_payment():
-	if not request.json:
-		abort(400)
-
-	try:
-		timecards = request.json['timecards']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	timecards = get_request_json(request, 'timecards')
 
 	ids = []
 	for timecard in timecards:
@@ -71,14 +67,10 @@ def approve_payment():
 @login_required
 @roles_accepted('organization_manager', 'employee_manager')
 def add_order_id():
-	if not request.json:
-		abort(400)
-
-	try:
-		order_id = request.json['transaction']["orderID"]
-		timecards = request.json['timecards']
-	except KeyError as key:
-		abort(400, f"Request attribute not found: {key}")
+	timecards = get_request_json(request, 'timecards')
+	order_id = get_request_json(request,'transaction').get("orderID")
+	if order_id is None:
+		raise MissingParameterException("Request attribute not found: orderID")
 
 	order_confirmation = GetOrder().get_order(order_id)
 
@@ -108,7 +100,7 @@ def add_order_id():
 		db.session.commit()
 		if float(order_confirmation['gross_amount']) == total_payment:
 			payout_id = SendPayouts().send_payouts(payments)
-			for i in request.json.get('timecards'):
+			for i in get_request_json(request, 'timecards', optional=True):
 				db.session \
 					.query(TimeCard) \
 					.filter(TimeCard.id == i['id']) \
