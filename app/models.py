@@ -5,6 +5,7 @@ from flask_security import UserMixin, RoleMixin
 from sqlalchemy_serializer import SerializerMixin
 
 from app import db
+from app.utils import get_key, get_request_arg, get_request_json
 
 class CustomSerializerMixin(SerializerMixin):
     datetime_format = '%Y-%m-%dT%H:%M:%SZ'
@@ -100,6 +101,23 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
     employee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     site_location = db.Column(db.String(255))
     timecard_id = db.Column(db.Integer, db.ForeignKey('time_card.id'))
+
+    def from_request(request):
+        shift = get_request_json(request, 'shift')
+        job_id = get_request_arg(request, 'job_id')
+
+        time_begin = get_key(shift, 'time_begin', error_on_missing=True)
+        time_end = get_key(shift, 'time_end', error_on_missing=True)
+        site_location = get_key(shift, 'site_location', error_on_missing=True)
+        employee_id = get_key(shift, 'employee_id', error_on_missing=True)
+
+        return ScheduleShift(
+            job_id=job_id,
+            time_begin=time_begin,
+            time_end=time_end,
+            site_location=site_location,
+            employee_id=employee_id
+        )
 
 class TimeClockAction(Enum):
     clock_in = 1
