@@ -462,9 +462,9 @@ def get_timecards():
         db.session.query(TimeCard, User.first_name, User.last_name)
         .join(User)
         .filter(
-            not TimeCard.paid,
-            not TimeCard.denied,
-            TimeCard.transaction_id is None,
+            TimeCard.paid == False,
+            TimeCard.denied == False,
+            TimeCard.transaction_id == None,
             User.manager_id == current_user.get_id(),
         )
         .all()
@@ -472,8 +472,10 @@ def get_timecards():
 
     # TODO: Implement paging here
     result = []
+    print(timecards)
     for i in timecards:
         timecard = i[0].to_dict()
+        print(f"Timecard: {timecard}")
         timecard["first_name"] = i[1]
         timecard["last_name"] = i[2]
         timecard["pay_rate"] = float(
