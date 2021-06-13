@@ -20,33 +20,34 @@ from app.utils import get_request_arg, get_request_json
 @bp.route("/clock/history", methods=["GET"])
 @login_required
 def clock_history():
-    """Endpoint returning a list of TimeClock events based on the current user and week_offset.
+    """
+    Endpoint returning a list of TimeClock events based on the current user and week_offset.
     ---
     parameters:
-            - name: week_offset
-                    in: path
-                    type: int
-                    required: false
-                    default: 0
+        - name: week_offset
+          in: path
+          type: int
+          required: false
+          default: 0
     definitions:
-            TimeClock:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            time:
-                                    type: datetime
-                            action:
-                                    type: enum
-                            employee_id:
-                                    type: int
+        TimeClock:
+            type: object
+            properties:
+                id:
+                    type: int
+                time:
+                    type: datetime
+                action:
+                    type: enum
+                employee_id:
+                    type: int
     responses:
-            200:
-                    description: A list of TimeClock events. Ordered by the time of the event.
-                    schema:
-                            $ref: '#/definitions/TimeClock'
-                    examples:
-                            week_offset: 2
+        200:
+            description: A list of TimeClock events. Ordered by the time of the event.
+            schema:
+                $ref: '#/definitions/TimeClock'
+            examples:
+                week_offset: 2
     """
     # ? Week offset should begin at 0. There is probably a better way to write this
     week_offset = int(get_request_arg(request, "week_offset") or 0) + 1
@@ -76,26 +77,26 @@ def get_shift():
     """Endpoint returning the current user's next shift.
     ---
     definitions:
-            ScheduleShift:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            job_id:
-                                    type: int
-                            time_begin:
-                                    type: datetime
-                            time_end:
-                                    type: datetime
-                            employee_id:
-                                    type: int
-                            site_location:
-                                    type: string
+        ScheduleShift:
+            type: object
+            properties:
+                id:
+                    type: int
+                job_id:
+                    type: int
+                time_begin:
+                    type: datetime
+                time_end:
+                    type: datetime
+                employee_id:
+                    type: int
+                site_location:
+                    type: string
     responses:
-            200:
-                    description: A single ScheduleShift object. This is the current users next shift.
-                    schema:
-                            $ref: '#/definitions/ScheduleShift'
+        200:
+            description: A single ScheduleShift object. This is the current users next shift.
+            schema:
+                $ref: '#/definitions/ScheduleShift'
     """
     today = datetime.datetime.combine(
         datetime.date.today(), datetime.datetime.min.time()
@@ -119,31 +120,31 @@ def clock_in():
     """Endpoint to clock the current user in.
     ---
     parameters:
-            - name: shift_id
-                    in: body
-                    type: int
-                    required: true
-            - name: code
-                    in: body
-                    type: int
-                    required: true
+        - name: shift_id
+          in: body
+          type: int
+          required: true
+        - name: code
+          in: body
+          type: int
+          required: true
     definitions:
-            TimeClock:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            time:
-                                    type: datetime
-                            action:
-                                    type: enum
-                            employee_id:
-                                    type: int
+        TimeClock:
+            type: object
+            properties:
+                id:
+                    type: int
+                time:
+                    type: datetime
+                action:
+                    type: enum
+                employee_id:
+                    type: int
     responses:
-            200:
-                    description: Returns the clock in TimeClock event
-                    schema:
-                            $ref: '#/definitions/TimeClock'
+        200:
+            description: Returns the clock in TimeClock event
+            schema:
+                $ref: '#/definitions/TimeClock'
     """
     shift_id = get_request_args(request, "shift_id")
     code = str(get_request_json(request, "code"))
@@ -185,22 +186,22 @@ def clock_out():
     timecard for the shift. Clock in - Clock out.
     ---
     definitions:
-            TimeClock:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            time:
-                                    type: datetime
-                            action:
-                                    type: enum
-                            employee_id:
-                                    type: int
+        TimeClock:
+            type: object
+            properties:
+                id:
+                    type: int
+                time:
+                    type: datetime
+                action:
+                    type: enum
+                employee_id:
+                    type: int
     responses:
-            200:
-                    description: Returns the clock out TimeClock event
-                    schema:
-                            $ref: '#/definitions/TimeClock'
+        200:
+            description: Returns the clock out TimeClock event
+            schema:
+                $ref: '#/definitions/TimeClock'
     """
     time_out = datetime.datetime.utcnow()
     timecard_id = (
@@ -323,50 +324,50 @@ def edit_timecard(timecard_id):
     """Endpoint to edit a given timecard.
     ---
     parameters:
-            - name: id
-                    in: body
-                    type: int
-                    required: true
-                    description: TimeCard.id
-            - name: changes
-                    in: body
-                    type: array
-                    items:
-                            $ref: '#/definitions/Change'
-                    required: true
+        - name: id
+          in: body
+          type: int
+          required: true
+          description: TimeCard.id
+        - name: changes
+          in: body
+          type: array
+          items:
+              $ref: '#/definitions/Change'
+          required: true
     definitions:
-            Change:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                                    description: id of the TimeClock event to be modified
-                            time:
-                                    type: datetime
-            TimeCard:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            time_in:
-                                    type: datetime
-                            time_out:
-                                    type: datetime
-                            time_break:
-                                    type: int
-                            employee_id:
-                                    type: int
-                            total_payment:
-                                    type: float/numeric
-                            approved:
-                                    type: bool
-                            paid:
-                                    type: bool
+        Change:
+            type: object
+            properties:
+                id:
+                    type: int
+                    description: id of the TimeClock event to be modified
+                time:
+                    type: datetime
+        TimeCard:
+            type: object
+            properties:
+                id:
+                    type: int
+                time_in:
+                    type: datetime
+                time_out:
+                    type: datetime
+                time_break:
+                    type: int
+                employee_id:
+                    type: int
+                total_payment:
+                    type: float/numeric
+                approved:
+                    type: bool
+                paid:
+                    type: bool
     responses:
-            200:
-                    description: An updated TimeCard showing the new changes.
-                    schema:
-                            $ref: '#/definitions/TimeCard'
+        200:
+            description: An updated TimeCard showing the new changes.
+            schema:
+                $ref: '#/definitions/TimeCard'
     """
     changes = get_request_json(request, "changes")
 
@@ -414,49 +415,49 @@ def get_timecards():
     """Endpoint to get all unpaid timecards associated with the current logged in manager.
     ---
     definitions:
-            TimeCard:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            time_in:
-                                    type: datetime
-                            time_out:
-                                    type: datetime
-                            time_break:
-                                    type: int
-                            employee_id:
-                                    type: int
-                            total_payment:
-                                    type: float/numeric
-                            approved:
-                                    type: bool
-                            paid:
-                                    type: bool
-                            first_name:
-                                    type: string
-                            last_name:
-                                    type: string
-                            time_clocks:
-                                    type: array
-                                    items :
-                                            $ref: '#/definitions/TimeClock'
-            TimeClock:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            time:
-                                    type: datetime
-                            action:
-                                    type: enum
-                            employee_id:
-                                    type: int
+        TimeCard:
+            type: object
+            properties:
+                id:
+                    type: int
+                time_in:
+                    type: datetime
+                time_out:
+                    type: datetime
+                time_break:
+                    type: int
+                employee_id:
+                    type: int
+                total_payment:
+                    type: float/numeric
+                approved:
+                    type: bool
+                paid:
+                    type: bool
+                first_name:
+                    type: string
+                last_name:
+                    type: string
+                time_clocks:
+                    type: array
+                    items :
+                        $ref: '#/definitions/TimeClock'
+        TimeClock:
+            type: object
+            properties:
+                id:
+                    type: int
+                time:
+                    type: datetime
+                action:
+                    type: enum
+                employee_id:
+                    type: int
     responses:
-            200:
-                    description: Returns the unapproved timecards associated with a manager
-                    schema:
-                            $ref: '#/definitions/TimeCard'
+        200:
+            description: Returns the unapproved timecards associated with a manager
+            schema:
+                $ref: '#/definitions/TimeCard'
     """
     timecards = (
         db.session.query(TimeCard, User.first_name, User.last_name)
@@ -500,22 +501,22 @@ def start_break():
     """Endpoint to start the current user's break.
     ---
     definitions:
-            TimeClock:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            time:
-                                    type: datetime
-                            action:
-                                    type: enum
-                            employee_id:
-                                    type: int
+        TimeClock:
+            type: object
+            properties:
+                id:
+                    type: int
+                time:
+                    type: datetime
+                action:
+                    type: enum
+                employee_id:
+                    type: int
     responses:
-            200:
-                    description: Returns the start break TimeClock event
-                    schema:
-                            $ref: '#/definitions/TimeClock'
+        200:
+            description: Returns the start break TimeClock event
+            schema:
+                $ref: '#/definitions/TimeClock'
     """
     timecard_id = (
         db.session.query(TimeClock.timecard_id)
@@ -541,22 +542,22 @@ def end_break():
     """Endpoint to end the current user's break.
     ---
     definitions:
-            TimeClock:
-                    type: object
-                    properties:
-                            id:
-                                    type: int
-                            time:
-                                    type: datetime
-                            action:
-                                    type: enum
-                            employee_id:
-                                    type: int
+        TimeClock:
+            type: object
+            properties:
+                id:
+                    type: int
+                time:
+                    type: datetime
+                action:
+                    type: enum
+                employee_id:
+                    type: int
     responses:
-            200:
-                    description: Returns the end break TimeClock event
-                    schema:
-                            $ref: '#/definitions/TimeClock'
+        200:
+            description: Returns the end break TimeClock event
+            schema:
+                $ref: '#/definitions/TimeClock'
     """
     timecard_id = (
         db.session.query(TimeClock.timecard_id)
