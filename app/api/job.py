@@ -20,12 +20,11 @@ from app.utils import get_request_arg, get_request_json
 def list_jobs():
     """Returns list of registered jobs
     ---
-
     responses:
-            200:
-                    description: A list of jobs
-                    schema:
-                            $ref: '#/definitions/Job'
+        200:
+            description: A list of jobs
+            schema:
+                $ref: '#/definitions/Job'
     """
     result = {
         "jobs": [],
@@ -306,15 +305,15 @@ def close_job(job_id):
     """Marks a given job inactive
     ---
     parameters:
-    - name: job_id
-            in: url
-            type: int
-            required: true
+        - name: job_id
+          in: url
+          type: int
+          required: true
     responses:
-            200:
-                    description: The job that was closed
-                    schema:
-                            $ref: '#/definitions/Job'
+        200:
+            description: The job that was closed
+            schema:
+                $ref: '#/definitions/Job'
     """
     db.session.query(Job).filter(Job.id == job_id).update({Job.active: False})
     db.session.commit()
