@@ -18,13 +18,35 @@ from app.utils import get_request_arg, get_request_json
 @login_required
 @roles_accepted("employee_manager", "organization_manager")
 def list_jobs():
-    """Returns list of registered jobs
+    """
+    Get a list of registered jobs and the available managers for the jobs.
     ---
+    definitions:
+        JobsAndManagers:
+            type: object
+            properties:
+                jobs:
+                    type: array
+                    items:
+                        $ref '#/definitions/Job'
+                    description: List of jobs.
+                managers:
+                    type: object
+                    description: Managers that can be assigned to returned jobs.
+                    properties:
+                        organization_managers:
+                            type: array
+                            items:
+                                $ref: '#/definitions/User
+                        employee_managers:
+                            type: array
+                            items:
+                                $ref: '#/definitions/User
     responses:
         200:
             description: A list of jobs
             schema:
-                $ref: '#/definitions/Job'
+                $ref: '#/definitions/JobsAndManagers'
     """
     result = {
         "jobs": [],

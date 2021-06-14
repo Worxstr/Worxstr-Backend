@@ -26,21 +26,9 @@ def clock_history():
     parameters:
         - name: week_offset
           in: path
-          type: int
+          type: integer
           required: false
           default: 0
-    definitions:
-        TimeClock:
-            type: object
-            properties:
-                id:
-                    type: int
-                time:
-                    type: datetime
-                action:
-                    type: enum
-                employee_id:
-                    type: int
     responses:
         200:
             description: A list of TimeClock events. Ordered by the time of the event.
@@ -81,13 +69,15 @@ def get_shift():
             type: object
             properties:
                 id:
-                    type: int
+                    type: integer
                 job_id:
-                    type: int
+                    type: integer
                 time_begin:
-                    type: datetime
+                    type: string
+                    format: date-time
                 time_end:
-                    type: datetime
+                    type: string
+                    format: date-time
                 employee_id:
                     type: int
                 site_location:
@@ -117,29 +107,18 @@ def get_shift():
 @login_required
 @roles_required("employee")
 def clock_in():
-    """Endpoint to clock the current user in.
+    """
+    Clock the current user in.
     ---
     parameters:
         - name: shift_id
           in: body
-          type: int
+          type: integer
           required: true
         - name: code
           in: body
-          type: int
+          type: integer
           required: true
-    definitions:
-        TimeClock:
-            type: object
-            properties:
-                id:
-                    type: int
-                time:
-                    type: datetime
-                action:
-                    type: enum
-                employee_id:
-                    type: int
     responses:
         200:
             description: Returns the clock in TimeClock event
@@ -182,21 +161,10 @@ def clock_in():
 @bp.route("/clock/clock-out", methods=["POST"])
 @login_required
 def clock_out():
-    """Endpoint to clock the current user out. This method also creates a
-    timecard for the shift. Clock in - Clock out.
+    """
+    Clock the current user out, creating a timecard for the shift:
+    Clock in -> Clock out.
     ---
-    definitions:
-        TimeClock:
-            type: object
-            properties:
-                id:
-                    type: int
-                time:
-                    type: datetime
-                action:
-                    type: enum
-                employee_id:
-                    type: int
     responses:
         200:
             description: Returns the clock out TimeClock event
@@ -321,12 +289,12 @@ def calculate_timecard(timecard_id):
 @login_required
 @roles_accepted("employee_manager")
 def edit_timecard(timecard_id):
-    """Endpoint to edit a given timecard.
+    """Edit a given timecard.
     ---
     parameters:
         - name: id
           in: body
-          type: int
+          type: integer
           required: true
           description: TimeCard.id
         - name: changes
@@ -340,29 +308,32 @@ def edit_timecard(timecard_id):
             type: object
             properties:
                 id:
-                    type: int
+                    type: integer
                     description: id of the TimeClock event to be modified
                 time:
-                    type: datetime
+                    type: string
+                    format: date-time
         TimeCard:
             type: object
             properties:
                 id:
-                    type: int
+                    type: integer
                 time_in:
-                    type: datetime
+                    type: string
+                    format: date-time
                 time_out:
-                    type: datetime
+                    type: string
+                    format: date-time
                 time_break:
-                    type: int
+                    type: integer
                 employee_id:
-                    type: int
+                    type: integer
                 total_payment:
-                    type: float/numeric
+                    type: number
                 approved:
-                    type: bool
+                    type: boolean
                 paid:
-                    type: bool
+                    type: boolean
     responses:
         200:
             description: An updated TimeCard showing the new changes.
@@ -419,21 +390,23 @@ def get_timecards():
             type: object
             properties:
                 id:
-                    type: int
+                    type: integer
                 time_in:
-                    type: datetime
+                    type: string
+                    format: date-time
                 time_out:
-                    type: datetime
+                    type: string
+                    format: date-time
                 time_break:
-                    type: int
+                    type: integer
                 employee_id:
-                    type: int
+                    type: integer
                 total_payment:
-                    type: float/numeric
+                    type: number
                 approved:
-                    type: bool
+                    type: boolean
                 paid:
-                    type: bool
+                    type: boolean
                 first_name:
                     type: string
                 last_name:
@@ -446,13 +419,15 @@ def get_timecards():
             type: object
             properties:
                 id:
-                    type: int
+                    type: integer
                 time:
-                    type: datetime
+                    type: string
+                    format: date-time
                 action:
-                    type: enum
+                    type: string
+                    enum: []
                 employee_id:
-                    type: int
+                    type: integer
     responses:
         200:
             description: Returns the unapproved timecards associated with a manager
@@ -500,18 +475,6 @@ def get_timecards():
 def start_break():
     """Endpoint to start the current user's break.
     ---
-    definitions:
-        TimeClock:
-            type: object
-            properties:
-                id:
-                    type: int
-                time:
-                    type: datetime
-                action:
-                    type: enum
-                employee_id:
-                    type: int
     responses:
         200:
             description: Returns the start break TimeClock event
@@ -541,18 +504,6 @@ def start_break():
 def end_break():
     """Endpoint to end the current user's break.
     ---
-    definitions:
-        TimeClock:
-            type: object
-            properties:
-                id:
-                    type: int
-                time:
-                    type: datetime
-                action:
-                    type: enum
-                employee_id:
-                    type: int
     responses:
         200:
             description: Returns the end break TimeClock event
