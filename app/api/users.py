@@ -424,6 +424,7 @@ def add_org():
 
     organization = Organization(name=organization_name)
     db.session.add(organization)
+    db.session.commit()
     user = {
         "first_name": get_request_json(request, "first_name"),
         "last_name": get_request_json(request, "last_name"),
