@@ -406,6 +406,7 @@ def edit_employee(id):
 
     return {"event": result}, 200
 
+
 @bp.route("/users/add-org", methods=["POST"])
 def add_org():
     """Gives a new customer the ability to add an organization and intial user
@@ -419,9 +420,7 @@ def add_org():
     """
     organization_name = get_request_json(request, "organization_name")
 
-    organization = Organization(
-        name=organization_name
-    )
+    organization = Organization(name=organization_name)
     db.session.add(organization)
 
     first_name = get_request_json(request, "first_name")
