@@ -410,7 +410,7 @@ def edit_employee(id):
 @bp.route("/users/add-org", methods=["POST"])
 def add_org():
     """Add an organization and new initial user
-    
+
     The created user is considered the owner of the organization.
     ---
 
@@ -434,7 +434,7 @@ def add_org():
         "password": hash_password(get_request_json(request, "password")),
         "roles": ["organization_manager", "employee_manager"],
         "manager_id": None,
-        "organization_id": organization.id
+        "organization_id": organization.id,
     }
 
     user = user_datastore.create_user(**user)
