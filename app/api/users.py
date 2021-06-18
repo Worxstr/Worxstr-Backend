@@ -409,7 +409,9 @@ def edit_employee(id):
 
 @bp.route("/users/add-org", methods=["POST"])
 def add_org():
-    """Gives a new customer the ability to add an organization and intial user
+    """Add an organization and new initial user
+    
+    The created user is considered the owner of the organization.
     ---
 
     responses:
