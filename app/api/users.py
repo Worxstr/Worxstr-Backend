@@ -424,26 +424,18 @@ def add_org():
 
     organization = Organization(name=organization_name)
     db.session.add(organization)
+    user = {
+        "first_name": get_request_json(request, "first_name"),
+        "last_name": get_request_json(request, "last_name"),
+        "username": get_request_json(request, "username"),
+        "email": get_request_json(request, "email"),
+        "phone": get_request_json(request, "phone"),
+        "password": hash_password(get_request_json(request, "password")),
+        "roles": ["organization_manager", "employee_manager"],
+        "manager_id": None,
+        "organization_id": organization.id
+    }
 
-    first_name = get_request_json(request, "first_name")
-    last_name = get_request_json(request, "last_name")
-    username = get_request_json(request, "username")
-    email = get_request_json(request, "email")
-    phone = get_request_json(request, "phone")
-    password = get_request_json(request, "password")
-    roles = ["organization_manager", "employee_manager"]
-    manager_id = None
-
-    user = user_datastore.create_user(
-        first_name=first_name,
-        last_name=last_name,
-        username=username,
-        email=email,
-        phone=phone,
-        organization_id=organization.id,
-        manager_id=manager_id,
-        roles=roles,
-        password=hash_password(password),
-    )
+    user = user_datastore.create_user(**user)
     db.session.commit()
     return user.to_dict()
