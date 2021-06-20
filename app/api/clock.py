@@ -198,6 +198,15 @@ def clock_out():
 
 @bp.route("/clock/calculate/<timecard_id>", methods=["POST"])
 def calculate_timecard(timecard_id):
+    """
+    Calculate pay for a given timecard and update the timecard in place.
+    ---
+    parameters:
+        - name: timecard_id
+          in: path
+          type: integer
+          required: true
+    """
     timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
     time_in = (
         db.session.query(TimeClock.time)

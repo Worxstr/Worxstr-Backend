@@ -153,6 +153,38 @@ def manager_reference_generator():
 
 @bp.route("/users/add-employee", methods=["POST"])
 def add_employee():
+    """
+    Add a new employee.
+    ---
+    parameters:
+        - name: first_name
+          in: body
+          type: string
+        - name: last_name
+          in: body
+          type: string
+        - name: username
+          in: body
+          type: string
+        - name: email
+          in: body
+          type: string
+        - name: phone
+          in: body
+          type: string
+        - name: password
+          in: body
+          type: string
+        - name: hourly_rate
+          in: body
+          type: string
+        - name: manager_id
+          in: body
+          type: string
+    responses:
+        201:
+            description: Employee successfully created.
+    """
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
     username = get_request_json(request, "username")
