@@ -28,20 +28,57 @@ def on_connect():
     print("Client connected")
 
 
-@bp.route("/conversations", methods=["GET", "POST"])
+@bp.route("/conversations", methods=["GET"])
 @login_required
-def conversations():
-    # List conversations
-    if request.method == "GET":
-        all_conversations = db.session.query(Conversation).all()
-        user_conversations = []
-        for i in all_conversations:
-            for participant in i.participants:
-                if int(current_user.get_id()) == participant.id:
-                    user_conversations.append(i.to_dict())
-        return {"conversations": user_conversations}
+def get_conversations():
+    """
+    Fetch all conversations for the current user
+    ---
+    responses:
+        200:
+            description: List of conversations for the current user.
+            schema:
+                type: object
+                properties:
+                    conversations:
+                        type: array
+                        items:
+                            $ref: '#/definitions/Conversation'
+    """
+    all_conversations = db.session.query(Conversation).all()
+    user_conversations = []
+    # TODO: This can be a single comprehension without a nested loop
+    for i in all_conversations:
+        for participant in i.participants:
+            if int(current_user.get_id()) == participant.id:
+                user_conversations.append(i.to_dict())
+    return {"conversations": user_conversations}
 
-    # POST request
+
+@bp.route("/conversations", methods=["POST"])
+@login_required
+def create_conversation():
+    """
+    Create a new conversation between the current user and a list of other users.
+    ---
+    parameters:
+        - name: users
+          description: List of IDs for the users to be including in the conversation.
+          in: body
+          type: list
+          items: string
+          required: true
+    responses:
+        200:
+            description: The new conversation.
+            schema:
+                type: object
+                properties:
+                    conversation:
+                        type: array
+                        items:
+                            $ref: '#/definitions/Conversation'
+    """
     participants = [current_user]
 
     recipients = get_request_json(request, "users")
@@ -61,6 +98,21 @@ def conversations():
 @bp.route("/conversations/contacts", methods=["GET"])
 @login_required
 def contacts():
+    """
+    List all users in the current organization.
+    ---
+    responses:
+        200:
+            description: The new conversation.
+            schema:
+                type: object
+                properties:
+                    contacts:
+                        type: array
+                        items:
+                            $ref: '#/definitions/User'
+    """
+    # TODO: Implement paging here
     org_contacts = (
         db.session.query(User)
         .filter(User.organization_id == current_user.organization_id)
@@ -72,7 +124,25 @@ def contacts():
 @bp.route("/conversations/<conversation_id>", methods=["GET"])
 @login_required
 def conversation(conversation_id):
-    # Get conversation data along with messages
+    """
+    Get a conversation by ID.
+    ---
+    parameters:
+        - name: conversation_id
+          description: ID of the requested conversation.
+          in: path
+          type: string
+          required: true
+    responses:
+        200:
+            description: The requested conversation.
+            schema:
+                type: object
+                properties:
+                    conversation:
+                        $ref: '#/definitions/Conversation'
+    """
+    # TODO: make sure the user has access to the requested conversation
     selected_conversation = (
         db.session.query(Conversation)
         .filter(Conversation.id == conversation_id)
@@ -82,31 +152,70 @@ def conversation(conversation_id):
     return {"conversation": selected_conversation}
 
 
-@bp.route("/conversations/<conversation_id>/messages", methods=["GET", "POST"])
+@bp.route("/conversations/<conversation_id>/messages", methods=["GET"])
 @login_required
 def messages(conversation_id):
+    """
+    Get messages in a conversation.
+    ---
+    parameters:
+        - name: conversation_id
+          description: ID of the conversation which contains the desired messages.
+          in: path
+          type: string
+          required: true
+    responses:
+        200:
+            description: The requested conversation.
+            schema:
+                type: object
+                properties:
+                    messages:
+                        type: array
+                        items:
+                            $ref: '#/definitions/Message'
+    """
+    # The last message id that was recieved by the client.
+    # Return the most recent if not set
+    # Currently unused
+    # last_id = request.args.get('last_id')
 
-    # List messages in a conversation
-    if request.method == "GET":
-        # The last message id that was recieved by the client.
-        # Return the most recent if not set
-        # Currently unused
-        # last_id = request.args.get('last_id')
+    # The amount of messages to return
+    # Currently unused
+    # limit = request.args.get('limit')
 
-        # The amount of messages to return
-        # Currently unused
-        # limit = request.args.get('limit')
+    # TODO: Query the messages for a given last_id and limit
+    # TODO: Implement paging here
+    conversation_messages = (
+        db.session.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .all()
+    )
 
-        # TODO: Query the messages for a given last_id and limit
-        conversation_messages = (
-            db.session.query(Message)
-            .filter(Message.conversation_id == conversation_id)
-            .all()
-        )
+    return {"messages": [message.to_dict() for message in conversation_messages]}
 
-        return {"messages": [message.to_dict() for message in conversation_messages]}
 
-    # POST request: Send a message
+@bp.route("/conversations/<conversation_id>/messages", methods=["POST"])
+@login_required
+def messages(conversation_id):
+    """
+    Add a new message to a conversaion.
+    ---
+    parameters:
+        - name: conversation_id
+          description: The ID of the conversation to add the new message too.
+          in: path
+          type: string
+          required: true
+    responses:
+        200:
+            description: The requested conversation.
+            schema:
+                type: object
+                properties:
+                    message:
+                        $ref: '#/definitions/Message'
+    """
     message_body = get_request_json(request, "body")
 
     return {
@@ -126,8 +235,8 @@ def send_message(conversation_id, user_id, message):
 
     socket_message = {
         "id": db_message.id,
-        "conversation_id": conversation_id,
         "sender_id": user_id,
+        "conversation_id": conversation_id,
         "body": message.get("body"),
     }
 

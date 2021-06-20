@@ -91,6 +91,69 @@ def list_jobs():
 @login_required
 @roles_required("organization_manager")
 def add_job():
+    """
+    Create a new job entry.
+    ---
+    parameters:
+        - name: name
+          in: body
+          type: string
+          required: true
+        - name: employee_manager_id
+          in: body
+          type: integer
+          required: true
+        - name: organization_manager_id
+          in: body
+          type: integer
+          required: true
+        - name: address
+          in: body
+          type: string
+          required: true
+        - name: city
+          in: body
+          type: string
+          required: true
+        - name: state
+          in: body
+          type: string
+          required: true
+        - name: country
+          in: body
+          type: string
+          required: true
+        - name: zip_code
+          in: body
+          type: string
+          required: true
+        - name: longitude
+          in: body
+          type: string
+          required: true
+        - name: latitude
+          in: body
+          type: string
+          required: true
+        - name: consultant_name
+          in: body
+          type: string
+          required: true
+        - name: consultant_phone
+          in: body
+          type: string
+          required: true
+        - name: consultant_email
+          in: body
+          type: string
+          format: email
+          required: true
+    responses:
+        200:
+            description: The newly created job.
+            schema:
+                $ref: '#/definitions/Job'
+    """
     job = Job(
         name=get_request_json(request, "name"),
         organization_id=current_user.organization_id,
@@ -121,6 +184,18 @@ def add_job():
 @login_required
 @roles_accepted("employee_manager", "organization_manager")
 def job_detail(job_id):
+    """
+    Get details about a job, by ID.
+    ---
+    parameters:
+        - name: Job ID
+          in: path
+          type: string
+          required: true
+    responses:
+        200:
+            description: Job details.
+    """
     job = db.session.query(Job).filter(Job.id == job_id).one().to_dict()
     # Collect all the current and future shifts for a job
     scheduled_shifts = (
@@ -203,8 +278,44 @@ def job_detail(job_id):
 @roles_accepted("employee_manager", "organization_manager")
 @bp.route("/jobs/managers", methods=["GET"])
 def get_managers(manager_id=None):
+    """
+    Get list of subordinate managers, including the calling manager.
+    Data is separated into lists of who manages employees and the organization.
+    ---
+    parameters:
+        - name: Manager ID
+          in: body
+          type: string
+          required: true
+    definitions:
+        ManagersList:
+            type: object
+            properties:
+                organization_managers:
+                    type: array
+                    items:
+                        $ref '#/definitions/User'
+                    description:
+                        "List of sub-manangers with the role
+                        'organization_manager', including the
+                        calling user, if applicable."
+                employee_managers:
+                    type: array
+                    items:
+                        $ref '#/definitions/User'
+                    description:
+                        "List of sub-manangers with the role
+                        'employee_manager', including the
+                        calling user, if applicable."
+    responses:
+        200:
+            description: Lists of managers
+            schema:
+                $ref: '#/definitions/ManagersList'
+    """
     if not manager_id:
         manager_id = get_request_arg(request, "manager_id")
+
     managers = get_lower_managers(manager_id)
     result = {"organization_managers": [], "employee_managers": []}
 
@@ -248,6 +359,26 @@ def get_lower_managers(manager_id):
 @login_required
 @roles_required("organization_manager")
 def edit_job(job_id):
+    """
+    Update a job object.
+    ---
+    parameters:
+        - name: Job ID
+          in: path
+          type: string
+          required: true
+    definitions:
+        ReturnJob:
+            type: object
+            properties:
+                job:
+                    $ref: '#/definitions/User'
+    responses:
+        200:
+            description: Updated job.
+            schema:
+                $ref: '#/definitions/ReturnJob'
+    """
     job = db.session.query(Job).filter(Job.id == job_id).one()
 
     original_email = job.consultant_email
