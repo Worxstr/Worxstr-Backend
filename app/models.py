@@ -78,10 +78,6 @@ class Organization(db.Model, CustomSerializerMixin):
     __tablename__ = "organization"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
-    primary_contact_first_name = db.Column(db.String(255))
-    primary_contact_last_name = db.Column(db.String(255))
-    primary_contact_phone = db.Column(db.String(10))
-    primary_contact_email = db.Column(db.String(255))
 
     def __repr__(self):
         return "<Organization {}>".format(self.name)
