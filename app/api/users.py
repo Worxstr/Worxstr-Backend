@@ -206,7 +206,20 @@ def add_employee():
     db.session.commit()
 
     if current_user.is_authenticated:
-        employee_info = EmployeeInfo(id=user.id, hourly_rate=float(hourly_rate))
+        ssn = get_request_json(request, "ssn", optional=True)
+        address = get_request_json(request, "address", optional=True)
+        city = get_request_json(request, "city", optional=True)
+        state = get_request_json(request, "state", optional=True)
+        zip_code = get_request_json(request, "zip_code", optional=True)
+        employee_info = EmployeeInfo(
+            id=user.id,
+            hourly_rate=float(hourly_rate),
+            ssn=ssn,
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code
+        )
         db.session.add(employee_info)
         db.session.commit()
         send_email(
