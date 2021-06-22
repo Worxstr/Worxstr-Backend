@@ -12,6 +12,7 @@ from flask_security import (
     roles_required,
     roles_accepted,
 )
+from sqlalchemy.sql.elements import Null
 
 from app import db, user_datastore, geolocator
 from app.api import bp
@@ -72,7 +73,7 @@ def add_manager():
     """
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
-    username = get_request_json(request, "username")
+    username = get_request_json(request, "username", optional=True) or (first_name + last_name)
     email = get_request_json(request, "email")
     phone = get_request_json(request, "phone")
     roles = get_request_json(request, "roles")
@@ -155,26 +156,40 @@ def manager_reference_generator():
 def add_employee():
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
-    username = get_request_json(request, "username")
+    username = get_request_json(request, "username", optional=True) or (first_name + last_name)
     email = get_request_json(request, "email")
     phone = get_request_json(request, "phone")
-    password = get_request_json(request, "password")
-    hourly_rate = get_request_json(request, "hourly_rate")
     roles = ["employee"]
-    manager_id = get_request_json(request, "manager_id", optional=True)
 
     organization_id = None
+    manager_id = None
     confirmed_at = None
+    password = None
 
-    if current_user:
+    if current_user.is_authenticated:
         organization_id = current_user.organization_id
         organization_name = (
             db.session.query(Organization.name)
             .filter(Organization.id == organization_id)
             .one()[0]
         )
+        hourly_rate = get_request_json(request, "hourly_rate", optional=True)
+        manager_id = get_request_json(request, "manager_id")
         confirmed_at = datetime.datetime.utcnow()
         password = "".join(random.choices(string.ascii_letters + string.digits, k=10))
+    else:
+        password = get_request_json(request, "password")
+        manager_reference = get_request_json(request, "manager_id")
+        manager_id = (
+            db.session.query(ManagerReference.user_id)
+            .filter(ManagerReference.reference_number == manager_reference)
+            .one()[0]
+        )
+        organization_id = (
+            db.session.query(User.organization_id)
+            .filter(User.id == manager_id)
+            .one()[0]
+        )
 
     user = user_datastore.create_user(
         first_name=first_name,
@@ -190,11 +205,10 @@ def add_employee():
     )
     db.session.commit()
 
-    employee_info = EmployeeInfo(id=user.id, hourly_rate=float(hourly_rate))
-    db.session.add(employee_info)
-    db.session.commit()
-
-    if current_user:
+    if current_user.is_authenticated:
+        employee_info = EmployeeInfo(id=user.id, hourly_rate=float(hourly_rate))
+        db.session.add(employee_info)
+        db.session.commit()
         send_email(
             "[Worxstr] Welcome!",
             sender=current_app.config["ADMINS"][0],
@@ -212,6 +226,10 @@ def add_employee():
                 password=password,
             ),
         )
+    else:
+        employee_info = EmployeeInfo(id=user.id)
+        db.session.add(employee_info)
+        db.session.commit()
 
     return "OK", 201
 
