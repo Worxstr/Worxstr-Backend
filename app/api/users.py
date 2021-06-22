@@ -73,7 +73,9 @@ def add_manager():
     """
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
-    username = get_request_json(request, "username", optional=True) or (first_name + last_name)
+    username = get_request_json(request, "username", optional=True) or (
+        first_name + last_name
+    )
     email = get_request_json(request, "email")
     phone = get_request_json(request, "phone")
     roles = get_request_json(request, "roles")
@@ -156,7 +158,9 @@ def manager_reference_generator():
 def add_employee():
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
-    username = get_request_json(request, "username", optional=True) or (first_name + last_name)
+    username = get_request_json(request, "username", optional=True) or (
+        first_name + last_name
+    )
     email = get_request_json(request, "email")
     phone = get_request_json(request, "phone")
     roles = ["employee"]
@@ -218,7 +222,7 @@ def add_employee():
             address=address,
             city=city,
             state=state,
-            zip_code=zip_code
+            zip_code=zip_code,
         )
         db.session.add(employee_info)
         db.session.commit()
