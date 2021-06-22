@@ -9,9 +9,6 @@ from app.utils import get_request_arg
 
 
 def get_events(user_id, date_begin, date_end):
-    """
-    Fetch all calendar shift events for a given user during a given time range.
-    """
     events = []
     scheduled_shifts = (
         db.session.query(ScheduleShift)
@@ -38,8 +35,6 @@ def get_events(user_id, date_begin, date_end):
             shift_timeclock_events = [
                 timeclock_event.to_dict() for timeclock_event in timeclock_events
             ]
-            # TODO: Return a tuple of (Shift, List[TimeClock]) instead of joining
-            # these types.
             shift["timeclock_events"] = shift_timeclock_events
 
         events.append(shift)
@@ -49,34 +44,6 @@ def get_events(user_id, date_begin, date_end):
 
 @bp.route("/calendar", methods=["GET"])
 def get_calendar_events():
-    """
-    Fetch all calendar shift events for the current user or organization during
-    a given time range.
-    ---
-    parameters:
-        - name: date_begin
-          in: body
-          type: string
-          format: date-time
-          required: true
-        - name: date_end
-          in: body
-          type: string
-          format: date-time
-          required: true
-    responses:
-        200:
-            description: "A list of Shifts events. Empty, if not authenticated.
-                Shifts all have the added attribute 'timeclock_events' which is
-                a list of TimeClocks for a shift."
-            schema:
-                type: object
-                properties:
-                    events:
-                        type: array
-                        items:
-                            $ref: '#/definitions/ScheduleShift'
-    """
     date_begin = get_request_arg(request, "date_begin")
     date_end = get_request_arg(request, "date_end")
 

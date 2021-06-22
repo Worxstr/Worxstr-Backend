@@ -28,12 +28,12 @@ def list_users():
     Returns list of registered users
     ---
     responses:
-        200:
-            description: A list of users
-            schema:
-                type: array
-                items:
-                    $ref: '#/definitions/User'
+            200:
+                    description: A list of users
+                    schema:
+                            type: array
+                            items:
+                                    $ref: '#/definitions/User'
     """
     result = db.session.query(User).all()
     return {"users": [x.to_dict() for x in result]}
@@ -46,8 +46,8 @@ def reset_password():
     Reset the logged-in user's password
     ---
     responses:
-        200:
-            description: Password reset successfully
+            200:
+                    description: Password reset successfully
     """
     new_password = get_request_json(request, "password")
 
@@ -65,10 +65,10 @@ def add_manager():
     Creates a new manager user
     ---
     responses:
-        200:
-            description: The created manager user
-            schema:
-                $ref: '#/definitions/User'
+            200:
+                    description: The created manager user
+                    schema:
+                            $ref: '#/definitions/User'
     """
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
@@ -153,38 +153,6 @@ def manager_reference_generator():
 
 @bp.route("/users/add-employee", methods=["POST"])
 def add_employee():
-    """
-    Add a new employee.
-    ---
-    parameters:
-        - name: first_name
-          in: body
-          type: string
-        - name: last_name
-          in: body
-          type: string
-        - name: username
-          in: body
-          type: string
-        - name: email
-          in: body
-          type: string
-        - name: phone
-          in: body
-          type: string
-        - name: password
-          in: body
-          type: string
-        - name: hourly_rate
-          in: body
-          type: string
-        - name: manager_id
-          in: body
-          type: string
-    responses:
-        201:
-            description: Employee successfully created.
-    """
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
     username = get_request_json(request, "username")
@@ -254,15 +222,15 @@ def check_email(email):
     Returns if an email does not yet exist in the database
     ---
     parameters:
-        - name: email
-          in: path
-          type: string
-          required: true
+            - name: email
+                    in: path
+                    type: string
+                    required: true
     responses:
-        200:
-            description: True or false, if the email is unused or used, respectively
-            schema:
-                $ref: '#/definitions/User'
+            200:
+                    description: True or false, if the email is unused or used, respectively
+                    schema:
+                            $ref: '#/definitions/User'
     """
     account = db.session.query(User.id).filter(User.email == email).one_or_none()
     return {"success": account is None}, 200
@@ -275,25 +243,25 @@ def get_user(id):
     """Returns a user by their ID
     ---
     parameters:
-        - name: id
-          in: path
-          type: number
-          required: true
+            - name: id
+                    in: path
+                    type: number
+                    required: true
     definitions:
-        User:
-            type: object
-            properties:
-                first:
-                    type: string
-                    example: Jackson
-                last:
-                    type: string
-                    example: Sippe
+            User:
+                    type: object
+                    properties:
+                            first:
+                                    type: string
+                                    example: Jackson
+                            last:
+                                    type: string
+                                    example: Sippe
     responses:
-        200:
-            description: The specified user
-            schema:
-                $ref: '#/definitions/User'
+            200:
+                    description: The specified user
+                    schema:
+                            $ref: '#/definitions/User'
     """
     user = db.session.query(User).filter(User.id == id).one_or_none()
     result = user
@@ -397,11 +365,12 @@ def edit_user():
 def list_employees():
     """Returns list of employees associated with the current manager
     ---
+
     responses:
-        200:
-            description: A list of users
-            schema:
-                $ref: '#/definitions/User'
+            200:
+                    description: A list of users
+                    schema:
+                            $ref: '#/definitions/User'
     """
     result = (
         db.session.query(User)
@@ -419,9 +388,9 @@ def list_employees():
 def edit_employee(id):
     """Gives manager the ability to edit an employee's pay and direct manager
     ---
+
     responses:
-        200:
-            description: Employee edited
+            200:
     """
     hourly_rate = get_request_json(request, "hourly_rate")
 
