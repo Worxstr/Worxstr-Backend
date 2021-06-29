@@ -63,10 +63,11 @@ def create_conversation():
     ---
     parameters:
         - name: users
-          description: List of IDs for the users to be including in the conversation.
+          description: "List of IDs for the users to be including in the conversation."
           in: body
-          type: list
-          items: string
+          type: array
+          items:
+              type: string
           required: true
     definitions:
         Conversation:
@@ -181,7 +182,7 @@ def get_messages(conversation_id):
     definitions:
         Message:
             type: object
-            propperties:
+            properties:
                 id:
                     type: integer
                 sender_id:
