@@ -37,11 +37,11 @@ def list_jobs():
                         organization_managers:
                             type: array
                             items:
-                                $ref: '#/definitions/User
+                                $ref: '#/definitions/User'
                         employee_managers:
                             type: array
                             items:
-                                $ref: '#/definitions/User
+                                $ref: '#/definitions/User'
     responses:
         200:
             description: A list of jobs
