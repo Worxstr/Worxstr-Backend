@@ -75,7 +75,7 @@ def get_calendar_events():
                     events:
                         type: array
                         items:
-                            $ref: '#/definitions/ScheduleShift'
+                            $ref: '#/definitions/Shift'
     """
     date_begin = get_request_arg(request, "date_begin")
     date_end = get_request_arg(request, "date_end")

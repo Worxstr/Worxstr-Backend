@@ -68,6 +68,20 @@ def create_conversation():
           type: list
           items: string
           required: true
+    definitions:
+        Conversation:
+            type: object
+            properties:
+                id:
+                    type: integer
+                participants:
+                    type: array
+                    items:
+                        ref: '/definitions/User'
+                messages:
+                    type: array
+                    items:
+                        ref: '/definitions/Message'
     responses:
         200:
             description: The new conversation.
@@ -164,6 +178,21 @@ def get_messages(conversation_id):
           in: path
           type: string
           required: true
+    definitions:
+        Message:
+            type: object
+            propperties:
+                id:
+                    type: integer
+                sender_id:
+                    type: integer
+                body:
+                    type: string
+                timestamp:
+                    type: string
+                    format: date-time
+                conversation_id:
+                    type: integer
     responses:
         200:
             description: The requested conversation.

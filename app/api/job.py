@@ -22,6 +22,43 @@ def list_jobs():
     Get a list of registered jobs and the available managers for the jobs.
     ---
     definitions:
+        Job:
+            type: object
+            properties:
+                id:
+                    type: integer
+                name:
+                    type: string
+                organization_id:
+                    type: integer
+                employee_manager_id:
+                    type: integer
+                organization_manager_id:
+                    type: integer
+                address:
+                    type: string
+                city:
+                    type: string
+                state:
+                    type: string
+                zip_code:
+                    type: string
+                country:
+                    type: string
+                consultant_name:
+                    type: string
+                consultant_phone:
+                    type: string
+                consultant_email:
+                    type: string
+                consultant_code:
+                    type: string
+                longitude:
+                    type: number
+                latitude:
+                    type: number
+                active:
+                    type: boolean
         JobsAndManagers:
             type: object
             properties:

@@ -16,6 +16,26 @@ def shifts():
     """
     Create new shifts.
     ---
+    definitions:
+        Shift:
+            type: object
+            properties:
+                id:
+                    type: integer
+                job_id:
+                    type: integer
+                time_begin:
+                    type: string
+                    format: date-time
+                time_end:
+                    type: string
+                    format: date-time
+                employee_id:
+                    type: integer
+                site_location:
+                    type: string
+                timecard_id:
+                    type: integer
     responses:
         201:
             description: The newly created shift.
