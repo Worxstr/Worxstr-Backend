@@ -154,7 +154,7 @@ def conversation(conversation_id):
 
 @bp.route("/conversations/<conversation_id>/messages", methods=["GET"])
 @login_required
-def messages(conversation_id):
+def get_messages(conversation_id):
     """
     Get messages in a conversation.
     ---
@@ -197,7 +197,7 @@ def messages(conversation_id):
 
 @bp.route("/conversations/<conversation_id>/messages", methods=["POST"])
 @login_required
-def messages(conversation_id):
+def create_messages(conversation_id):
     """
     Add a new message to a conversaion.
     ---
