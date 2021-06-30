@@ -7,6 +7,7 @@ from app import Config
 from app.api import bp
 from app.utils import get_request_json, OK_RESPONSE
 
+
 @bp.route("/contact/sales", methods=["POST"])
 def sales():
     """
@@ -26,11 +27,32 @@ def sales():
     notes = get_request_json(request, "notes", optional=True)
 
     if not (phone or email):
-        raise(NotEnoughInformationException(f'No contact information provided.'))
-    create_ticket(business_name, contact_name, contact_title, phone, email, website, num_managers, num_contractors, notes)
+        raise (NotEnoughInformationException(f"No contact information provided."))
+    create_ticket(
+        business_name,
+        contact_name,
+        contact_title,
+        phone,
+        email,
+        website,
+        num_managers,
+        num_contractors,
+        notes,
+    )
     return OK_RESPONSE, 201
 
-def create_ticket(business_name, contact_name, contact_title, phone, email, website, num_managers, num_contractors, notes):
+
+def create_ticket(
+    business_name,
+    contact_name,
+    contact_title,
+    phone,
+    email,
+    website,
+    num_managers,
+    num_contractors,
+    notes,
+):
     values = {
         "name": business_name,
         "description": notes,
@@ -39,39 +61,19 @@ def create_ticket(business_name, contact_name, contact_title, phone, email, webs
         "notify_all": True,
         "check_required_custom_fields": True,
         "custom_fields": [
-        {
-            "id": "1f5b9606-293f-4abc-8bdc-15a4d3739749",
-            "value": contact_name
-        },
-        {
-            "id": "fd844e04-66de-4387-bc0e-4d51c499526b",
-            "value": phone
-        },
-        {
-            "id": "ea4abe15-0e7e-40b4-b7a2-7b37cf4cf6b7",
-            "value": contact_title
-        },
-        {
-            "id": "861d4136-1c80-4735-8fb6-d4a95e5ce1c2",
-            "value": num_contractors
-        },
-        {
-            "id": "f8cb7b25-f05b-468e-a043-3972c1307d42",
-            "value": num_managers
-        },
-        {
-            "id": "3dbe29b4-02ec-41ff-83dd-7e2b0b6d9dff",
-            "value": email
-        },
-        {
-            "id": "c2917630-b938-45de-99d1-6369c0690ee3",
-            "value": website
-        }
-        ]
+            {"id": "1f5b9606-293f-4abc-8bdc-15a4d3739749", "value": contact_name},
+            {"id": "fd844e04-66de-4387-bc0e-4d51c499526b", "value": phone},
+            {"id": "ea4abe15-0e7e-40b4-b7a2-7b37cf4cf6b7", "value": contact_title},
+            {"id": "861d4136-1c80-4735-8fb6-d4a95e5ce1c2", "value": num_contractors},
+            {"id": "f8cb7b25-f05b-468e-a043-3972c1307d42", "value": num_managers},
+            {"id": "3dbe29b4-02ec-41ff-83dd-7e2b0b6d9dff", "value": email},
+            {"id": "c2917630-b938-45de-99d1-6369c0690ee3", "value": website},
+        ],
     }
-    headers = {
-    'Authorization': Config.CLICKUP_KEY,
-    'Content-Type': 'application/json'
-    }
-    requests.post('https://api.clickup.com/api/v2/list/81940859/task', data=json.dumps(values), headers=headers)
+    headers = {"Authorization": Config.CLICKUP_KEY, "Content-Type": "application/json"}
+    requests.post(
+        "https://api.clickup.com/api/v2/list/81940859/task",
+        data=json.dumps(values),
+        headers=headers,
+    )
     return

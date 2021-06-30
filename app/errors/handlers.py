@@ -18,6 +18,7 @@ def missing_parameter_error(error):
 
     return response
 
+
 @bp.app_errorhandler(NotEnoughInformationException)
 def not_enough_information(error):
     response = error.get_response()
@@ -30,6 +31,7 @@ def not_enough_information(error):
     )
 
     return response
+
 
 @bp.app_errorhandler(404)
 def not_found_error(error):
