@@ -87,3 +87,5 @@ class Config(object):
         "swagger_ui": True,
         "specs_route": "/docs/",
     }
+
+    CLICKUP_KEY = os.environ.get("CLICKUP_KEY")

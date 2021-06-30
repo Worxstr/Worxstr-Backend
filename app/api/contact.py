@@ -3,9 +3,9 @@ import datetime, requests
 import json
 from flask import request
 
-from app import db
+from app import Config
 from app.api import bp
-from app.utils import get_request_arg, get_request_json, OK_RESPONSE
+from app.utils import get_request_json, OK_RESPONSE
 
 @bp.route("/contact/sales", methods=["POST"])
 def sales():
@@ -25,11 +25,10 @@ def sales():
     num_contractors = get_request_json(request, "num_contractors", optional=True)
     notes = get_request_json(request, "notes", optional=True)
 
-    if phone or email:
-        print("here")
-        create_ticket(business_name, contact_name, contact_title, phone, email, website, num_managers, num_contractors, notes)
-        return OK_RESPONSE, 201
-    raise(NotEnoughInformationException(f'No contact information provided.'))
+    if not (phone or email):
+        raise(NotEnoughInformationException(f'No contact information provided.'))
+    create_ticket(business_name, contact_name, contact_title, phone, email, website, num_managers, num_contractors, notes)
+    return OK_RESPONSE, 201
 
 def create_ticket(business_name, contact_name, contact_title, phone, email, website, num_managers, num_contractors, notes):
     values = {
@@ -53,7 +52,7 @@ def create_ticket(business_name, contact_name, contact_title, phone, email, webs
             "value": contact_title
         },
         {
-            "id": "af9501a1-5d5b-448f-89b7-f757ac5ab79b",
+            "id": "861d4136-1c80-4735-8fb6-d4a95e5ce1c2",
             "value": num_contractors
         },
         {
@@ -70,9 +69,8 @@ def create_ticket(business_name, contact_name, contact_title, phone, email, webs
         }
         ]
     }
-
     headers = {
-    'Authorization': 'pk_14868405_D82C7DOIOML11J08RQIS1BFUDKNI8OOG',
+    'Authorization': Config.CLICKUP_KEY,
     'Content-Type': 'application/json'
     }
     requests.post('https://api.clickup.com/api/v2/list/81940859/task', data=json.dumps(values), headers=headers)
