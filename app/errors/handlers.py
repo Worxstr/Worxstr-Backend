@@ -18,6 +18,7 @@ def missing_parameter_error(error):
 
     return response
 
+
 @bp.app_errorhandler(404)
 def not_found_error(error):
     return 404
