@@ -167,7 +167,7 @@ class TimeCard(db.Model, CustomSerializerMixin):
     payout_id = db.Column(db.String(255))
 
 
-class EmployeeInfo(db.Model, CustomSerializerMixin):
+class ContractorInfo(db.Model, CustomSerializerMixin):
     serialize_only = (
         "id",
         "address",
