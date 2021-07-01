@@ -16,10 +16,23 @@ def sales():
     responses:
         200:
     """
-    business_name = get_request_json(request, "business_name")
+    business_name = (
+        get_request_json(request, "business_name", optional=True) or "Unknown"
+    )
     contact_name = get_request_json(request, "contact_name")
     contact_title = get_request_json(request, "contact_title", optional=True)
     phone = get_request_json(request, "phone", optional=True)
+    if phone:
+        phone = (
+            "+"
+            + phone["country_code"]
+            + " "
+            + phone["area_code"]
+            + " "
+            + phone["phone_number"][:3]
+            + " "
+            + phone["phone_number"][3:]
+        )
     email = get_request_json(request, "email", optional=True)
     website = get_request_json(request, "website", optional=True)
     num_managers = get_request_json(request, "num_managers", optional=True)
