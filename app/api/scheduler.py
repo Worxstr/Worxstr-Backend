@@ -97,7 +97,7 @@ def shifts():
                         items:
                             $ref: '#/definitions/ShiftContractorUnion'
     """
-    job_id = get_request_json(request, "job_id")
+    job_id = get_request_arg(request, "job_id")
     time_begin = get_request_json(request, "time_begin")
     time_end = get_request_json(request, "time_end")
     site_locations = get_request_json(request, "site_locations")
