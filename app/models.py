@@ -88,7 +88,7 @@ class Job(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"))
-    employee_manager_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    contractor_manager_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     organization_manager_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     address = db.Column(db.String(255))
     city = db.Column(db.String(255))
@@ -113,7 +113,7 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
     job_id = db.Column(db.Integer, db.ForeignKey("job.id"))
     time_begin = db.Column(db.DateTime)
     time_end = db.Column(db.DateTime)
-    employee_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    contractor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     site_location = db.Column(db.String(255))
     timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
 
@@ -124,14 +124,14 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
         time_begin = get_key(shift, "time_begin", error_on_missing=True)
         time_end = get_key(shift, "time_end", error_on_missing=True)
         site_location = get_key(shift, "site_location", error_on_missing=True)
-        employee_id = get_key(shift, "employee_id", error_on_missing=True)
+        contractor_id = get_key(shift, "contractor_id", error_on_missing=True)
 
         return ScheduleShift(
             job_id=job_id,
             time_begin=time_begin,
             time_end=time_end,
             site_location=site_location,
-            employee_id=employee_id,
+            contractor_id=contractor_id,
         )
 
 
@@ -148,7 +148,7 @@ class TimeClock(db.Model, CustomSerializerMixin):
     time = db.Column(db.DateTime)
     action = db.Column(db.Enum(TimeClockAction))
     timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
-    employee_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    contractor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
 
 class TimeCard(db.Model, CustomSerializerMixin):
@@ -156,7 +156,7 @@ class TimeCard(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     total_time = db.Column(db.Numeric)
     time_break = db.Column(db.Numeric)
-    employee_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    contractor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     wage_payment = db.Column(db.Numeric)
     fees_payment = db.Column(db.Numeric)
     total_payment = db.Column(db.Numeric)
@@ -179,7 +179,7 @@ class EmployeeInfo(db.Model, CustomSerializerMixin):
         "hourly_rate",
         "need_info",
     )
-    __tablename__ = "employee_info"
+    __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
     ssn = db.Column(db.String(9), unique=True)
     address = db.Column(db.String(255))

@@ -16,7 +16,7 @@ from flask_security import (
 from app import db, user_datastore, geolocator
 from app.api import bp
 from app.email import send_email
-from app.models import ManagerReference, User, EmployeeInfo, Organization
+from app.models import ManagerReference, User, ContractorInfo, Organization
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 
@@ -59,7 +59,7 @@ def reset_password():
 
 @bp.route("/users/add-manager", methods=["POST"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
+@roles_accepted("organization_manager", "contractor_manager")
 def add_manager():
     """
     Creates a new manager user
@@ -151,10 +151,10 @@ def manager_reference_generator():
     return rand
 
 
-@bp.route("/users/add-employee", methods=["POST"])
-def add_employee():
+@bp.route("/users/add-contractor", methods=["POST"])
+def add_contractor():
     """
-    Add a new employee.
+    Add a new contractor.
     ---
     parameters:
         - name: first_name
@@ -183,7 +183,7 @@ def add_employee():
           type: string
     responses:
         201:
-            description: Employee successfully created.
+            description: Contractor successfully created.
     """
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
@@ -192,7 +192,7 @@ def add_employee():
     phone = get_request_json(request, "phone")
     password = get_request_json(request, "password")
     hourly_rate = get_request_json(request, "hourly_rate")
-    roles = ["employee"]
+    roles = ["contractor"]
     manager_id = get_request_json(request, "manager_id", optional=True)
 
     organization_id = None
@@ -222,8 +222,8 @@ def add_employee():
     )
     db.session.commit()
 
-    employee_info = EmployeeInfo(id=user.id, hourly_rate=float(hourly_rate))
-    db.session.add(employee_info)
+    contractor_info = ContractorInfo(id=user.id, hourly_rate=float(hourly_rate))
+    db.session.add(contractor_info)
     db.session.commit()
 
     if current_user:
@@ -270,7 +270,7 @@ def check_email(email):
 
 @bp.route("/users/<id>", methods=["GET"])
 @login_required
-@roles_accepted("employee_manager", "organization_manager")
+@roles_accepted("contractor_manager", "organization_manager")
 def get_user(id):
     """Returns a user by their ID
     ---
@@ -299,10 +299,10 @@ def get_user(id):
     result = user
     if user:
         result = user.to_dict()
-        if user.has_role("employee"):
-            result["employee_info"] = (
-                db.session.query(EmployeeInfo)
-                .filter(EmployeeInfo.id == id)
+        if user.has_role("contractor"):
+            result["contractor_info"] = (
+                db.session.query(ContractorInfo)
+                .filter(ContractorInfo.id == id)
                 .one()
                 .to_dict()
             )
@@ -311,11 +311,11 @@ def get_user(id):
 
 @bp.route("/users/me/ssn", methods=["PUT"])
 @login_required
-@roles_accepted("employee")
+@roles_accepted("contractor")
 def set_user_ssn():
-    db.session.query(EmployeeInfo).filter(
-        EmployeeInfo.id == current_user.get_id()
-    ).update({EmployeeInfo.ssn: get_request_json(request, "ssn")})
+    db.session.query(ContractorInfo).filter(
+        ContractorInfo.id == current_user.get_id()
+    ).update({ContractorInfo.ssn: get_request_json(request, "ssn")})
     db.session.commit()
     return OK_RESPONSE
 
@@ -334,10 +334,10 @@ def get_authenticated_user():
         .one()
         .to_dict()
     )
-    if current_user.has_role("employee"):
-        authenticated_user["employee_info"] = (
-            db.session.query(EmployeeInfo)
-            .filter(EmployeeInfo.id == current_user.get_id())
+    if current_user.has_role("contractor"):
+        authenticated_user["contractor_info"] = (
+            db.session.query(ContractorInfo)
+            .filter(ContractorInfo.id == current_user.get_id())
             .one()
             .to_dict()
         )
@@ -346,7 +346,7 @@ def get_authenticated_user():
 
 @bp.route("/users/edit", methods=["PUT"])
 @login_required
-@roles_accepted("employee")
+@roles_accepted("contractor")
 def edit_user():
     # TODO: Are all of the fields required?
     phone = get_request_json(request, "phone")
@@ -360,30 +360,30 @@ def edit_user():
         {User.phone: phone, User.email: email}
     )
 
-    if current_user.has_role("employee"):
+    if current_user.has_role("contractor"):
         location = geolocator.geocode(
             address + " " + city + " " + state + " " + zip_code
         )
-        db.session.query(EmployeeInfo).filter(
-            EmployeeInfo.id == current_user.get_id()
+        db.session.query(ContractorInfo).filter(
+            ContractorInfo.id == current_user.get_id()
         ).update(
             {
-                EmployeeInfo.address: address,
-                EmployeeInfo.city: city,
-                EmployeeInfo.state: state,
-                EmployeeInfo.zip_code: zip_code,
-                EmployeeInfo.longitude: location.longitude,
-                EmployeeInfo.latitude: location.latitude,
+                ContractorInfo.address: address,
+                ContractorInfo.city: city,
+                ContractorInfo.state: state,
+                ContractorInfo.zip_code: zip_code,
+                ContractorInfo.longitude: location.longitude,
+                ContractorInfo.latitude: location.latitude,
             }
         )
 
     db.session.commit()
     result = current_user.to_dict()
 
-    if current_user.has_role("employee"):
-        result["employee_info"] = (
-            db.session.query(EmployeeInfo)
-            .filter(EmployeeInfo.id == current_user.get_id())
+    if current_user.has_role("contractor"):
+        result["contractor_info"] = (
+            db.session.query(ContractorInfo)
+            .filter(ContractorInfo.id == current_user.get_id())
             .one()
             .to_dict()
         )
@@ -391,11 +391,11 @@ def edit_user():
     return {"event": result}, 200
 
 
-@bp.route("/users/employees", methods=["GET"])
+@bp.route("/users/contractors", methods=["GET"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
-def list_employees():
-    """Returns list of employees associated with the current manager
+@roles_accepted("organization_manager", "contractor_manager")
+def list_contractors():
+    """Returns list of contractors associated with the current manager
     ---
     responses:
         200:
@@ -406,33 +406,33 @@ def list_employees():
     result = (
         db.session.query(User)
         .filter(
-            User.manager_id == current_user.get_id(), User.roles.any(name="employee")
+            User.manager_id == current_user.get_id(), User.roles.any(name="contractor")
         )
         .all()
     )
     return {"users": [x.to_dict() for x in result]}, 200
 
 
-@bp.route("/users/employees/<id>", methods=["PUT"])
+@bp.route("/users/contractors/<id>", methods=["PUT"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
-def edit_employee(id):
-    """Gives manager the ability to edit an employee's pay and direct manager
+@roles_accepted("organization_manager", "contractor_manager")
+def edit_contractor(id):
+    """Gives manager the ability to edit an contractor's pay and direct manager
     ---
     responses:
         200:
-            description: Employee edited
+            description: Contractor edited
     """
     hourly_rate = get_request_json(request, "hourly_rate")
 
-    db.session.query(EmployeeInfo).filter(EmployeeInfo.id == id).update(
-        {EmployeeInfo.hourly_rate: hourly_rate}
+    db.session.query(ContractorInfo).filter(ContractorInfo.id == id).update(
+        {ContractorInfo.hourly_rate: hourly_rate}
     )
     db.session.commit()
 
     result = db.session.query(User).filter(User.id == id).one().to_dict()
-    result["employee_info"] = (
-        db.session.query(EmployeeInfo).filter(EmployeeInfo.id == id).one().to_dict()
+    result["contractor_info"] = (
+        db.session.query(ContractorInfo).filter(ContractorInfo.id == id).one().to_dict()
     )
 
     return {"event": result}, 200
@@ -463,7 +463,7 @@ def add_org():
         "email": get_request_json(request, "email"),
         "phone": get_request_json(request, "phone"),
         "password": hash_password(get_request_json(request, "password")),
-        "roles": ["organization_manager", "employee_manager"],
+        "roles": ["organization_manager", "contractor_manager"],
         "manager_id": None,
         "organization_id": organization.id,
     }

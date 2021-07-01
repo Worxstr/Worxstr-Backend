@@ -18,7 +18,7 @@ def get_events(user_id, date_begin, date_end):
         .filter(
             ScheduleShift.time_begin > date_begin,
             ScheduleShift.time_begin < date_end,
-            ScheduleShift.employee_id == user_id,
+            ScheduleShift.contractor_id == user_id,
         )
         .order_by(ScheduleShift.time_begin.desc())
         .all()
@@ -81,16 +81,16 @@ def get_calendar_events():
     date_end = get_request_arg(request, "date_end")
 
     events = []
-    if current_user.has_role("employee"):
+    if current_user.has_role("contractor"):
         events = get_events(current_user.get_id(), date_begin, date_end)
     elif current_user.has_role("organization_manager") or current_user.has_role(
-        "employee_manager"
+        "contractor_manager"
     ):
-        employees = db.session.query(User).filter(
+        contractors = db.session.query(User).filter(
             User.manager_id == current_user.get_id()
         )
 
-        for employee in [e for e in employees if e.has_role("employee")]:
-            events.extend(get_events(employee.id, date_begin, date_end))
+        for contractor in [e for e in contractors if e.has_role("contractor")]:
+            events.extend(get_events(contractor.id, date_begin, date_end))
 
     return {"events": events}

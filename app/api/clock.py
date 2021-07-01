@@ -12,7 +12,7 @@ from app.models import (
     TimeClockAction,
     TimeCard,
     User,
-    EmployeeInfo,
+    ContractorInfo,
 )
 from app.utils import get_request_arg, get_request_json
 
@@ -49,7 +49,7 @@ def clock_history():
         .filter(
             TimeClock.time > num_weeks_begin,
             TimeClock.time < num_weeks_end,
-            TimeClock.employee_id == current_user.get_id(),
+            TimeClock.contractor_id == current_user.get_id(),
         )
         .order_by(TimeClock.time.desc())
         .all()
@@ -60,7 +60,7 @@ def clock_history():
 
 @bp.route("/clock/get-shift", methods=["GET"])
 @login_required
-@roles_required("employee")
+@roles_required("contractor")
 def get_shift():
     """Endpoint returning the current user's next shift.
     ---
@@ -78,7 +78,7 @@ def get_shift():
                 time_end:
                     type: string
                     format: date-time
-                employee_id:
+                contractor_id:
                     type: int
                 site_location:
                     type: string
@@ -94,7 +94,7 @@ def get_shift():
     shift = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.employee_id == current_user.get_id(),
+            ScheduleShift.contractor_id == current_user.get_id(),
             ScheduleShift.time_begin > today,
         )
         .order_by(ScheduleShift.time_begin)
@@ -105,7 +105,7 @@ def get_shift():
 
 @bp.route("/clock/clock-in", methods=["POST"])
 @login_required
-@roles_required("employee")
+@roles_required("contractor")
 def clock_in():
     """
     Clock the current user in.
@@ -140,7 +140,7 @@ def clock_in():
 
     time_in = datetime.datetime.utcnow()
 
-    timecard = TimeCard(employee_id=current_user.get_id())
+    timecard = TimeCard(contractor_id=current_user.get_id())
     db.session.add(timecard)
     db.session.commit()
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
@@ -148,7 +148,7 @@ def clock_in():
     )
     timeclock = TimeClock(
         time=time_in,
-        employee_id=current_user.get_id(),
+        contractor_id=current_user.get_id(),
         action=TimeClockAction.clock_in,
         timecard_id=timecard.id,
     )
@@ -174,14 +174,14 @@ def clock_out():
     time_out = datetime.datetime.utcnow()
     timecard_id = (
         db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.employee_id == current_user.get_id())
+        .filter(TimeClock.contractor_id == current_user.get_id())
         .order_by(TimeClock.time.desc())
         .first()
     )
     timeclock = TimeClock(
         time=time_out,
         timecard_id=timecard_id,
-        employee_id=current_user.get_id(),
+        contractor_id=current_user.get_id(),
         action=TimeClockAction.clock_out,
     )
     db.session.add(timeclock)
@@ -189,8 +189,8 @@ def clock_out():
     calculate_timecard(timecard_id)
     result = timeclock.to_dict()
     result["need_info"] = (
-        db.session.query(EmployeeInfo.need_info)
-        .filter(EmployeeInfo.id == current_user.get_id())
+        db.session.query(ContractorInfo.need_info)
+        .filter(ContractorInfo.id == current_user.get_id())
         .one()[0]
     )
     return {"event": result}
@@ -228,8 +228,8 @@ def calculate_timecard(timecard_id):
     total_time_hours = total_time.total_seconds() / 60.0 / 60.0
 
     rate = (
-        db.session.query(EmployeeInfo.hourly_rate)
-        .filter(EmployeeInfo.id == timecard.employee_id)
+        db.session.query(ContractorInfo.hourly_rate)
+        .filter(ContractorInfo.id == timecard.contractor_id)
         .one()
     )
     wage = round(float(rate[0]) * total_time_hours, 2)
@@ -239,7 +239,7 @@ def calculate_timecard(timecard_id):
     breaks = iter(
         db.session.query(TimeClock)
         .filter(
-            TimeClock.employee_id == timecard.employee_id,
+            TimeClock.contractor_id == timecard.contractor_id,
             TimeClock.timecard_id == timecard.id,
             TimeClock.action.in_(
                 (TimeClockAction.start_break, TimeClockAction.end_break)
@@ -269,8 +269,8 @@ def calculate_timecard(timecard_id):
     )
     db.session.commit()
     info = (
-        db.session.query(EmployeeInfo)
-        .filter(EmployeeInfo.id == timecard.employee_id)
+        db.session.query(ContractorInfo)
+        .filter(ContractorInfo.id == timecard.contractor_id)
         .one()
     )
     if not info.need_info and (info.ssn is None or info.address is None):
@@ -280,7 +280,7 @@ def calculate_timecard(timecard_id):
             db.session.query(TimeCard)
             .join(TimeClock)
             .filter(
-                TimeCard.employee_id == timecard.employee_id,
+                TimeCard.contractor_id == timecard.contractor_id,
                 TimeClock.time >= begin_year,
             )
             .all()
@@ -288,15 +288,15 @@ def calculate_timecard(timecard_id):
         for i in timecards:
             total_wage = total_wage + (float(i.wage_payment) - float(i.fees_payment))
         if total_wage > 400:
-            db.session.query(EmployeeInfo).filter(
-                EmployeeInfo.id == timecard.employee_id
-            ).update({EmployeeInfo.need_info: True})
+            db.session.query(ContractorInfo).filter(
+                ContractorInfo.id == timecard.contractor_id
+            ).update({ContractorInfo.need_info: True})
             db.session.commit()
 
 
 @bp.route("/clock/timecards/<timecard_id>", methods=["PUT"])
 @login_required
-@roles_accepted("employee_manager")
+@roles_accepted("contractor_manager")
 def edit_timecard(timecard_id):
     """Edit a given timecard.
     ---
@@ -335,7 +335,7 @@ def edit_timecard(timecard_id):
                     format: date-time
                 time_break:
                     type: integer
-                employee_id:
+                contractor_id:
                     type: integer
                 total_payment:
                     type: number
@@ -352,7 +352,7 @@ def edit_timecard(timecard_id):
     changes = get_request_json(request, "changes")
 
     timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
-    employee_id = timecard.employee_id
+    contractor_id = timecard.contractor_id
 
     for i in changes:
         db.session.query(TimeClock).filter(TimeClock.id == i["id"]).update(
@@ -363,13 +363,13 @@ def edit_timecard(timecard_id):
     calculate_timecard(timecard.id)
     # TODO: These could likely be combined into one query
     rate = (
-        db.session.query(EmployeeInfo.hourly_rate)
-        .filter(EmployeeInfo.id == employee_id)
+        db.session.query(ContractorInfo.hourly_rate)
+        .filter(ContractorInfo.id == contractor_id)
         .one()
     )
     user = (
         db.session.query(User.first_name, User.last_name)
-        .filter(User.id == employee_id)
+        .filter(User.id == contractor_id)
         .one()
     )
     result = (
@@ -390,7 +390,7 @@ def edit_timecard(timecard_id):
 
 @bp.route("/clock/timecards", methods=["GET"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
+@roles_accepted("organization_manager", "contractor_manager")
 def get_timecards():
     """Endpoint to get all unpaid timecards associated with the current logged in manager.
     ---
@@ -408,7 +408,7 @@ def get_timecards():
                     format: date-time
                 time_break:
                     type: integer
-                employee_id:
+                contractor_id:
                     type: integer
                 total_payment:
                     type: number
@@ -435,7 +435,7 @@ def get_timecards():
                 action:
                     type: string
                     enum: []
-                employee_id:
+                contractor_id:
                     type: integer
     responses:
         200:
@@ -464,8 +464,8 @@ def get_timecards():
         timecard["first_name"] = i[1]
         timecard["last_name"] = i[2]
         timecard["pay_rate"] = float(
-            db.session.query(EmployeeInfo.hourly_rate)
-            .filter(EmployeeInfo.id == timecard["employee_id"])
+            db.session.query(ContractorInfo.hourly_rate)
+            .filter(ContractorInfo.id == timecard["contractor_id"])
             .one()[0]
         )
         timecard["time_clocks"] = [
@@ -492,14 +492,14 @@ def start_break():
     """
     timecard_id = (
         db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.employee_id == current_user.get_id())
+        .filter(TimeClock.contractor_id == current_user.get_id())
         .order_by(TimeClock.time.desc())
         .first()
     )
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
         timecard_id=timecard_id,
-        employee_id=current_user.get_id(),
+        contractor_id=current_user.get_id(),
         action=TimeClockAction.start_break,
     )
     db.session.add(timeclock)
@@ -521,14 +521,14 @@ def end_break():
     """
     timecard_id = (
         db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.employee_id == current_user.get_id())
+        .filter(TimeClock.contractor_id == current_user.get_id())
         .order_by(TimeClock.time.desc())
         .first()
     )
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
         timecard_id=timecard_id,
-        employee_id=current_user.get_id(),
+        contractor_id=current_user.get_id(),
         action=TimeClockAction.end_break,
     )
     db.session.add(timeclock)

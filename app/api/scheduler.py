@@ -11,7 +11,7 @@ from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 @bp.route("/shifts", methods=["POST"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
+@roles_accepted("organization_manager", "contractor_manager")
 def shifts():
     """
     Create new shifts.
@@ -30,7 +30,7 @@ def shifts():
                 time_end:
                     type: string
                     format: date-time
-                employee_id:
+                contractor_id:
                     type: integer
                 site_location:
                     type: string
@@ -50,8 +50,8 @@ def shifts():
     db.session.add(shift)
     db.session.commit()
     result = shift.to_dict()
-    result["employee"] = (
-        db.session.query(User).filter(User.id == shift.employee_id).one().to_dict()
+    result["contractor"] = (
+        db.session.query(User).filter(User.id == shift.contractor_id).one().to_dict()
     )
     if (
         shift.time_begin <= datetime.datetime.utcnow()
@@ -64,7 +64,7 @@ def shifts():
 
 @bp.route("/shifts/<shift_id>", methods=["PUT"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
+@roles_accepted("organization_manager", "contractor_manager")
 def update_shift(shift_id):
     """
     Create new shifts.
@@ -91,7 +91,7 @@ def update_shift(shift_id):
             ScheduleShift.time_begin: shift.get("time_begin"),
             ScheduleShift.time_end: shift.get("time_end"),
             ScheduleShift.site_location: shift.get("site_location"),
-            ScheduleShift.employee_id: shift.get("employee_id"),
+            ScheduleShift.contractor_id: shift.get("contractor_id"),
         }
     )
 
@@ -104,7 +104,7 @@ def update_shift(shift_id):
 
 @bp.route("/shifts/<shift_id>", methods=["DELETE"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
+@roles_accepted("organization_manager", "contractor_manager")
 def delete_shift(shift_id):
     """
     Deletes a shift.
@@ -121,14 +121,14 @@ def delete_shift(shift_id):
 
 @bp.route("/shifts/next", methods=["GET"])
 @login_required
-@roles_accepted("employee")
+@roles_accepted("contractor")
 def get_next_shift():
     """
-    Get the next shift an employee is assigned to.
+    Get the next shift an contractor is assigned to.
     ---
     responses:
         200:
-            description: The next shift for the authenticated employee.
+            description: The next shift for the authenticated contractor.
             schema:
                 type: object
                 properties:
@@ -139,7 +139,7 @@ def get_next_shift():
     result = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.employee_id == current_user.get_id(),
+            ScheduleShift.contractor_id == current_user.get_id(),
             ScheduleShift.time_end > current_time,
         )
         .order_by(ScheduleShift.time_end)
