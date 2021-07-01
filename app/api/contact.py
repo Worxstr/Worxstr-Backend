@@ -1,4 +1,4 @@
-from app.errors.customs import NotEnoughInformationException
+from app.errors.customs import MissingParameterException
 import datetime, requests
 import json
 from flask import request
@@ -27,7 +27,7 @@ def sales():
     notes = get_request_json(request, "notes", optional=True)
 
     if not (phone or email):
-        raise (NotEnoughInformationException(f"No contact information provided."))
+        raise (MissingParameterException(f"No contact information provided."))
     create_ticket(
         business_name,
         contact_name,
