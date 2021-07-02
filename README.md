@@ -5,8 +5,6 @@ Web API for Worxstr
 
 ### Requirements
 - [Python 3](https://www.python.org/)
-- [Node.js](https://nodejs.org/en/)
-- [Yarn](https://yarnpkg.com/)
 
 1. Python virtual environment
     1. Create a new virtual environment
