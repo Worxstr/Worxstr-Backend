@@ -6,7 +6,9 @@ from flask_security import current_user, login_required, roles_accepted
 from app import db
 from app.api import bp
 from app.models import ScheduleShift, User
-from app.utils import get_request_arg, get_request_json, OK_RESPONSE
+from app.scheduler import add_shift
+from app.users import get_users_list
+from app.utils import get_request_arg, get_request_json, get_key, OK_RESPONSE
 
 
 @bp.route("/shifts", methods=["POST"])
@@ -14,8 +16,32 @@ from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 @roles_accepted("organization_manager", "contractor_manager")
 def shifts():
     """
-    Create new shifts.
+    Create new shift(s).
     ---
+    parameters:
+        - name: job_id
+          in: body
+          type: integer
+        - name: time_begin
+          in: body
+          type: string
+          format: date-time
+        - name: time_end
+          in: body
+          type: string
+          format: date-time
+        - name: contractor_ids
+          description: Contractor IDs, in order, to be assigned to the shift.
+          in: body
+          type: array
+          items:
+              type: integer
+        - name: site_locations
+          description: Site locations, in order, corresponding to the respective contractor ID.
+          in: body
+          type: array
+          items:
+              type: string
     definitions:
         Shift:
             type: object
@@ -36,30 +62,84 @@ def shifts():
                     type: string
                 timecard_id:
                     type: integer
+        ShiftContractorUnion:
+            type: object
+            description: "A Shift with the Employee added under the key 'contractor' and whether or not shift is active."
+            properties:
+                active:
+                    type: boolean
+                id:
+                    type: integer
+                job_id:
+                    type: integer
+                time_begin:
+                    type: string
+                    format: date-time
+                time_end:
+                    type: string
+                    format: date-time
+                employee_id:
+                    type: integer
+                contractor:
+                    $ref: '#/definitions/User'
+                site_location:
+                    type: string
+                timecard_id:
+                    type: integer
     responses:
         201:
             description: The newly created shift.
             schema:
                 type: object
                 properties:
-                    shift:
-                        $ref: '#/definitions/Shift'
+                    shifts:
+                        type: array
+                        items:
+                            $ref: '#/definitions/ShiftContractorUnion'
     """
-    shift = ScheduleShift.from_request(request)
+    job_id = get_request_arg(request, "job_id")
+    time_begin = get_request_json(request, "time_begin")
+    time_end = get_request_json(request, "time_end")
+    site_locations = get_request_json(request, "site_locations")
+    employee_ids = get_request_json(request, "contractor_ids")
 
-    db.session.add(shift)
-    db.session.commit()
-    result = shift.to_dict()
-    result["contractor"] = (
-        db.session.query(User).filter(User.id == shift.contractor_id).one().to_dict()
-    )
-    if (
-        shift.time_begin <= datetime.datetime.utcnow()
-        and shift.time_end >= datetime.datetime.utcnow()
-    ):
-        result["active"] = True
+    if len(site_locations) != len(employee_ids):
+        abort(400, "Must supply the same number of Contractor IDs and Site Locations.")
 
-    return {"shift": result}, 201
+    shifts = []
+    for (e, s) in zip(employee_ids, site_locations):
+        shifts.append(
+            add_shift(
+                job_id,
+                time_begin,
+                time_end,
+                site_location=s,
+                employee_id=e,
+            )
+        )
+
+    employees = get_users_list(employee_ids)
+
+    # Add contractor objects to the results
+    for s in shifts:
+        setattr(
+            s,
+            "contractor",
+            next(filter(lambda e: e.id == s.employee_id, employees)).to_dict(),
+        )
+
+    # Add whether or not each shift is active
+    for shift in shifts:
+        setattr(
+            shift,
+            "active",
+            (
+                shift.time_begin <= datetime.datetime.utcnow()
+                and shift.time_end >= datetime.datetime.utcnow()
+            ),
+        )
+
+    return {"shifts": [s.to_dict() for s in shifts]}, 201
 
 
 @bp.route("/shifts/<shift_id>", methods=["PUT"])
