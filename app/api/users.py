@@ -72,9 +72,9 @@ def add_manager():
     """
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
-    username = get_request_json(request, "username")
     email = get_request_json(request, "email")
-    phone = get_request_json(request, "phone")
+    phone_raw = get_request_json(request, "phone")
+    phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
     roles = get_request_json(request, "roles")
     manager_id = get_request_json(request, "manager_id")
 
@@ -85,7 +85,6 @@ def add_manager():
     manager = user_datastore.create_user(
         first_name=first_name,
         last_name=last_name,
-        username=username,
         email=email,
         phone=phone,
         roles=roles,
@@ -187,9 +186,9 @@ def add_contractor():
     """
     first_name = get_request_json(request, "first_name")
     last_name = get_request_json(request, "last_name")
-    username = get_request_json(request, "username")
     email = get_request_json(request, "email")
-    phone = get_request_json(request, "phone")
+    phone_raw = get_request_json(request, "phone")
+    phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
     password = get_request_json(request, "password")
     hourly_rate = get_request_json(request, "hourly_rate")
     roles = ["contractor"]
@@ -211,7 +210,6 @@ def add_contractor():
     user = user_datastore.create_user(
         first_name=first_name,
         last_name=last_name,
-        username=username,
         email=email,
         phone=phone,
         organization_id=organization_id,

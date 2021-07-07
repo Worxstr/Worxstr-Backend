@@ -191,6 +191,10 @@ def add_job():
             schema:
                 $ref: '#/definitions/Job'
     """
+    consultant_phone_raw = get_request_json(request, "consultant_phone")
+    consultant_phone = (
+        consultant_phone_raw["areaCode"] + consultant_phone_raw["phoneNumber"]
+    )
     job = Job(
         name=get_request_json(request, "name"),
         organization_id=current_user.organization_id,
@@ -204,11 +208,10 @@ def add_job():
         longitude=get_request_json(request, "longitude"),
         latitude=get_request_json(request, "latitude"),
         consultant_name=get_request_json(request, "consultant_name"),
-        consultant_phone=get_request_json(request, "consultant_phone"),
+        consultant_phone=consultant_phone,
         consultant_email=get_request_json(request, "consultant_email"),
         consultant_code=str(randint(000000, 999999)),
     )
-
     db.session.add(job)
     db.session.commit()
 
