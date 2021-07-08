@@ -12,6 +12,7 @@ from flask_security import (
     roles_required,
     roles_accepted,
 )
+from sqlalchemy.sql.operators import op
 
 from app import db, user_datastore, geolocator
 from app.api import bp
@@ -55,6 +56,7 @@ def reset_password():
         {User.password: hash_password(new_password)}
     )
     db.session.commit()
+    return OK_RESPONSE
 
 
 @bp.route("/users/add-manager", methods=["POST"])
