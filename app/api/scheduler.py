@@ -78,7 +78,7 @@ def shifts():
                 time_end:
                     type: string
                     format: date-time
-                employee_id:
+                contractor_id:
                     type: integer
                 contractor:
                     $ref: '#/definitions/User'
@@ -101,31 +101,31 @@ def shifts():
     time_begin = get_request_json(request, "time_begin")
     time_end = get_request_json(request, "time_end")
     site_locations = get_request_json(request, "site_locations")
-    employee_ids = get_request_json(request, "contractor_ids")
+    contractor_ids = get_request_json(request, "contractor_ids")
 
-    if len(site_locations) != len(employee_ids):
+    if len(site_locations) != len(contractor_ids):
         abort(400, "Must supply the same number of Contractor IDs and Site Locations.")
 
     shifts = []
-    for (e, s) in zip(employee_ids, site_locations):
+    for (e, s) in zip(contractor_ids, site_locations):
         shifts.append(
             add_shift(
                 job_id,
                 time_begin,
                 time_end,
                 site_location=s,
-                employee_id=e,
+                contractor_id=e,
             )
         )
 
-    employees = get_users_list(employee_ids)
+    contractors = get_users_list(contractor_ids)
 
     # Add contractor objects to the results
     for s in shifts:
         setattr(
             s,
             "contractor",
-            next(filter(lambda e: e.id == s.employee_id, employees)).to_dict(),
+            next(filter(lambda e: e.id == s.contractor_id, contractors)).to_dict(),
         )
 
     # Add whether or not each shift is active
