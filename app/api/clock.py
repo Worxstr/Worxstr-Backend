@@ -125,7 +125,7 @@ def clock_in():
             schema:
                 $ref: '#/definitions/TimeClock'
     """
-    shift_id = get_request_args(request, "shift_id")
+    shift_id = get_request_arg(request, "shift_id")
     code = str(get_request_json(request, "code"))
 
     correct_code = (
