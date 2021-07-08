@@ -11,7 +11,7 @@ from app import db
 from app.api import bp
 from app.email import send_email
 from app.models import ContractorInfo, Job, User, ScheduleShift, TimeClock
-from app.utils import get_request_arg, get_request_json
+from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 
 @bp.route("/jobs", methods=["GET"])
