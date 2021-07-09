@@ -12,7 +12,7 @@ from app.utils import get_request_arg, get_request_json
 @bp.route("/payments/approve", methods=["PUT"])
 @bp.route("/payments/deny", methods=["PUT"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
+@roles_accepted("organization_manager", "contractor_manager")
 def approve_payment():
     timecards = get_request_json(request, "timecards")
 
@@ -38,12 +38,12 @@ def approve_payment():
     for timecard in [t.to_dict() for t in timecards]:
         timecard["first_name"] = (
             db.session.query(User.first_name)
-            .filter(User.id == timecard["employee_id"])
+            .filter(User.id == timecard["contractor_id"])
             .one()[0]
         )
         timecard["last_name"] = (
             db.session.query(User.last_name)
-            .filter(User.id == timecard["employee_id"])
+            .filter(User.id == timecard["contractor_id"])
             .one()[0]
         )
         timecard["time_clocks"] = [
@@ -59,7 +59,7 @@ def approve_payment():
 
 @bp.route("/payments/complete", methods=["PUT"])
 @login_required
-@roles_accepted("organization_manager", "employee_manager")
+@roles_accepted("organization_manager", "contractor_manager")
 def add_order_id():
     timecards = get_request_json(request, "timecards")
     order_id = get_request_json(request, "transaction").get("orderID")
@@ -75,7 +75,7 @@ def add_order_id():
             total_payment = total_payment + float(i["total_payment"])
 
             email = (
-                db.session.query(User.email).filter(User.id == i["employee_id"]).one()
+                db.session.query(User.email).filter(User.id == i["contractor_id"]).one()
             )
             payment = {
                 "email": email[0],

@@ -10,13 +10,13 @@ import pyqrcode
 from app import db
 from app.api import bp
 from app.email import send_email
-from app.models import EmployeeInfo, Job, User, ScheduleShift, TimeClock
-from app.utils import get_request_arg, get_request_json
+from app.models import ContractorInfo, Job, User, ScheduleShift, TimeClock
+from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 
 @bp.route("/jobs", methods=["GET"])
 @login_required
-@roles_accepted("employee_manager", "organization_manager")
+@roles_accepted("contractor_manager", "organization_manager")
 def list_jobs():
     """
     Get a list of registered jobs and the available managers for the jobs.
@@ -31,7 +31,7 @@ def list_jobs():
                     type: string
                 organization_id:
                     type: integer
-                employee_manager_id:
+                contractor_manager_id:
                     type: integer
                 organization_manager_id:
                     type: integer
@@ -75,7 +75,7 @@ def list_jobs():
                             type: array
                             items:
                                 $ref: '#/definitions/User'
-                        employee_managers:
+                        contractor_managers:
                             type: array
                             items:
                                 $ref: '#/definitions/User'
@@ -93,7 +93,7 @@ def list_jobs():
     direct_ids = []
     direct_jobs = (
         db.session.query(Job)
-        .filter(Job.employee_manager_id == current_user.get_id(), Job.active)
+        .filter(Job.contractor_manager_id == current_user.get_id(), Job.active)
         .all()
     )
     for direct_job in direct_jobs:
@@ -109,7 +109,7 @@ def list_jobs():
             not_(Job.id.in_(direct_ids)),
             or_(
                 Job.organization_manager_id.in_(lower_managers),
-                Job.employee_manager_id.in_(lower_managers),
+                Job.contractor_manager_id.in_(lower_managers),
             ),
             Job.active,
         )
@@ -136,7 +136,7 @@ def add_job():
           in: body
           type: string
           required: true
-        - name: employee_manager_id
+        - name: contractor_manager_id
           in: body
           type: integer
           required: true
@@ -191,10 +191,14 @@ def add_job():
             schema:
                 $ref: '#/definitions/Job'
     """
+    consultant_phone_raw = get_request_json(request, "consultant_phone")
+    consultant_phone = (
+        consultant_phone_raw["areaCode"] + consultant_phone_raw["phoneNumber"]
+    )
     job = Job(
         name=get_request_json(request, "name"),
         organization_id=current_user.organization_id,
-        employee_manager_id=get_request_json(request, "employee_manager_id"),
+        contractor_manager_id=get_request_json(request, "contractor_manager_id"),
         organization_manager_id=get_request_json(request, "organization_manager_id"),
         address=get_request_json(request, "address"),
         city=get_request_json(request, "city"),
@@ -204,11 +208,10 @@ def add_job():
         longitude=get_request_json(request, "longitude"),
         latitude=get_request_json(request, "latitude"),
         consultant_name=get_request_json(request, "consultant_name"),
-        consultant_phone=get_request_json(request, "consultant_phone"),
+        consultant_phone=consultant_phone,
         consultant_email=get_request_json(request, "consultant_email"),
         consultant_code=str(randint(000000, 999999)),
     )
-
     db.session.add(job)
     db.session.commit()
 
@@ -219,7 +222,7 @@ def add_job():
 
 @bp.route("/jobs/<job_id>", methods=["GET"])
 @login_required
-@roles_accepted("employee_manager", "organization_manager")
+@roles_accepted("contractor_manager", "organization_manager")
 def job_detail(job_id):
     """
     Get details about a job, by ID.
@@ -256,9 +259,9 @@ def job_detail(job_id):
     shifts = []
     # Add all scheduled shifts
     for shift in [s.to_dict() for s in scheduled_shifts]:
-        shift["employee"] = (
+        shift["contractor"] = (
             db.session.query(User)
-            .filter(User.id == shift["employee_id"])
+            .filter(User.id == shift["contractor_id"])
             .one()
             .to_dict()
         )
@@ -274,9 +277,9 @@ def job_detail(job_id):
             .all()
         )
         shift["timeclock_actions"] = [timeclock.to_dict() for timeclock in timeclocks]
-        shift["employee"] = (
+        shift["contractor"] = (
             db.session.query(User)
-            .filter(User.id == shift["employee_id"])
+            .filter(User.id == shift["contractor_id"])
             .one()
             .to_dict()
         )
@@ -284,21 +287,21 @@ def job_detail(job_id):
 
     job["shifts"] = shifts
     job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
-    job["employees"] = []
-    employees = db.session.query(User).filter(User.manager_id == current_user.id)
+    job["contractors"] = []
+    contractors = db.session.query(User).filter(User.manager_id == current_user.id)
 
-    for employee in [e.to_dict() for e in employees if e.has_role("employee")]:
-        employee["employee_info"] = (
-            db.session.query(EmployeeInfo)
-            .filter(EmployeeInfo.id == employee["id"])
+    for contractor in [e.to_dict() for e in contractors if e.has_role("contractor")]:
+        contractor["contractor_info"] = (
+            db.session.query(ContractorInfo)
+            .filter(ContractorInfo.id == contractor["id"])
             .one()
             .to_dict()
         )
-        job["employees"].append(employee)
+        job["contractors"].append(contractor)
 
-    job["employee_manager"] = (
+    job["contractor_manager"] = (
         db.session.query(User)
-        .filter(User.id == job["employee_manager_id"])
+        .filter(User.id == job["contractor_manager_id"])
         .one()
         .to_dict()
     )
@@ -312,12 +315,12 @@ def job_detail(job_id):
 
 
 @login_required
-@roles_accepted("employee_manager", "organization_manager")
+@roles_accepted("contractor_manager", "organization_manager")
 @bp.route("/jobs/managers", methods=["GET"])
 def get_managers(manager_id=None):
     """
     Get list of subordinate managers, including the calling manager.
-    Data is separated into lists of who manages employees and the organization.
+    Data is separated into lists of who manages contractors and the organization.
     ---
     parameters:
         - name: Manager ID
@@ -336,13 +339,13 @@ def get_managers(manager_id=None):
                         "List of sub-manangers with the role
                         'organization_manager', including the
                         calling user, if applicable."
-                employee_managers:
+                contractor_managers:
                     type: array
                     items:
                         $ref '#/definitions/User'
                     description:
                         "List of sub-manangers with the role
-                        'employee_manager', including the
+                        'contractor_manager', including the
                         calling user, if applicable."
     responses:
         200:
@@ -354,19 +357,19 @@ def get_managers(manager_id=None):
         manager_id = get_request_arg(request, "manager_id")
 
     managers = get_lower_managers(manager_id)
-    result = {"organization_managers": [], "employee_managers": []}
+    result = {"organization_managers": [], "contractor_managers": []}
 
     for manager in managers:
         user = db.session.query(User).filter(User.id == manager).one()
         if user.has_role("organization_manager"):
             result["organization_managers"].append(user.to_dict())
-        if user.has_role("employee_manager"):
-            result["employee_managers"].append(user.to_dict())
+        if user.has_role("contractor_manager"):
+            result["contractor_managers"].append(user.to_dict())
 
     if current_user.has_role("organization_manager"):
         result["organization_managers"].append(current_user.to_dict())
-    if current_user.has_role("employee_manager"):
-        result["employee_managers"].append(current_user.to_dict())
+    if current_user.has_role("contractor_manager"):
+        result["contractor_managers"].append(current_user.to_dict())
 
     return result
 
@@ -383,7 +386,7 @@ def get_lower_managers(manager_id):
 
     lower_managers = []
     for user in users:
-        if user.has_role("employee_manager") or user.has_role("organization_manager"):
+        if user.has_role("contractor_manager") or user.has_role("organization_manager"):
             lower_managers.append(user.id)
             for i in get_lower_managers(user.id):
                 # TODO: a recursive database call could be a _very_ bad idea
@@ -425,8 +428,8 @@ def edit_job(job_id):
         db.session.query(Job).filter(Job.id == job_id).update(
             {
                 Job.name: get_request_json(request, "name"),
-                Job.employee_manager_id: get_request_json(
-                    request, "employee_manager_id"
+                Job.contractor_manager_id: get_request_json(
+                    request, "contractor_manager_id"
                 ),
                 Job.organization_manager_id: get_request_json(
                     request, "organization_manager_id"
