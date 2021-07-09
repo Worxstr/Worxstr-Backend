@@ -244,8 +244,7 @@ def add_contractor():
                 password=password,
             ),
         )
-
-    return "OK", 201
+    return user.to_dict(), 201
 
 
 @bp.route("/users/check-email/<email>", methods=["GET"])
