@@ -1,4 +1,4 @@
-name: CI
+name: Build and Deploy
 
 on:
   push:
@@ -68,8 +68,10 @@ jobs:
           # Set deploy environment
           if [[ "$BRANCH" == "main" ]]; then
             echo "DEPLOY_ENV=worxstr-backend-prod-env" >> $GITHUB_ENV
-          else
+          elif [[ "$BRANCH" == "dev" ]]; then
             echo "DEPLOY_ENV=worxstr-backend-dev-env" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_ENV=worxstr-backend-qa-env" >> $GITHUB_ENV
           fi
 
 
@@ -104,14 +106,12 @@ jobs:
         run: |
           eb init -p python-3.7 Worxstr-Backend --region us-east-1
       # Deploy to (or Create) the Elastic Beanstalk environment
-      - name: Create test environment & deploy
+      - name: Deploy to mapped environment
         run: |
-          env | sort
-
-          if [[ "$BRANCH" != "main" && "$BRANCH" != "dev" ]]; then
-            echo "::debug::Dry run workflow. No deployment action taken."
-            exit 0
-          fi
+          # if [[ "$BRANCH" != "main" && "$BRANCH" != "dev" ]]; then
+          #   echo "::debug::Dry run workflow. No deployment action taken."
+          #   exit 0
+          # fi
 
           eb use "$DEPLOY_ENV"
           eb status "$DEPLOY_ENV"
