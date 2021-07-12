@@ -69,7 +69,7 @@ jobs:
           if [[ "$BRANCH" == "main" ]]; then
             echo "DEPLOY_ENV=worxstr-backend-prod-env" >> $GITHUB_ENV
           else
-            echo "DEPLOY_ENV=WorxstrBackend-dev-env" >> $GITHUB_ENV
+            echo "DEPLOY_ENV=worxstr-backend-dev-env" >> $GITHUB_ENV
           fi
 
 
