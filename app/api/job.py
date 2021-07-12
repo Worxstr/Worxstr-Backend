@@ -93,7 +93,11 @@ def list_jobs():
     direct_ids = []
     direct_jobs = (
         db.session.query(Job)
-        .filter(Job.contractor_manager_id == current_user.get_id(), Job.active)
+        .filter(
+            Job.contractor_manager_id == current_user.get_id()
+            or Job.organization_manager_id == current_user.get_id(),
+            Job.active,
+        )
         .all()
     )
     for direct_job in direct_jobs:
