@@ -1,3 +1,5 @@
+#potentially damaging comment
+
 from app import create_app, db, cli, socketio
 from app.models import User, Job, TimeClock, ScheduleShift
 
