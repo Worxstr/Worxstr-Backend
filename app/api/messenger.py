@@ -4,7 +4,7 @@ I have implemented some basic messaging so far. You can send messages from
 different user accounts, and the messages that other users have send appear on
 the left, and your messages on the right
 
-I mapped employeeone@worxstr.com to name Jackson Sippe and
+I mapped contractorone@worxstr.com to name Jackson Sippe and
 managerone@worxstr.com to Alex Wohlbruck, so when logged in to those accounts,
 the names appear next to the message
 
