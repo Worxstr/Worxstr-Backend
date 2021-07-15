@@ -109,7 +109,7 @@ jobs:
           env | sort
 
           if [[ "$BRANCH" != "refs/heads/main" && "$BRANCH" != "refs/heads/dev" ]]; then
-            echo "::debug::Dry run workflow. No deployment action taken."
+            echo "Dry run workflow. No deployment action taken."
             exit 0
           fi
 
