@@ -68,7 +68,7 @@ jobs:
           # Set deploy environment
           if [[ "$BRANCH" == "refs/heads/main" ]]; then
             echo "DEPLOY_ENV=worxstr-backend-prod-env" >> $GITHUB_ENV
-          elif [[ "$BRANCH" == "dev" ]]; then
+          elif [[ "$BRANCH" == "refs/heads/dev" ]]; then
             echo "DEPLOY_ENV=worxstr-backend-dev-env" >> $GITHUB_ENV
           else
             echo "DEPLOY_ENV=worxstr-backend-qa-env" >> $GITHUB_ENV
@@ -109,11 +109,6 @@ jobs:
       - name: Deploy to mapped environment
         run: |
           env | sort
-
-          if [[ "$BRANCH" != "refs/heads/main" && "$BRANCH" != "refs/heads/dev" ]]; then
-            echo "Dry run workflow. No deployment action taken."
-            exit 0
-          fi
 
           eb use "$DEPLOY_ENV"
           eb status "$DEPLOY_ENV"
