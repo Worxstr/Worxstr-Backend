@@ -1,9 +1,11 @@
 alembic==1.4.3
+appdirs==1.4.4
 astroid==2.4.2
 attrs==20.3.0
 Babel==2.9.0
 bcrypt==3.2.0
 bidict==0.21.2
+black==21.5b1
 blinker==1.4
 certifi==2020.12.5
 cffi==1.14.4
@@ -37,7 +39,9 @@ Mako==1.1.4
 MarkupSafe==1.1.1
 mccabe==0.6.1
 mistune==0.8.4
+mypy-extensions==0.4.3
 passlib==1.7.4
+pathspec==0.8.1
 paypal-checkout-serversdk==1.0.1
 paypalhttp==1.0.0
 psycopg2-binary==2.8.6
@@ -54,6 +58,7 @@ python-engineio==4.0.0
 python-socketio==5.0.4
 pytz==2020.5
 PyYAML==5.4
+regex==2021.4.4
 requests==2.25.1
 six==1.15.0
 speaklater==1.3
