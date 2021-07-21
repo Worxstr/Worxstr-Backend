@@ -66,9 +66,9 @@ jobs:
           echo "GIT_BRANCH=$BRANCH" >> $GITHUB_ENV
 
           # Set deploy environment
-          if [[ "$BRANCH" == "main" ]]; then
+          if [[ "$BRANCH" == "refs/heads/main" ]]; then
             echo "DEPLOY_ENV=worxstr-backend-prod-env" >> $GITHUB_ENV
-          elif [[ "$BRANCH" == "dev" ]]; then
+          elif [[ "$BRANCH" == "refs/heads/dev" ]]; then
             echo "DEPLOY_ENV=worxstr-backend-dev-env" >> $GITHUB_ENV
           else
             echo "DEPLOY_ENV=worxstr-backend-qa-env" >> $GITHUB_ENV
@@ -108,10 +108,7 @@ jobs:
       # Deploy to (or Create) the Elastic Beanstalk environment
       - name: Deploy to mapped environment
         run: |
-          # if [[ "$BRANCH" != "main" && "$BRANCH" != "dev" ]]; then
-          #   echo "::debug::Dry run workflow. No deployment action taken."
-          #   exit 0
-          # fi
+          env | sort
 
           eb use "$DEPLOY_ENV"
           eb status "$DEPLOY_ENV"
