@@ -1,4 +1,5 @@
 import random
+import re
 import string
 import datetime
 
@@ -14,7 +15,7 @@ from flask_security import (
 )
 from sqlalchemy.sql.operators import op
 
-from app import db, user_datastore, geolocator
+from app import db, user_datastore, geolocator, payments
 from app.api import bp
 from app.email import send_email
 from app.models import ManagerReference, User, ContractorInfo, Organization
@@ -450,9 +451,25 @@ def add_org():
             schema:
                     $ref: '#/definitions/User'
     """
+    customer_record = payments.create_business_customer(
+        firstName=get_request_json(request, "first_name"),
+        lastName=get_request_json(request, "last_name"),
+        email=get_request_json(request, "email"),
+        ipAddress=get_request_json(request, "ipAddress"),
+        address1=get_request_json(request, "address1"),
+        city=get_request_json(request, "city"),
+        state=get_request_json(request, "state"),
+        postalCode=get_request_json(request, "postalCode"),
+        controller=get_request_json(request, "controller"),
+        businessClassification=get_request_json(request, "businessClassification"),
+        businessType=get_request_json(request, "businessType"),
+        businessName=get_request_json(request, "businessName"),
+        ein=get_request_json(request, "ein")
+    )
+    
     organization_name = get_request_json(request, "organization_name")
 
-    organization = Organization(name=organization_name)
+    organization = Organization(name=organization_name, customer_record=customer_record)
     db.session.add(organization)
     db.session.commit()
     user = {

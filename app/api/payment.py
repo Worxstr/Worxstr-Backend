@@ -6,8 +6,14 @@ from app.api import bp
 from app.api.paypal import GetOrder, SendPayouts
 from app.errors.customs import MissingParameterException
 from app.models import TimeCard, User, TimeClock
-from app.utils import get_request_arg, get_request_json
+from app.utils import OK_RESPONSE, get_request_arg, get_request_json
+from app import payments
 
+@bp.route("/payments/test", methods=["GET"])
+@login_required
+def test_dwolla():
+    print(payments.app_token.get('customers', {'limit': 10}).json())
+    return OK_RESPONSE
 
 @bp.route("/payments/approve", methods=["PUT"])
 @bp.route("/payments/deny", methods=["PUT"])

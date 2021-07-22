@@ -89,3 +89,5 @@ class Config(object):
     }
 
     CLICKUP_KEY = os.environ.get("CLICKUP_KEY")
+    DWOLLA_APP_KEY = os.environ.get("DWOLLA_APP_KEY")
+    DWOLLA_APP_SECRET = os.environ.get("DWOLLA_APP_SECRET")
