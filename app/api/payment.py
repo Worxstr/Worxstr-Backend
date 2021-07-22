@@ -12,7 +12,7 @@ from app import payments
 @bp.route("/payments/test", methods=["GET"])
 @login_required
 def test_dwolla():
-    print(payments.app_token.get('customers', {'limit': 10}).json())
+    print(payments.app_token.get('customers', {'limit': 10}))
     return OK_RESPONSE
 
 @bp.route("/payments/approve", methods=["PUT"])
