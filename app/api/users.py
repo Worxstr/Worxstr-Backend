@@ -464,7 +464,7 @@ def add_org():
         businessClassification=get_request_json(request, "businessClassification"),
         businessType=get_request_json(request, "businessType"),
         businessName=get_request_json(request, "businessName"),
-        ein=get_request_json(request, "ein")
+        ein=get_request_json(request, "ein"),
     )
 
     organization_name = get_request_json(request, "organization_name")

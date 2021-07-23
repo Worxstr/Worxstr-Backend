@@ -9,11 +9,11 @@ from app.models import TimeCard, User, TimeClock
 from app.utils import OK_RESPONSE, get_request_arg, get_request_json
 from app import payments
 
-@bp.route("/payments/test", methods=["GET"])
-@login_required
+
+@bp.route("/payments/access", methods=["GET"])
 def test_dwolla():
-    print(payments.app_token.get('customers', {'limit': 10}))
-    return OK_RESPONSE
+    return {"token": payments.app_token.access_token}
+
 
 @bp.route("/payments/approve", methods=["PUT"])
 @bp.route("/payments/deny", methods=["PUT"])
