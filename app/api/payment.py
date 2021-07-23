@@ -10,8 +10,8 @@ from app.utils import OK_RESPONSE, get_request_arg, get_request_json
 from app import payments
 
 
-@bp.route("/payments/access", methods=["GET"])
-def test_dwolla():
+@bp.route("/payments/access", methods=["POST"])
+def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
 
 
