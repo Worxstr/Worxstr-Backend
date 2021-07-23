@@ -13,6 +13,7 @@ chardet==4.0.0
 click==7.1.2
 cryptography==3.3.2
 dnspython==2.1.0
+dwollav2==2.2.0
 email-validator==1.1.2
 flasgger==0.9.5
 Flask==1.1.2
@@ -26,6 +27,7 @@ Flask-Security-Too==3.4.5
 Flask-SocketIO==5.0.1
 Flask-SQLAlchemy==2.4.4
 Flask-WTF==0.14.3
+future==0.18.2
 geographiclib==1.50
 geopy==2.1.0
 idna==2.10
