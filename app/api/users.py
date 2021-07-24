@@ -435,38 +435,3 @@ def edit_contractor(id):
     )
 
     return {"event": result}, 200
-
-
-@bp.route("/users/add-org", methods=["POST"])
-def add_org():
-    """Add an organization and new initial user
-
-    The created user is considered the owner of the organization.
-    ---
-
-    responses:
-        200:
-            description: A new User who is the root user of the new Organization
-            schema:
-                    $ref: '#/definitions/User'
-    """
-    organization_name = get_request_json(request, "organization_name")
-
-    organization = Organization(name=organization_name)
-    db.session.add(organization)
-    db.session.commit()
-    user = {
-        "first_name": get_request_json(request, "first_name"),
-        "last_name": get_request_json(request, "last_name"),
-        "username": get_request_json(request, "username"),
-        "email": get_request_json(request, "email"),
-        "phone": get_request_json(request, "phone"),
-        "password": hash_password(get_request_json(request, "password")),
-        "roles": ["organization_manager", "contractor_manager"],
-        "manager_id": None,
-        "organization_id": organization.id,
-    }
-
-    user = user_datastore.create_user(**user)
-    db.session.commit()
-    return user.to_dict()
