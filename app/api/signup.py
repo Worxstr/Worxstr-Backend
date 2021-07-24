@@ -18,25 +18,33 @@ def sign_up_org():
 
     The created user is considered the owner of the organization.
     ---
-
+    parameters:
+        - name: customer_url
+          in: body
+          type: string
+        - name: password
+          in: body
+          type: string
     responses:
         200:
             description: A new User who is the root user of the new Organization
             schema:
                     $ref: '#/definitions/User'
     """
-    organization_name = get_request_json(request, "organization_name")
+
+    customer_url = get_request_json(request, "customer_url")
+    password = hash_password(get_request_json(request, "password"))
+    customer = payments.get_customer_info(customer_url)
+    organization_name = customer["businessName"]
 
     organization = Organization(name=organization_name)
     db.session.add(organization)
     db.session.commit()
     user = {
-        "first_name": get_request_json(request, "first_name"),
-        "last_name": get_request_json(request, "last_name"),
-        "username": get_request_json(request, "username"),
-        "email": get_request_json(request, "email"),
-        "phone": get_request_json(request, "phone"),
-        "password": hash_password(get_request_json(request, "password")),
+        "first_name": customer["firstName"],
+        "last_name": customer["lastName"],
+        "email": customer["email"],
+        "password": password,
         "roles": ["organization_manager", "contractor_manager"],
         "manager_id": None,
         "organization_id": organization.id,
