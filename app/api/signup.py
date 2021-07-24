@@ -33,24 +33,25 @@ def sign_up_org():
     """
 
     customer_url = get_request_json(request, "customer_url")
-    password = hash_password(get_request_json(request, "password"))
+    password = get_request_json(request, "password")
     customer = payments.get_customer_info(customer_url)
-    organization_name = customer["businessName"]
 
+    organization_name = customer["businessName"]
     organization = Organization(name=organization_name)
     db.session.add(organization)
     db.session.commit()
-    user = {
-        "first_name": customer["firstName"],
-        "last_name": customer["lastName"],
-        "email": customer["email"],
-        "password": password,
-        "roles": ["organization_manager", "contractor_manager"],
-        "manager_id": None,
-        "organization_id": organization.id,
-    }
 
-    user = user_datastore.create_user(**user)
+    confirmed_at = datetime.datetime.utcnow()
+    roles = ["organization_manager", "contractor_manager"]
+    user = user_datastore.create_user(
+        first_name=customer["firstName"],
+        last_name=customer["lastName"],
+        email=customer["email"],
+        organization_id=organization.id,
+        confirmed_at=confirmed_at,
+        roles=roles,
+        password=hash_password(password),
+    )
     db.session.commit()
     return user.to_dict()
 
