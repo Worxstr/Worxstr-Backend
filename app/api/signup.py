@@ -75,7 +75,7 @@ def sign_up_contractor():
             description: Contractor successfully created.
     """
     password = get_request_json(request, "password")
-    manager_reference = get_request_json(request, "manager_reference", optional=True)
+    manager_reference = get_request_json(request, "manager_reference")
     customer_url = get_request_json(request, "customer_url")
 
     customer = payments.get_customer_info(customer_url)
