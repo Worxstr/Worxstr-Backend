@@ -74,7 +74,7 @@ def sign_up_contractor():
 
     first_name = customer["firstName"]
     last_name = customer["lastName"]
-    email = customer["emails"]
+    email = customer["email"]
 
     confirmed_at = datetime.datetime.utcnow()
     roles = ["contractor"]
