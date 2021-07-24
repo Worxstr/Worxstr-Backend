@@ -12,7 +12,8 @@ class Dwolla:
         self.app_token = client.Auth.client()
 
     def get_customer_info(self, customer_url):
-        return self.app_token.get(customer_url)
+        customer = self.app_token.get(customer_url)
+        return customer.body
 
     def create_personal_customer(
         self,

@@ -12,7 +12,7 @@ from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app import payments
 
 @bp.route("/signup/add-org", methods=["POST"])
-def add_org():
+def signup_org():
     """Add an organization and new initial user
 
     The created user is considered the owner of the organization.
@@ -46,7 +46,7 @@ def add_org():
     return user.to_dict()
 
 @bp.route("/signup/add-contractor", methods=["POST"])
-def add_contractor():
+def signup_contractor():
     """
     Add a new contractor.
     ---
@@ -67,8 +67,13 @@ def add_contractor():
     password = get_request_json(request, "password")
     manager_reference = get_request_json(request, "manager_reference", optional=True)
     customer_url = get_request_json(request, "customer_url")
+
     customer = payments.get_customer_info(customer_url)
-    print(customer)
+
+    first_name = customer["firstName"]
+    last_name = customer["lastName"]
+    email = customer["emails"]
+
     confirmed_at = datetime.datetime.utcnow()
     roles = ["contractor"]
     manager_id = (
