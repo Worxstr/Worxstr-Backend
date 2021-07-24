@@ -37,7 +37,9 @@ def sign_up_org():
     customer = payments.get_customer_info(customer_url)
 
     organization_name = customer["businessName"]
-    organization = Organization(name=organization_name)
+    organization = Organization(
+        name=organization_name, dwolla_customer_url=customer_url
+    )
     db.session.add(organization)
     db.session.commit()
 
@@ -48,6 +50,7 @@ def sign_up_org():
         last_name=customer["lastName"],
         email=customer["email"],
         organization_id=organization.id,
+        dwolla_customer_url=customer_url,
         confirmed_at=confirmed_at,
         roles=roles,
         password=hash_password(password),

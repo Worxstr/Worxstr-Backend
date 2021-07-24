@@ -55,6 +55,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
     organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"))
     manager_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     password = db.Column(db.String(255))
+    dwolla_customer_url = db.Column(db.String(255))
     last_login_at = db.Column(db.DateTime())
     current_login_at = db.Column(db.DateTime())
     last_login_ip = db.Column(db.String(100))
@@ -78,6 +79,7 @@ class Organization(db.Model, CustomSerializerMixin):
     __tablename__ = "organization"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
+    dwolla_customer_url = db.Column(db.String(255))
 
     def __repr__(self):
         return "<Organization {}>".format(self.name)
