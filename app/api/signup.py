@@ -11,8 +11,9 @@ from app.models import ManagerReference, User, ContractorInfo, Organization
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app import payments
 
-@bp.route("/signup/add-org", methods=["POST"])
-def signup_org():
+
+@bp.route("/auth/sign-up/org", methods=["POST"])
+def sign_up_org():
     """Add an organization and new initial user
 
     The created user is considered the owner of the organization.
@@ -45,8 +46,9 @@ def signup_org():
     db.session.commit()
     return user.to_dict()
 
-@bp.route("/signup/add-contractor", methods=["POST"])
-def signup_contractor():
+
+@bp.route("/auth/sign-up/contractor", methods=["POST"])
+def sign_up_contractor():
     """
     Add a new contractor.
     ---
