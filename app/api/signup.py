@@ -1,25 +1,15 @@
-import random
-import string
 import datetime
 
-from random import randint
-
-from flask import current_app, request, render_template
+from flask import request
 from flask_security import (
     hash_password,
-    current_user,
-    login_required,
-    roles_required,
-    roles_accepted,
 )
-from sqlalchemy.sql.operators import op
 
-from app import db, user_datastore, geolocator
+from app import db, user_datastore
 from app.api import bp
-from app.email import send_email
 from app.models import ManagerReference, User, ContractorInfo, Organization
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
-
+from app import payments
 
 @bp.route("/signup/add-org", methods=["POST"])
 def add_org():
@@ -55,8 +45,7 @@ def add_org():
     db.session.commit()
     return user.to_dict()
 
-
-@bp.route("/users/add-contractor", methods=["POST"])
+@bp.route("/signup/add-contractor", methods=["POST"])
 def add_contractor():
     """
     Add a new contractor.
@@ -78,7 +67,8 @@ def add_contractor():
     password = get_request_json(request, "password")
     manager_reference = get_request_json(request, "manager_reference", optional=True)
     customer_url = get_request_json(request, "customer_url")
-
+    customer = payments.get_customer_info(customer_url)
+    print(customer)
     confirmed_at = datetime.datetime.utcnow()
     roles = ["contractor"]
     manager_id = (
