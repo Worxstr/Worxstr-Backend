@@ -189,6 +189,15 @@ def add_job():
           type: string
           format: email
           required: true
+        - name: color
+          in: body
+          type: string
+          format: hex
+          required: true
+        - name: radius
+          in: body
+          type: int
+          required: true
     responses:
         200:
             description: The newly created job.
@@ -215,6 +224,8 @@ def add_job():
         consultant_phone=consultant_phone,
         consultant_email=get_request_json(request, "consultant_email"),
         consultant_code=str(randint(000000, 999999)),
+        color=get_request_json(request, "color"),
+        radius=get_request_json(request, "radius"),
     )
     db.session.add(job)
     db.session.commit()
@@ -447,6 +458,8 @@ def edit_job(job_id):
                 Job.consultant_name: get_request_json(request, "consultant_name"),
                 Job.consultant_phone: get_request_json(request, "consultant_phone"),
                 Job.consultant_email: get_request_json(request, "consultant_email"),
+                Job.color: get_request_json(request, "color"),
+                Job.radius: get_request_json(request, "radius"),
             }
         )
 
