@@ -101,6 +101,8 @@ class Job(db.Model, CustomSerializerMixin):
     consultant_code = db.Column(db.String(255))
     longitude = db.Column(db.Float(precision=52))
     latitude = db.Column(db.Float(precision=52))
+    color = db.Column(db.String(7))
+    radius = db.Column(db.Integer)
     active = db.Column(db.Boolean, default=True)
 
     def __repr__(self):
