@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum
 
-from flask_security import UserMixin, RoleMixin
+from flask_security import UserMixin, RoleMixin, current_user
 from sqlalchemy_serializer import SerializerMixin
-
+from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
 from app.utils import get_key, get_request_arg, get_request_json
 
@@ -84,6 +84,8 @@ class Organization(db.Model, CustomSerializerMixin):
 
 
 class Job(db.Model, CustomSerializerMixin):
+    serialize_rules = ("direct",)
+
     __tablename__ = "job"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
@@ -107,6 +109,13 @@ class Job(db.Model, CustomSerializerMixin):
 
     def __repr__(self):
         return "<Job {}>".format(self.name)
+
+    @hybrid_property
+    def direct(self):
+        return (
+            int(current_user.get_id()) == self.contractor_manager_id
+            or int(current_user.get_id()) == self.organization_manager_id
+        )
 
 
 class ScheduleShift(db.Model, CustomSerializerMixin):
