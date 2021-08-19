@@ -42,6 +42,14 @@ class Dwolla:
         customer = self.app_token.post("customers", request_body)
         return customer.headers["location"]
 
+    def authenticate_funding_source(self, customer_url, plaid_token, source_name):
+        request_body = {
+            'plaidToken': plaid_token,
+            'name': source_name
+        }
+        customer = self.app_token.post('%s/funding-sources' % customer_url, request_body)
+        return customer.headers["location"]
+
     def create_business_customer(
         self,
         firstName,
