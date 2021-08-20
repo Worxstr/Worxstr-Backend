@@ -66,6 +66,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
     roles = db.relationship(
         "Role", secondary="roles_users", backref=db.backref("users", lazy="dynamic")
     )
+    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
 
 
 class ManagerReference(db.Model):
