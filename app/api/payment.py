@@ -9,10 +9,10 @@ from app.models import TimeCard, User, TimeClock
 from app.utils import OK_RESPONSE, get_request_arg, get_request_json
 
 
-
 @bp.route("/payments/access", methods=["POST"])
 def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
+
 
 @login_required
 @bp.route("/payments/authenticate", methods=["POST"])
@@ -21,6 +21,7 @@ def authenticate_funding_source():
     plaid_token = get_request_json(request, "plaid_token")
     account_name = get_request_json(request, "account_name")
     return payments.authenticate_funding_source(customer_url, plaid_token, account_name)
+
 
 @bp.route("/payments/approve", methods=["PUT"])
 @bp.route("/payments/deny", methods=["PUT"])
