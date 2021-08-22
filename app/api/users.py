@@ -1,5 +1,4 @@
 import random
-import re
 import string
 import datetime
 
