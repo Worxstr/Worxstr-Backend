@@ -14,6 +14,7 @@ from flasgger import Swagger
 from geopy.geocoders import Nominatim
 
 from config import Config
+from app.payments.dwolla import Dwolla
 
 cors = CORS()
 db = SQLAlchemy()
@@ -27,6 +28,7 @@ security = Security()
 csrf = CSRFProtect()
 socketio = SocketIO()
 geolocator = Nominatim(user_agent="worxstr")
+payments = Dwolla(app_key=Config.DWOLLA_APP_KEY, app_secret=Config.DWOLLA_APP_SECRET)
 
 
 def create_app(config_class=Config):

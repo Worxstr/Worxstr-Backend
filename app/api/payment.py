@@ -1,12 +1,26 @@
 from flask import request
-from flask_security import login_required, roles_accepted
+from flask_security import login_required, roles_accepted, current_user
 
-from app import db
+from app import db, payments
 from app.api import bp
 from app.api.paypal import GetOrder, SendPayouts
 from app.errors.customs import MissingParameterException
 from app.models import TimeCard, User, TimeClock
-from app.utils import get_request_arg, get_request_json
+from app.utils import OK_RESPONSE, get_request_arg, get_request_json
+
+
+@bp.route("/payments/access", methods=["POST"])
+def access_payment_facilitator():
+    return {"token": payments.app_token.access_token}
+
+
+@login_required
+@bp.route("/payments/authenticate", methods=["POST"])
+def authenticate_funding_source():
+    customer_url = current_user.dwolla_customer_url
+    plaid_token = get_request_json(request, "plaid_token")
+    account_name = get_request_json(request, "account_name")
+    return payments.authenticate_funding_source(customer_url, plaid_token, account_name)
 
 
 @bp.route("/payments/approve", methods=["PUT"])
