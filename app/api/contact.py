@@ -1,3 +1,6 @@
+import flask_login
+from sqlalchemy.sql.functions import user
+
 from app.errors.customs import MissingParameterException
 import datetime, requests
 import json
@@ -38,6 +41,7 @@ def sales():
     num_managers = get_request_json(request, "num_managers", optional=True)
     num_contractors = get_request_json(request, "num_contractors", optional=True)
     notes = get_request_json(request, "notes", optional=True)
+    print(request.values)
 
     if not (phone or email):
         raise (MissingParameterException(f"No contact information provided."))
@@ -69,7 +73,7 @@ def create_ticket(
     values = {
         "name": business_name,
         "description": notes,
-        "status": "qualified prospect",
+        "status": " prospect",
         "start_date": int(datetime.datetime.now().timestamp()),
         "notify_all": True,
         "check_required_custom_fields": True,
@@ -89,4 +93,75 @@ def create_ticket(
         data=json.dumps(values),
         headers=headers,
     )
+    print(requests)
+    return
+
+
+@bp.route("/contact/staff", methods=["POST"])
+def staff():
+    """
+    Create a new ticket in ClickUp CRM with the given staff information
+    ---
+    responses:
+        200:
+    """
+
+    name = get_request_json(request, "name", optional=True) or "Unknown"
+    phone = get_request_json(request, "phone", optional=True)
+    if phone:
+        phone = (
+            "+"
+            + phone["country_code"]
+            + " "
+            + phone["area_code"]
+            + " "
+            + phone["phone_number"][:3]
+            + " "
+            + phone["phone_number"][3:]
+        )
+    email = get_request_json(request, "email", optional=True)
+    description = get_request_json(request, "description")
+    os_name = get_request_json(request, "os_name", optional=True)
+    browser_name = get_request_json(request, "browser_name", optional=True)
+    user_id = get_request_json(request, "user_id", optional=True)
+    print(request.user_agent)
+    #
+    create_staff_ticket(name, phone, email, description, os_name, browser_name, user_id)
+
+    return OK_RESPONSE, 201
+
+
+def create_staff_ticket(
+    name,
+    phone,
+    email,
+    description,
+    os_name,
+    browser_name,
+    user_id,
+):
+    values = {
+        "name": name,
+        "description": description,
+        "status": "can do",
+        "os_name": os_name,
+        "browser_name": browser_name,
+        "start_date": int(datetime.datetime.now().timestamp()),
+        "notify_all": True,
+        "check_required_custom_fields": True,
+        "user_id": user_id,
+        "custom_fields": [
+            {"id": "1f5b9606-293f-4abc-8bdc-15a4d3739749", "value": name},
+            {"id": "fd844e04-66de-4387-bc0e-4d51c499526b", "value": phone},
+            {"id": "3dbe29b4-02ec-41ff-83dd-7e2b0b6d9dff", "value": email},
+            {"id": "8cafe79d-6b05-43f6-8be3-bd8291e18ba9", "value": description},
+        ],
+    }
+    headers = {"Authorization": Config.CLICKUP_KEY, "Content-Type": "application/json"}
+    requests.post(
+        "https://api.clickup.com/api/v2/list/84083345/task",
+        data=json.dumps(values),
+        headers=headers,
+    )
+    print(request.data)
     return
