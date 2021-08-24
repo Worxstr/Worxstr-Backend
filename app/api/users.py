@@ -336,7 +336,7 @@ def get_authenticated_user():
     if current_user.has_role("contractor"):
         authenticated_user["contractor_info"] = (
             db.session.query(ContractorInfo)
-            .filter(ContractorInfo.id == current_user.get_id())
+            .filter(ContractorInfo.id == current_user.id)
             .one()
             .to_dict()
         )

@@ -43,8 +43,8 @@ class Plaid:
         return response["link_token"]
 
     def get_dwolla_token(self, public_token, account_id):
-        access_token = self.obtain_access_token(public_token, account_id)
-        processor_token = self.obtain_processor_token(access_token, account_id, "dwolla")
+        access_token = self.obtain_access_token(public_token)
+        return self.obtain_processor_token(access_token, account_id, "dwolla")
 
     def obtain_access_token(self, public_token):
         request = ItemPublicTokenExchangeRequest(public_token=public_token)
