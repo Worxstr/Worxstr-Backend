@@ -1,7 +1,7 @@
 from flask import request
 from flask_security import login_required, roles_accepted, current_user
 
-from app import db, payments
+from app import db, payments, payments_auth
 from app.api import bp
 from app.api.paypal import GetOrder, SendPayouts
 from app.errors.customs import MissingParameterException
@@ -12,6 +12,12 @@ from app.utils import OK_RESPONSE, get_request_arg, get_request_json
 @bp.route("/payments/access", methods=["POST"])
 def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
+
+
+@login_required
+@bp.route("/payments/plaid/link-token", methods=["POST"])
+def get_link_token():
+    return {"token": payments_auth.obtain_processor_token(current_user.id)}
 
 
 @login_required

@@ -15,6 +15,7 @@ from geopy.geocoders import Nominatim
 
 from config import Config
 from app.payments.dwolla import Dwolla
+from app.payments.plaid import Plaid
 
 cors = CORS()
 db = SQLAlchemy()
@@ -29,6 +30,9 @@ csrf = CSRFProtect()
 socketio = SocketIO()
 geolocator = Nominatim(user_agent="worxstr")
 payments = Dwolla(app_key=Config.DWOLLA_APP_KEY, app_secret=Config.DWOLLA_APP_SECRET)
+payments_auth = Plaid(
+    client_id=Config.PLAID_CLIENT_ID, secret=Config.PLAID_SECRET, host=Config.PLAID_HOST
+)
 
 
 def create_app(config_class=Config):
