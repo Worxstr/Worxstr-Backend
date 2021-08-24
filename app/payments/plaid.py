@@ -44,16 +44,16 @@ class Plaid:
 
     def get_dwolla_token(self, public_token, account_id):
         access_token = self.obtain_access_token(public_token, account_id)
-        processor_token = self.obtain_processor_token(access_token, account_id)
+        processor_token = self.obtain_processor_token(access_token, account_id, "dwolla")
 
     def obtain_access_token(self, public_token):
         request = ItemPublicTokenExchangeRequest(public_token=public_token)
         response = self.client.item_public_token_exchange(request)
         return response["access_token"]
 
-    def obtain_processor_token(self, access_token, account_id):
+    def obtain_processor_token(self, access_token, account_id, processor):
         request = ProcessorTokenCreateRequest(
-            access_token=access_token, account_id=account_id, processor="dwolla"
+            access_token=access_token, account_id=account_id, processor=processor
         )
         response = self.client.processor_token_create(request)
         return response["processor_token"]
