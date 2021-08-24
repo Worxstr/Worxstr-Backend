@@ -15,18 +15,23 @@ def access_payment_facilitator():
 
 
 @login_required
-@bp.route("/payments/plaid/link-token", methods=["POST"])
-def get_link_token():
-    return {"token": payments_auth.obtain_processor_token(current_user.id)}
+@bp.route("/payments/plaid/add-account", methods=["POST"])
+def add_account():
+    public_token = get_request_json(request, "public_token")
+    account_id = get_request_json(request, "account_id")
+    account_name = get_request_json(request, "name")
+
+    dwolla_token = payments_auth.get_dwolla_token(public_token, account_id)
+    customer_url = current_user.dwolla_customer_url
+    return payments.authenticate_funding_source(
+        customer_url, dwolla_token, account_name
+    )
 
 
 @login_required
-@bp.route("/payments/authenticate", methods=["POST"])
-def authenticate_funding_source():
-    customer_url = current_user.dwolla_customer_url
-    plaid_token = get_request_json(request, "plaid_token")
-    account_name = get_request_json(request, "account_name")
-    return payments.authenticate_funding_source(customer_url, plaid_token, account_name)
+@bp.route("/payments/plaid/link-token", methods=["POST"])
+def get_link_token():
+    return {"token": payments_auth.obtain_link_token(current_user.id)}
 
 
 @bp.route("/payments/approve", methods=["PUT"])
