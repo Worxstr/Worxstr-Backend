@@ -1,5 +1,4 @@
-import flask_login
-from sqlalchemy.sql.functions import user
+
 from flask_security import current_user
 
 from app.errors.customs import MissingParameterException
