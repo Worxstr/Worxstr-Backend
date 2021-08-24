@@ -17,4 +17,4 @@ jobs:
 
       - name: Check Formatting
         run: python -m black . --check
-        run: python -m black 
+        run: python -m black .
