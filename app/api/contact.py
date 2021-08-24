@@ -1,11 +1,11 @@
 import flask_login
 from sqlalchemy.sql.functions import user
+from flask_security import current_user
 
 from app.errors.customs import MissingParameterException
 import datetime, requests
 import json
 from flask import request
-
 from app import Config
 from app.api import bp
 from app.utils import get_request_json, OK_RESPONSE
@@ -41,7 +41,6 @@ def sales():
     num_managers = get_request_json(request, "num_managers", optional=True)
     num_contractors = get_request_json(request, "num_contractors", optional=True)
     notes = get_request_json(request, "notes", optional=True)
-    print(request.values)
 
     if not (phone or email):
         raise (MissingParameterException(f"No contact information provided."))
@@ -73,7 +72,7 @@ def create_ticket(
     values = {
         "name": business_name,
         "description": notes,
-        "status": " prospect",
+        "status": "qualified prospect",
         "start_date": int(datetime.datetime.now().timestamp()),
         "notify_all": True,
         "check_required_custom_fields": True,
@@ -93,12 +92,11 @@ def create_ticket(
         data=json.dumps(values),
         headers=headers,
     )
-    print(requests)
     return
 
 
-@bp.route("/contact/staff", methods=["POST"])
-def staff():
+@bp.route("/contact/support", methods=["POST"])
+def support():
     """
     Create a new ticket in ClickUp CRM with the given staff information
     ---
@@ -120,48 +118,108 @@ def staff():
             + phone["phone_number"][3:]
         )
     email = get_request_json(request, "email", optional=True)
-    description = get_request_json(request, "description")
-    os_name = get_request_json(request, "os_name", optional=True)
-    browser_name = get_request_json(request, "browser_name", optional=True)
-    user_id = get_request_json(request, "user_id", optional=True)
-    print(request.user_agent)
-    #
-    create_staff_ticket(name, phone, email, description, os_name, browser_name, user_id)
+    description = get_request_json(request, "description", optional=True)
+    user_agent = get_request_json(request, "ua", optional=True)
+    browser = get_request_json(request, "browser", optional=True)
+    if browser:
+        browser = browser["name"] + " " + browser["version"] + " " + browser["major"]
 
+    os = get_request_json(request, "os", optional=True)
+
+    if os:
+        os = os["name"] + " " + os["version"]
+
+    the_user = current_user
+    device = get_request_json(request, "device", optional=True)
+    cpu = get_request_json(request, "cpu", optional=True)
+    if cpu:
+        cpu = cpu["architecture"]
+    engine = get_request_json(request, "engine", optional=True)
+
+    if engine:
+        engine = engine["name"] + " " + engine["version"]
+    if current_user.is_authenticated:
+        user_id = the_user.id
+
+    else:
+        user_id = "Not logged in"
+
+    create_support_ticket(
+        name,
+        phone,
+        email,
+        description,
+        user_agent,
+        browser,
+        engine,
+        os,
+        device,
+        cpu,
+        user_id,
+    )
+
+    if not email or not phone:
+        raise (MissingParameterException(f"Missing Contact Information"))
+
+    if not description:
+        raise (MissingParameterException(f"Include a Description For Your Problem"))
     return OK_RESPONSE, 201
 
 
-def create_staff_ticket(
+def create_support_ticket(
     name,
     phone,
     email,
     description,
-    os_name,
-    browser_name,
+    user_agent,
+    browser,
+    engine,
+    os,
+    device,
+    cpu,
     user_id,
 ):
     values = {
         "name": name,
+        "phone": phone,
+        "email": email,
         "description": description,
-        "status": "can do",
-        "os_name": os_name,
-        "browser_name": browser_name,
-        "start_date": int(datetime.datetime.now().timestamp()),
-        "notify_all": True,
-        "check_required_custom_fields": True,
+        "ua": user_agent,
+        "browser": browser,
+        "engine": engine,
+        "os": os,
+        "device": device,
+        "cpu": cpu,
         "user_id": user_id,
+    }
+
+    """
+    Using ids for custom fields did not allow me to post to list and threw an error.
+     However, the above body did work when posting.  
+    I did not delete the code below because I wanted to make sure that I was doing the 
+    right thing. 
         "custom_fields": [
-            {"id": "1f5b9606-293f-4abc-8bdc-15a4d3739749", "value": name},
+
+            {"id": "1f5b9606-293f-4abc-8bdc-15a4d3739749", "value":name},
             {"id": "fd844e04-66de-4387-bc0e-4d51c499526b", "value": phone},
             {"id": "3dbe29b4-02ec-41ff-83dd-7e2b0b6d9dff", "value": email},
             {"id": "8cafe79d-6b05-43f6-8be3-bd8291e18ba9", "value": description},
+            {"id": "7b61b15e-7ab0-47a3-b9c0-a0e209e888ed", "value": user_agent},
+            {"id": "c2891b23-0a2d-4a53-8feb-c77171d3df99", "value": browser},
+            {"id": "d7d4ceec-22e0-4bca-a962-f18a937c507e", "value": engine},
+            {"id": "55c2e4e1-b127-4e57-9835-93fd3c9e8a1a", "value": os},
+            {"id": "df2c9793-df47-432a-9d51-c8c2bfad9da7", "value": device},
+            {"id": "17d2e246-df8e-4a66-a86b-8578d46eae53", "value": cpu},
+            {"id": "5f3010d7-19a0-4be6-a69d-06e1c09d1ca1", "value": user_id},
+
         ],
-    }
+   # }
+    """
+
     headers = {"Authorization": Config.CLICKUP_KEY, "Content-Type": "application/json"}
     requests.post(
         "https://api.clickup.com/api/v2/list/84083345/task",
         data=json.dumps(values),
         headers=headers,
     )
-    print(request.data)
     return
