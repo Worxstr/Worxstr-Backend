@@ -87,15 +87,15 @@ def list_jobs():
     """
     result = {
         "jobs": [],
-        "managers": get_managers(current_user.manager_id or current_user.get_id()),
+        "managers": get_managers(current_user.manager_id or current_user.id),
     }
 
     direct_ids = []
     direct_jobs = (
         db.session.query(Job)
         .filter(
-            Job.contractor_manager_id == current_user.get_id()
-            or Job.organization_manager_id == current_user.get_id(),
+            Job.contractor_manager_id == current_user.id
+            or Job.organization_manager_id == current_user.id,
             Job.active,
         )
         .all()
@@ -106,7 +106,7 @@ def list_jobs():
         result["jobs"].append(job)
         direct_ids.append(direct_job.id)
 
-    lower_managers = get_lower_managers(current_user.get_id())
+    lower_managers = get_lower_managers(current_user.id)
     indirect_jobs = (
         db.session.query(Job)
         .filter(
@@ -301,7 +301,7 @@ def job_detail(job_id):
         shifts.append(shift)
 
     job["shifts"] = shifts
-    job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
+    job["managers"] = get_managers(current_user.manager_id or current_user.id)
     job["contractors"] = []
     contractors = db.session.query(User).filter(User.manager_id == current_user.id)
 

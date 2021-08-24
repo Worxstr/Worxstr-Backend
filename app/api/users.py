@@ -52,7 +52,7 @@ def reset_password():
     """
     new_password = get_request_json(request, "password")
 
-    db.session.query(User).filter(User.id == current_user.get_id()).update(
+    db.session.query(User).filter(User.id == current_user.id).update(
         {User.password: hash_password(new_password)}
     )
     db.session.commit()
@@ -313,7 +313,7 @@ def get_user(id):
 @roles_accepted("contractor")
 def set_user_ssn():
     db.session.query(ContractorInfo).filter(
-        ContractorInfo.id == current_user.get_id()
+        ContractorInfo.id == current_user.id
     ).update({ContractorInfo.ssn: get_request_json(request, "ssn")})
     db.session.commit()
     return OK_RESPONSE
@@ -355,7 +355,7 @@ def edit_user():
     state = get_request_json(request, "state")
     zip_code = get_request_json(request, "zip_code")
 
-    db.session.query(User).filter(User.id == current_user.get_id()).update(
+    db.session.query(User).filter(User.id == current_user.id).update(
         {User.phone: phone, User.email: email}
     )
 
@@ -364,7 +364,7 @@ def edit_user():
             address + " " + city + " " + state + " " + zip_code
         )
         db.session.query(ContractorInfo).filter(
-            ContractorInfo.id == current_user.get_id()
+            ContractorInfo.id == current_user.id
         ).update(
             {
                 ContractorInfo.address: address,
@@ -382,7 +382,7 @@ def edit_user():
     if current_user.has_role("contractor"):
         result["contractor_info"] = (
             db.session.query(ContractorInfo)
-            .filter(ContractorInfo.id == current_user.get_id())
+            .filter(ContractorInfo.id == current_user.id)
             .one()
             .to_dict()
         )
@@ -404,9 +404,7 @@ def list_contractors():
     """
     result = (
         db.session.query(User)
-        .filter(
-            User.manager_id == current_user.get_id(), User.roles.any(name="contractor")
-        )
+        .filter(User.manager_id == current_user.id, User.roles.any(name="contractor"))
         .all()
     )
     return {"users": [x.to_dict() for x in result]}, 200

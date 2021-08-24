@@ -49,7 +49,7 @@ def clock_history():
         .filter(
             TimeClock.time > num_weeks_begin,
             TimeClock.time < num_weeks_end,
-            TimeClock.contractor_id == current_user.get_id(),
+            TimeClock.contractor_id == current_user.id,
         )
         .order_by(TimeClock.time.desc())
         .all()
@@ -94,7 +94,7 @@ def get_shift():
     shift = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.contractor_id == current_user.get_id(),
+            ScheduleShift.contractor_id == current_user.id,
             ScheduleShift.time_begin > today,
         )
         .order_by(ScheduleShift.time_begin)
@@ -140,7 +140,7 @@ def clock_in():
 
     time_in = datetime.datetime.utcnow()
 
-    timecard = TimeCard(contractor_id=current_user.get_id())
+    timecard = TimeCard(contractor_id=current_user.id)
     db.session.add(timecard)
     db.session.commit()
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
@@ -148,7 +148,7 @@ def clock_in():
     )
     timeclock = TimeClock(
         time=time_in,
-        contractor_id=current_user.get_id(),
+        contractor_id=current_user.id,
         action=TimeClockAction.clock_in,
         timecard_id=timecard.id,
     )
@@ -174,14 +174,14 @@ def clock_out():
     time_out = datetime.datetime.utcnow()
     timecard_id = (
         db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.contractor_id == current_user.get_id())
+        .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
     timeclock = TimeClock(
         time=time_out,
         timecard_id=timecard_id,
-        contractor_id=current_user.get_id(),
+        contractor_id=current_user.id,
         action=TimeClockAction.clock_out,
     )
     db.session.add(timeclock)
@@ -190,7 +190,7 @@ def clock_out():
     result = timeclock.to_dict()
     result["need_info"] = (
         db.session.query(ContractorInfo.need_info)
-        .filter(ContractorInfo.id == current_user.get_id())
+        .filter(ContractorInfo.id == current_user.id)
         .one()[0]
     )
     return {"event": result}
@@ -450,7 +450,7 @@ def get_timecards():
             TimeCard.paid == False,
             TimeCard.denied == False,
             TimeCard.transaction_id == None,
-            User.manager_id == current_user.get_id(),
+            User.manager_id == current_user.id,
         )
         .all()
     )
@@ -492,14 +492,14 @@ def start_break():
     """
     timecard_id = (
         db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.contractor_id == current_user.get_id())
+        .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
         timecard_id=timecard_id,
-        contractor_id=current_user.get_id(),
+        contractor_id=current_user.id,
         action=TimeClockAction.start_break,
     )
     db.session.add(timeclock)
@@ -521,14 +521,14 @@ def end_break():
     """
     timecard_id = (
         db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.contractor_id == current_user.get_id())
+        .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
         timecard_id=timecard_id,
-        contractor_id=current_user.get_id(),
+        contractor_id=current_user.id,
         action=TimeClockAction.end_break,
     )
     db.session.add(timeclock)
