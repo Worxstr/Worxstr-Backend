@@ -102,7 +102,6 @@ def list_jobs():
     )
     for direct_job in direct_jobs:
         job = direct_job.to_dict()
-        job["direct"] = True
         result["jobs"].append(job)
         direct_ids.append(direct_job.id)
 
@@ -122,7 +121,6 @@ def list_jobs():
 
     for indirect_job in indirect_jobs:
         job = indirect_job.to_dict()
-        job["direct"] = False
         result["jobs"].append(job)
 
     return result
