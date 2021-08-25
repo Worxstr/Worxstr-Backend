@@ -106,6 +106,7 @@ def sign_up_contractor():
         organization_id=organization_id,
         manager_id=manager_id,
         confirmed_at=confirmed_at,
+        dwolla_customer_url=customer_url,
         roles=roles,
         password=hash_password(password),
     )

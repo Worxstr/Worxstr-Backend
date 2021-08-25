@@ -219,7 +219,7 @@ def get_next_shift():
     result = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.contractor_id == current_user.get_id(),
+            ScheduleShift.contractor_id == current_user.id,
             ScheduleShift.time_end > current_time,
         )
         .order_by(ScheduleShift.time_end)

@@ -82,13 +82,11 @@ def get_calendar_events():
 
     events = []
     if current_user.has_role("contractor"):
-        events = get_events(current_user.get_id(), date_begin, date_end)
+        events = get_events(current_user.id, date_begin, date_end)
     elif current_user.has_role("organization_manager") or current_user.has_role(
         "contractor_manager"
     ):
-        contractors = db.session.query(User).filter(
-            User.manager_id == current_user.get_id()
-        )
+        contractors = db.session.query(User).filter(User.manager_id == current_user.id)
 
         for contractor in [e for e in contractors if e.has_role("contractor")]:
             events.extend(get_events(contractor.id, date_begin, date_end))
