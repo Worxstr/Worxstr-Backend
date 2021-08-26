@@ -116,8 +116,8 @@ class Job(db.Model, CustomSerializerMixin):
     @hybrid_property
     def direct(self):
         return (
-            int(current_user.get_id()) == self.contractor_manager_id
-            or int(current_user.get_id()) == self.organization_manager_id
+            int(current_user.id) == self.contractor_manager_id
+            or int(current_user.id) == self.organization_manager_id
         )
 
 
