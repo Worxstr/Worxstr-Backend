@@ -174,36 +174,14 @@ class TimeCard(db.Model, CustomSerializerMixin):
     wage_payment = db.Column(db.Numeric)
     fees_payment = db.Column(db.Numeric)
     total_payment = db.Column(db.Numeric)
-    approved = db.Column(db.Boolean, default=False)
     paid = db.Column(db.Boolean, default=False)
     denied = db.Column(db.Boolean, default=False)
-    transaction_id = db.Column(db.String(255))
-    payout_id = db.Column(db.String(255))
 
 
 class ContractorInfo(db.Model, CustomSerializerMixin):
-    serialize_only = (
-        "id",
-        "address",
-        "city",
-        "state",
-        "zip_code",
-        "longitude",
-        "latitude",
-        "hourly_rate",
-        "need_info",
-    )
     __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
-    ssn = db.Column(db.String(9), unique=True)
-    address = db.Column(db.String(255))
-    city = db.Column(db.String(255))
-    state = db.Column(db.String(255))
-    zip_code = db.Column(db.String(10))
-    longitude = db.Column(db.Float(precision=52))
-    latitude = db.Column(db.Float(precision=52))
     hourly_rate = db.Column(db.Numeric)
-    need_info = db.Column(db.Boolean, default=False)
 
 
 class Message(db.Model, CustomSerializerMixin):
