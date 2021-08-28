@@ -1,4 +1,3 @@
-
 from flask_security import current_user
 
 from app.errors.customs import MissingParameterException
@@ -156,9 +155,6 @@ def support():
         cpu,
         user_id,
     )
-
-    if not email or not phone:
-        raise (MissingParameterException(f"Missing Contact Information"))
 
     if not description:
         raise (MissingParameterException(f"Include a Description For Your Problem"))

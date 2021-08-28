@@ -191,10 +191,8 @@ def create_support_ticket(
         "device": device,
         "cpu": cpu,
         "user_id": user_id,
-
         "custom_fields": [
-
-            {"id": "1f5b9606-293f-4abc-8bdc-15a4d3739749", "value":name},
+            {"id": "1f5b9606-293f-4abc-8bdc-15a4d3739749", "value": name},
             {"id": "fd844e04-66de-4387-bc0e-4d51c499526b", "value": phone},
             {"id": "3dbe29b4-02ec-41ff-83dd-7e2b0b6d9dff", "value": email},
             {"id": "8cafe79d-6b05-43f6-8be3-bd8291e18ba9", "value": description},
@@ -205,10 +203,8 @@ def create_support_ticket(
             {"id": "df2c9793-df47-432a-9d51-c8c2bfad9da7", "value": device},
             {"id": "17d2e246-df8e-4a66-a86b-8578d46eae53", "value": cpu},
             {"id": "5f3010d7-19a0-4be6-a69d-06e1c09d1ca1", "value": user_id},
-
-],
+        ],
     }
-
 
     headers = {"Authorization": Config.CLICKUP_KEY, "Content-Type": "application/json"}
     requests.post(
