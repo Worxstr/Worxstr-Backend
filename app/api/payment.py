@@ -3,9 +3,9 @@ from flask_security import login_required, roles_accepted, current_user
 
 from app import db, payments, payments_auth
 from app.api import bp
-from app.api.paypal import GetOrder, SendPayouts
 from app.errors.customs import MissingParameterException
-from app.models import TimeCard, User, TimeClock
+from app.models import TimeCard, User, TimeClock, ContractorInfo
+from app.api.clock import calculate_timecard
 from app.utils import OK_RESPONSE, get_request_arg, get_request_json
 
 
@@ -34,11 +34,10 @@ def get_link_token():
     return {"token": payments_auth.obtain_link_token(current_user.id)}
 
 
-@bp.route("/payments/approve", methods=["PUT"])
 @bp.route("/payments/deny", methods=["PUT"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
-def approve_payment():
+def deny_payment():
     timecards = get_request_json(request, "timecards")
 
     ids = []
@@ -48,77 +47,185 @@ def approve_payment():
             db.session.query(TimeCard).filter(TimeCard.id == timecard["id"]).update(
                 {TimeCard.denied: timecard["denied"]}, synchronize_session=False
             )
-        else:
-            db.session.query(TimeCard).filter(TimeCard.id == timecard["id"]).update(
-                {
-                    TimeCard.approved: timecard["approved"],
-                    TimeCard.paid: (not timecard["paypal"]),
-                },
-                synchronize_session=False,
-            )
     db.session.commit()
     timecards = db.session.query(TimeCard).filter(TimeCard.id.in_(ids)).all()
-    result = []
 
-    for timecard in [t.to_dict() for t in timecards]:
-        timecard["first_name"] = (
-            db.session.query(User.first_name)
-            .filter(User.id == timecard["contractor_id"])
-            .one()[0]
+    return OK_RESPONSE
+
+
+@bp.route("/payments/timecards", methods=["GET"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def get_timecards():
+    """Endpoint to get all unpaid timecards associated with the current logged in manager.
+    ---
+    definitions:
+        TimeCard:
+            type: object
+            properties:
+                id:
+                    type: integer
+                time_in:
+                    type: string
+                    format: date-time
+                time_out:
+                    type: string
+                    format: date-time
+                time_break:
+                    type: integer
+                contractor_id:
+                    type: integer
+                total_payment:
+                    type: number
+                paid:
+                    type: boolean
+                first_name:
+                    type: string
+                last_name:
+                    type: string
+                time_clocks:
+                    type: array
+                    items :
+                        $ref: '#/definitions/TimeClock'
+        TimeClock:
+            type: object
+            properties:
+                id:
+                    type: integer
+                time:
+                    type: string
+                    format: date-time
+                action:
+                    type: string
+                    enum: []
+                contractor_id:
+                    type: integer
+    responses:
+        200:
+            description: Returns the timecards associated with a manager
+            schema:
+                $ref: '#/definitions/TimeCard'
+    """
+    timecards = (
+        db.session.query(TimeCard, User.first_name, User.last_name)
+        .join(User)
+        .filter(
+            TimeCard.paid == False,
+            TimeCard.denied == False,
+            User.manager_id == current_user.id,
         )
-        timecard["last_name"] = (
-            db.session.query(User.last_name)
-            .filter(User.id == timecard["contractor_id"])
+        .all()
+    )
+
+    # TODO: Implement paging here
+    result = []
+    for i in timecards:
+        timecard = i[0].to_dict()
+        timecard["first_name"] = i[1]
+        timecard["last_name"] = i[2]
+        timecard["pay_rate"] = float(
+            db.session.query(ContractorInfo.hourly_rate)
+            .filter(ContractorInfo.id == timecard["contractor_id"])
             .one()[0]
         )
         timecard["time_clocks"] = [
-            i.to_dict()
-            for i in db.session.query(TimeClock)
+            timeclock.to_dict()
+            for timeclock in db.session.query(TimeClock)
             .filter(TimeClock.timecard_id == timecard["id"])
+            .order_by(TimeClock.time)
             .all()
         ]
         result.append(timecard)
+    return {"timecards": result}
 
-    return {"event": result}
 
-
-@bp.route("/payments/complete", methods=["PUT"])
+@bp.route("/payments/timecards/<timecard_id>", methods=["PUT"])
 @login_required
-@roles_accepted("organization_manager", "contractor_manager")
-def add_order_id():
-    timecards = get_request_json(request, "timecards")
-    order_id = get_request_json(request, "transaction").get("orderID")
-    if order_id is None:
-        raise MissingParameterException("Request attribute not found: orderID")
+@roles_accepted("contractor_manager")
+def edit_timecard(timecard_id):
+    """Edit a given timecard.
+    ---
+    parameters:
+        - name: id
+          in: body
+          type: integer
+          required: true
+          description: TimeCard.id
+        - name: changes
+          in: body
+          type: array
+          items:
+              $ref: '#/definitions/Change'
+          required: true
+    definitions:
+        Change:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    description: id of the TimeClock event to be modified
+                time:
+                    type: string
+                    format: date-time
+        TimeCard:
+            type: object
+            properties:
+                id:
+                    type: integer
+                time_in:
+                    type: string
+                    format: date-time
+                time_out:
+                    type: string
+                    format: date-time
+                time_break:
+                    type: integer
+                contractor_id:
+                    type: integer
+                total_payment:
+                    type: number
+                paid:
+                    type: boolean
+    responses:
+        200:
+            description: An updated TimeCard showing the new changes.
+            schema:
+                $ref: '#/definitions/TimeCard'
+    """
+    changes = get_request_json(request, "changes")
 
-    order_confirmation = GetOrder().get_order(order_id)
+    timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
+    contractor_id = timecard.contractor_id
 
-    if order_confirmation["status"] == GetOrder.ORDER_APPROVED:
-        payments = []
-        total_payment = 0.0
-        for i in timecards:
-            total_payment = total_payment + float(i["total_payment"])
+    for i in changes:
+        db.session.query(TimeClock).filter(TimeClock.id == i["id"]).update(
+            {TimeClock.time: i["time"]}, synchronize_session=False
+        )
 
-            email = (
-                db.session.query(User.email).filter(User.id == i["contractor_id"]).one()
-            )
-            payment = {
-                "email": email[0],
-                "note": "Payment",
-                "payment": str(
-                    round(float(i["wage_payment"]) - float(i["fees_payment"]), 2)
-                ),
-            }
-            payments.append(payment)
-            db.session.query(TimeCard).filter(TimeCard.id == i["id"]).update(
-                {TimeCard.transaction_id: order_id}, synchronize_session=False
-            )
-        db.session.commit()
-        if float(order_confirmation["gross_amount"]) == total_payment:
-            payout_id = SendPayouts().send_payouts(payments)
-            for i in get_request_json(request, "timecards", optional=True):
-                db.session.query(TimeCard).filter(TimeCard.id == i["id"]).update(
-                    {TimeCard.payout_id: payout_id, TimeCard.paid: True},
-                    synchronize_session=False,
-                )
-            db.session.commit()
+    db.session.commit()
+    calculate_timecard(timecard.id)
+    # TODO: These could likely be combined into one query
+    rate = (
+        db.session.query(ContractorInfo.hourly_rate)
+        .filter(ContractorInfo.id == contractor_id)
+        .one()
+    )
+    user = (
+        db.session.query(User.first_name, User.last_name)
+        .filter(User.id == contractor_id)
+        .one()
+    )
+    result = (
+        db.session.query(TimeCard).filter(TimeCard.id == timecard.id).one().to_dict()
+    )
+    result["first_name"] = user[0]
+    result["last_name"] = user[1]
+    result["pay_rate"] = float(rate[0])
+    result["time_clocks"] = [
+        timeclock.to_dict()
+        for timeclock in db.session.query(TimeClock)
+        .filter(TimeClock.timecard_id == timecard_id)
+        .order_by(TimeClock.time)
+        .all()
+    ]
+    return {"timecard": result}
