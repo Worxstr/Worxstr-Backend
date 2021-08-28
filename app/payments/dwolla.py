@@ -47,7 +47,30 @@ class Dwolla:
         customer = self.app_token.post(
             "%s/funding-sources" % customer_url, request_body
         )
-        return customer.headers["location"]
+        return {"location": customer.headers["location"], "name": source_name}
+
+    def get_funding_sources(self, customer_url):
+        funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
+        result = []
+        for sources in funding_sources.body["_embedded"]["funding-sources"]:
+            if sources["type"] == "bank":
+                result.append(
+                    {
+                        "location": sources["_links"]["self"]["href"],
+                        "name": sources["name"],
+                    }
+                )
+        return {"funding_sources": result}
+
+    def edit_funding_source(self, location, account_name):
+        request_body = {"name": account_name}
+        funding_source = self.app_token.post(location, request_body)
+        return {"location": location, "name": funding_source.body["name"]}
+
+    def remove_funding_source(self, location):
+        request_body = {"removed": True}
+        funding_source = self.app_token.post(location, request_body)
+        return
 
     def create_business_customer(
         self,

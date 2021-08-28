@@ -4,7 +4,7 @@ from flask_security import login_required, roles_accepted, current_user
 from app import db, payments, payments_auth
 from app.api import bp
 from app.errors.customs import MissingParameterException
-from app.models import TimeCard, User, TimeClock, ContractorInfo
+from app.models import Organization, TimeCard, User, TimeClock, ContractorInfo
 from app.api.clock import calculate_timecard
 from app.utils import OK_RESPONSE, get_request_arg, get_request_json
 
@@ -15,21 +15,58 @@ def access_payment_facilitator():
 
 
 @login_required
-@bp.route("/payments/plaid/add-account", methods=["POST"])
+@bp.route("/payments/accounts", methods=["POST"])
 def add_account():
     public_token = get_request_json(request, "public_token")
     account_id = get_request_json(request, "account_id")
     account_name = get_request_json(request, "name")
 
     dwolla_token = payments_auth.get_dwolla_token(public_token, account_id)
-    customer_url = current_user.dwolla_customer_url
+    if current_user.has_role("contractor"):
+        customer_url = current_user.dwolla_customer_url
+    else:
+        customer_url = (
+            db.session.query(Organization.dwolla_customer_url)
+            .filter(Organization.id == current_user.organization_id)
+            .one()[0]
+        )
     return payments.authenticate_funding_source(
         customer_url, dwolla_token, account_name
     )
 
 
 @login_required
-@bp.route("/payments/plaid/link-token", methods=["POST"])
+@bp.route("/payments/accounts", methods=["GET"])
+def get_accounts():
+    if current_user.has_role("contractor"):
+        customer_url = current_user.dwolla_customer_url
+    else:
+        customer_url = (
+            db.session.query(Organization.dwolla_customer_url)
+            .filter(Organization.id == current_user.organization_id)
+            .one()[0]
+        )
+    return payments.get_funding_sources(customer_url)
+
+
+@login_required
+@bp.route("/payments/accounts", methods=["PUT"])
+def edit_account():
+    location = get_request_json(request, "location")
+    account_name = get_request_json(request, "name")
+    return payments.edit_funding_source(location, account_name)
+
+
+@login_required
+@bp.route("/payments/accounts", methods=["DELETE"])
+def remove_account():
+    location = get_request_json(request, "location")
+    payments.remove_funding_source(location)
+    return OK_RESPONSE
+
+
+@login_required
+@bp.route("/payments/plaid-link-token", methods=["POST"])
 def get_link_token():
     return {"token": payments_auth.obtain_link_token(current_user.id)}
 
