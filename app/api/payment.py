@@ -10,12 +10,61 @@ from app.utils import OK_RESPONSE, get_request_arg, get_request_json
 
 
 @bp.route("/payments/access", methods=["POST"])
+@login_required
 def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
 
 
+@bp.route("/payments/balance", methods=["GET"])
 @login_required
+def get_balance():
+    if current_user.has_role("contractor"):
+        customer_url = current_user.dwolla_customer_url
+    else:
+        customer_url = (
+            db.session.query(Organization.dwolla_customer_url)
+            .filter(Organization.id == current_user.organization_id)
+            .one()[0]
+        )
+    return payments.get_balance(customer_url)
+
+
+@bp.route("/payments/balance/add", methods=["POST"])
+@login_required
+def add_balance():
+    location = get_request_json(request, "location")
+    amount = get_request_json(request, "amount")
+    if current_user.has_role("contractor"):
+        customer_url = current_user.dwolla_customer_url
+    else:
+        customer_url = (
+            db.session.query(Organization.dwolla_customer_url)
+            .filter(Organization.id == current_user.organization_id)
+            .one()[0]
+        )
+    balance = payments.get_balance(customer_url)["location"]
+    payments.transfer_funds(amount, location, balance)
+
+
+@bp.route("/payments/balance/remove", methods=["POST"])
+@login_required
+def remove_balance():
+    location = get_request_json(request, "location")
+    amount = get_request_json(request, "amount")
+    if current_user.has_role("contractor"):
+        customer_url = current_user.dwolla_customer_url
+    else:
+        customer_url = (
+            db.session.query(Organization.dwolla_customer_url)
+            .filter(Organization.id == current_user.organization_id)
+            .one()[0]
+        )
+    balance = payments.get_balance(customer_url)["location"]
+    payments.transfer_funds(amount, balance, location)
+
+
 @bp.route("/payments/accounts", methods=["POST"])
+@login_required
 def add_account():
     public_token = get_request_json(request, "public_token")
     account_id = get_request_json(request, "account_id")
@@ -35,8 +84,8 @@ def add_account():
     )
 
 
-@login_required
 @bp.route("/payments/accounts", methods=["GET"])
+@login_required
 def get_accounts():
     if current_user.has_role("contractor"):
         customer_url = current_user.dwolla_customer_url
@@ -49,24 +98,24 @@ def get_accounts():
     return payments.get_funding_sources(customer_url)
 
 
-@login_required
 @bp.route("/payments/accounts", methods=["PUT"])
+@login_required
 def edit_account():
     location = get_request_json(request, "location")
     account_name = get_request_json(request, "name")
     return payments.edit_funding_source(location, account_name)
 
 
-@login_required
 @bp.route("/payments/accounts", methods=["DELETE"])
+@login_required
 def remove_account():
     location = get_request_json(request, "location")
     payments.remove_funding_source(location)
     return OK_RESPONSE
 
 
-@login_required
 @bp.route("/payments/plaid-link-token", methods=["POST"])
+@login_required
 def get_link_token():
     return {"token": payments_auth.obtain_link_token(current_user.id)}
 
