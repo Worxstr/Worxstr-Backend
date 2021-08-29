@@ -17,7 +17,6 @@ class Dwolla:
         self.refresh_app_token()
 
     def refresh_app_token(self):
-        print("Here!")
         self.app_token = self.client.Auth.client()
 
     def get_customer_info(self, customer_url):
@@ -68,8 +67,7 @@ class Dwolla:
     def get_transfers(self, customer_url, limit, offset):
         request_body = {"limit": limit, "offset": offset}
         transfers = self.app_token.get("%s/transfers" % customer_url, request_body)
-        result = json.dumps(transfers.body["_embedded"])
-        return result
+        return transfers.body["_embedded"]
 
     def get_balance(self, customer_url):
         funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
