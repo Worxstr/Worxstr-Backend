@@ -15,6 +15,35 @@ def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
 
 
+@bp.route("/payments/user", methods=["GET"])
+@login_required
+def get_user_info():
+    if current_user.has_role("contractor"):
+        customer_url = current_user.dwolla_customer_url
+    else:
+        customer_url = (
+            db.session.query(Organization.dwolla_customer_url)
+            .filter(Organization.id == current_user.organization_id)
+            .one()[0]
+        )
+    return payments.get_customer_info(customer_url)
+
+
+@bp.route("/payments/transfers", methods=["GET"])
+@login_required
+def get_transfers():
+    limit = get_request_json(request, "limit") or 15
+    offset = get_request_json(request, "offset") or 0
+    if current_user.has_role("contractor"):
+        customer_url = current_user.dwolla_customer_url
+    else:
+        customer_url = (
+            db.session.query(Organization.dwolla_customer_url)
+            .filter(Organization.id == current_user.organization_id)
+            .one()[0]
+        )
+    return payments.get_transfers(customer_url, limit, offset)
+
 @bp.route("/payments/balance", methods=["GET"])
 @login_required
 def get_balance():
@@ -43,7 +72,7 @@ def add_balance():
             .one()[0]
         )
     balance = payments.get_balance(customer_url)["location"]
-    payments.transfer_funds(amount, location, balance)
+    payments.transfer_funds(str(amount), location, balance)
 
 
 @bp.route("/payments/balance/remove", methods=["POST"])
@@ -60,7 +89,7 @@ def remove_balance():
             .one()[0]
         )
     balance = payments.get_balance(customer_url)["location"]
-    payments.transfer_funds(amount, balance, location)
+    payments.transfer_funds(str(amount), balance, location)
 
 
 @bp.route("/payments/accounts", methods=["POST"])
