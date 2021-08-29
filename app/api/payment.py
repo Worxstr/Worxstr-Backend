@@ -10,7 +10,6 @@ from app.utils import OK_RESPONSE, get_request_arg, get_request_json
 
 
 @bp.route("/payments/access", methods=["POST"])
-@login_required
 def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
 
