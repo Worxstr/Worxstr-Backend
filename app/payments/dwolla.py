@@ -52,12 +52,12 @@ class Dwolla:
     def get_funding_sources(self, customer_url):
         funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
         result = []
-        for sources in funding_sources.body["_embedded"]["funding-sources"]:
-            if sources["type"] == "bank":
+        for source in funding_sources.body["_embedded"]["funding-sources"]:
+            if source["type"] == "bank" and source["removed"] == False:
                 result.append(
                     {
-                        "location": sources["_links"]["self"]["href"],
-                        "name": sources["name"],
+                        "location": source["_links"]["self"]["href"],
+                        "name": source["name"],
                     }
                 )
         return {"funding_sources": result}
@@ -71,6 +71,26 @@ class Dwolla:
         request_body = {"removed": True}
         funding_source = self.app_token.post(location, request_body)
         return
+
+    def transfer_funds(self, amount, source, destination):
+        request_body = {
+            "_links": {
+                "source": {"href": source},
+                "destination": {"href": destination},
+            },
+            "amount": {"currency": "USD", "value": amount},
+        }
+        transfer = self.app_token.post("transfers", request_body)
+        return {"location": transfer.headers["location"]}
+
+    def get_balance(self, customer_url):
+        funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
+        balance_location = ""
+        for source in funding_sources.body["_embedded"]["funding-sources"]:
+            if source["type"] == "balance":
+                balance_location = source["_links"]["self"]["href"]
+        balance = self.app_token.get("%s/balance" % balance_location)
+        return {"balance": balance.body["balance"], "location": balance_location}
 
     def create_business_customer(
         self,
