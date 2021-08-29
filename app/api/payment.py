@@ -31,8 +31,8 @@ def get_user_info():
 @bp.route("/payments/transfers", methods=["GET"])
 @login_required
 def get_transfers():
-    limit = get_request_arg(request, "limit") or 15
-    offset = get_request_arg(request, "offset") or 0
+    limit = get_request_arg(request, "limit", True) or 15
+    offset = get_request_arg(request, "offset", True) or 0
     if current_user.has_role("contractor"):
         customer_url = current_user.dwolla_customer_url
     else:
