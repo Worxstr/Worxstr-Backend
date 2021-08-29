@@ -62,7 +62,7 @@ class Dwolla:
             "amount": {"currency": "USD", "value": amount},
         }
         transfer = self.app_token.post("transfers", request_body)
-        return {"location": transfer.headers["location"]}
+        return {"location": transfer.headers._store["location"][1]}
 
     def get_transfers(self, customer_url, limit, offset):
         request_body = {"limit": limit, "offset": offset}

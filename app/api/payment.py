@@ -72,7 +72,7 @@ def add_balance():
             .one()[0]
         )
     balance = payments.get_balance(customer_url)["location"]
-    payments.transfer_funds(str(amount), location, balance)
+    return payments.transfer_funds(str(amount), location, balance)
 
 
 @bp.route("/payments/balance/remove", methods=["POST"])
@@ -89,7 +89,7 @@ def remove_balance():
             .one()[0]
         )
     balance = payments.get_balance(customer_url)["location"]
-    payments.transfer_funds(str(amount), balance, location)
+    return payments.transfer_funds(str(amount), balance, location)
 
 
 @bp.route("/payments/accounts", methods=["POST"])
