@@ -67,7 +67,7 @@ class Dwolla:
     def get_transfers(self, customer_url, limit, offset):
         request_body = {"limit": limit, "offset": offset}
         transfers = self.app_token.get("%s/transfers" % customer_url, request_body)
-        return transfers.body["_embedded"]
+        return {"transfers": transfers.body["_embedded"]["transfers"]}
 
     def get_balance(self, customer_url):
         funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
