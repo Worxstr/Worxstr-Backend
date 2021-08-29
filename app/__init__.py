@@ -17,6 +17,8 @@ from config import Config
 from app.payments.dwolla import Dwolla
 from app.payments.plaid import Plaid
 
+from apscheduler.schedulers.background import BackgroundScheduler
+
 cors = CORS()
 db = SQLAlchemy()
 migrate = Migrate()
@@ -33,6 +35,7 @@ payments = Dwolla(app_key=Config.DWOLLA_APP_KEY, app_secret=Config.DWOLLA_APP_SE
 payments_auth = Plaid(
     client_id=Config.PLAID_CLIENT_ID, secret=Config.PLAID_SECRET, host=Config.PLAID_HOST
 )
+scheduler = BackgroundScheduler()
 
 
 def create_app(config_class=Config):
@@ -46,6 +49,8 @@ def create_app(config_class=Config):
     swagger.init_app(app)
     security.init_app(app, user_datastore)
     socketio.init_app(app, cors_allowed_origins="*")
+    scheduler.add_job(func=payments.refresh_app_token, trigger="interval", seconds=3600)
+    scheduler.start()
 
     @security.login_manager.unauthorized_handler
     def unauthorized_handler():

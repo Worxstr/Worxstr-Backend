@@ -1,47 +1,28 @@
 from datetime import date
 import dwollav2
+from dwollav2 import client
 from flask.globals import request
 import json
 
 
 class Dwolla:
     app_token = None
+    client = None
 
     def __init__(self, app_key, app_secret):
-        client = dwollav2.Client(key=app_key, secret=app_secret, environment="sandbox")
+        self.client = dwollav2.Client(
+            key=app_key, secret=app_secret, environment="sandbox"
+        )
 
-        self.app_token = client.Auth.client()
+        self.refresh_app_token()
+
+    def refresh_app_token(self):
+        print("Here!")
+        self.app_token = self.client.Auth.client()
 
     def get_customer_info(self, customer_url):
         customer = self.app_token.get(customer_url)
         return customer.body
-
-    def create_personal_customer(
-        self,
-        firstName,
-        lastName,
-        email,
-        address1,
-        city,
-        state,
-        postalCode,
-        dateOfBirth,
-        ssn,
-    ):
-        request_body = {
-            "firstName": firstName,
-            "lastName": lastName,
-            "email": email,
-            "type": "personal",
-            "address1": address1,
-            "city": city,
-            "state": state,
-            "postalCode": postalCode,
-            "dateOfBirth": dateOfBirth,
-            "ssn": ssn,
-        }
-        customer = self.app_token.post("customers", request_body)
-        return customer.headers["location"]
 
     def authenticate_funding_source(self, customer_url, plaid_token, source_name):
         request_body = {"plaidToken": plaid_token, "name": source_name}
@@ -98,6 +79,33 @@ class Dwolla:
                 balance_location = source["_links"]["self"]["href"]
         balance = self.app_token.get("%s/balance" % balance_location)
         return {"balance": balance.body["balance"], "location": balance_location}
+
+    def create_personal_customer(
+        self,
+        firstName,
+        lastName,
+        email,
+        address1,
+        city,
+        state,
+        postalCode,
+        dateOfBirth,
+        ssn,
+    ):
+        request_body = {
+            "firstName": firstName,
+            "lastName": lastName,
+            "email": email,
+            "type": "personal",
+            "address1": address1,
+            "city": city,
+            "state": state,
+            "postalCode": postalCode,
+            "dateOfBirth": dateOfBirth,
+            "ssn": ssn,
+        }
+        customer = self.app_token.post("customers", request_body)
+        return customer.headers["location"]
 
     def create_business_customer(
         self,
