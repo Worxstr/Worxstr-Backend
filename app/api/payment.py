@@ -44,6 +44,7 @@ def get_transfers():
         )
     return payments.get_transfers(customer_url, limit, offset)
 
+
 @bp.route("/payments/balance", methods=["GET"])
 @login_required
 def get_balance():
