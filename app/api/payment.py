@@ -191,18 +191,11 @@ def complete_payments():
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def deny_payment():
-    timecards = get_request_json(request, "timecards")
-
-    ids = []
-    for timecard in timecards:
-        ids.append(timecard["id"])
-        if "denied" in timecard.keys():
-            db.session.query(TimeCard).filter(TimeCard.id == timecard["id"]).update(
-                {TimeCard.denied: timecard["denied"]}, synchronize_session=False
-            )
+    timecard_ids = get_request_json(request, "timecard_ids")
+    db.session.query(TimeCard).filter(TimeCard.id.in_(timecard_ids)).update(
+        {TimeCard.denied: True}, synchronize_session=False
+    )
     db.session.commit()
-    timecards = db.session.query(TimeCard).filter(TimeCard.id.in_(ids)).all()
-
     return OK_RESPONSE
 
 
