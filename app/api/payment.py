@@ -32,7 +32,7 @@ def get_user_info():
 @login_required
 def get_transfers():
     limit = int(get_request_arg(request, "limit", True)) or 15
-    offset = limit * get_request_arg(request, "offset", True) or 0
+    offset = limit * int(get_request_arg(request, "offset", True)) or 0
     if current_user.has_role("contractor"):
         customer_url = current_user.dwolla_customer_url
     else:
