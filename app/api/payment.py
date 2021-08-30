@@ -1,5 +1,6 @@
 from flask import request
 from flask_security import login_required, roles_accepted, current_user
+from sqlalchemy.sql.elements import Null
 
 from app import db, payments, payments_auth
 from app.api import bp
@@ -258,6 +259,7 @@ def get_timecards():
         .filter(
             TimeCard.paid == False,
             TimeCard.denied == False,
+            TimeCard.total_payment != None,
             User.manager_id == current_user.id,
         )
         .all()
