@@ -1,8 +1,4 @@
-from datetime import date
 import dwollav2
-from dwollav2 import client
-from flask.globals import request
-import json
 
 
 class Dwolla:
@@ -53,13 +49,14 @@ class Dwolla:
         funding_source = self.app_token.post(location, request_body)
         return
 
-    def transfer_funds(self, amount, source, destination):
+    def transfer_funds(self, amount, source, destination, fees=None):
         request_body = {
             "_links": {
                 "source": {"href": source},
                 "destination": {"href": destination},
             },
             "amount": {"currency": "USD", "value": amount},
+            "fees": fees,
         }
         transfer = self.app_token.post("transfers", request_body)
         return {"location": transfer.headers._store["location"][1]}

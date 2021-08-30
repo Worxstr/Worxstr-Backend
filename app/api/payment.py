@@ -32,7 +32,7 @@ def get_user_info():
 @login_required
 def get_transfers():
     limit = get_request_arg(request, "limit", True) or 15
-    offset = get_request_arg(request, "offset", True) or 0
+    offset = limit * get_request_arg(request, "offset", True) or 0
     if current_user.has_role("contractor"):
         customer_url = current_user.dwolla_customer_url
     else:
@@ -147,6 +147,44 @@ def remove_account():
 @login_required
 def get_link_token():
     return {"token": payments_auth.obtain_link_token(current_user.id)}
+
+
+@bp.route("/payments/complete", methods=["PUT"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def complete_payments():
+    timecard_ids = get_request_json(request, "timecard_ids")
+    timecards = (
+        db.session.query(TimeCard, User.dwolla_customer_url)
+        .filter(User.id == TimeCard.contractor_id, TimeCard.id.in_(timecard_ids))
+        .all()
+    )
+    if current_user.has_role("contractor"):
+        customer_url = current_user.dwolla_customer_url
+    else:
+        customer_url = (
+            db.session.query(Organization.dwolla_customer_url)
+            .filter(Organization.id == current_user.organization_id)
+            .one()[0]
+        )
+    for timecard in timecards:
+        fees = [
+            {
+                "_links": {"charge-to": {"href": customer_url}},
+                "amount": {"value": str(timecard[0].fees_payment), "currency": "USD"},
+            }
+        ]
+        payments.transfer_funds(
+            str(timecard[0].wage_payment),
+            payments.get_balance(customer_url)["location"],
+            payments.get_balance(timecard[1])["location"],
+            fees,
+        )
+        db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
+            {TimeCard.paid: True}
+        )
+    db.session.commit()
+    return OK_RESPONSE
 
 
 @bp.route("/payments/deny", methods=["PUT"])
