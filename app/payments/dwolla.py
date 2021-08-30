@@ -66,8 +66,12 @@ class Dwolla:
         transfers = self.app_token.get("%s/transfers" % customer_url, request_body)
         result = {"transfers": transfers.body["_embedded"]["transfers"]}
         for transfer in result["transfers"]:
-            transfer["_links"]["destination"]["additional-information"] = self.get_customer_info(transfer["_links"]["destination"]["href"])
-            transfer["_links"]["source"]["additional-information"] = self.get_customer_info(transfer["_links"]["destination"]["href"])
+            transfer["_links"]["destination"][
+                "additional-information"
+            ] = self.get_customer_info(transfer["_links"]["destination"]["href"])
+            transfer["_links"]["source"][
+                "additional-information"
+            ] = self.get_customer_info(transfer["_links"]["destination"]["href"])
         return result
 
     def get_balance(self, customer_url):
