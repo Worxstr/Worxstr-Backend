@@ -56,11 +56,11 @@ class Dwolla:
         transfer = self.app_token.post("transfers", request_body)
         transfer_obj = self.get_customer_info(transfer.headers._store["location"][1])
         transfer_obj["_links"]["destination"][
-                "additional-information"
-            ] = self.get_customer_info(transfer_obj["_links"]["destination"]["href"])
+            "additional-information"
+        ] = self.get_customer_info(transfer_obj["_links"]["destination"]["href"])
         transfer_obj["_links"]["source"][
-                "additional-information"
-            ] = self.get_customer_info(transfer_obj["_links"]["source"]["href"])
+            "additional-information"
+        ] = self.get_customer_info(transfer_obj["_links"]["source"]["href"])
         return {"transfer": transfer_obj}
 
     def get_transfers(self, customer_url, limit, offset):
