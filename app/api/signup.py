@@ -129,13 +129,13 @@ def confirm_email():
         )
         db.session.commit()
         return OK_RESPONSE
-    return "Invalid token", 401
+    return {"message": "Invalid token"}, 401
 
 
 @bp.route("/auth/resend-email", methods=["GET"])
 def test():
     email = get_request_json(request, "email")
-    name = get_request_json(request, "name")
+    name = get_request_json(request, "name", True) or "User"
     send_confirmation_email(email, name)
     return OK_RESPONSE
 
