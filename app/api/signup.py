@@ -131,7 +131,8 @@ def confirm_email():
         return OK_RESPONSE
     return "Invalid token", 401
 
-@bp.route("/test", methods=["GET"])
+
+@bp.route("/auth/resend-email", methods=["GET"])
 def test():
     email = get_request_json(request, "email")
     name = get_request_json(request, "name")
@@ -151,14 +152,14 @@ def send_confirmation_email(email, name):
             token=token,
             user=name,
             email=email,
-            url=current_app.config["FRONT_URL"]
+            url=current_app.config["FRONT_URL"],
         ),
         html_body=render_template(
             "email/confirm_email.html",
             token=token,
             user=name,
             email=email,
-            url=current_app.config["FRONT_URL"]
+            url=current_app.config["FRONT_URL"],
         ),
     )
     return OK_RESPONSE
