@@ -132,7 +132,7 @@ def confirm_email():
     return {"message": "Invalid token"}, 401
 
 
-@bp.route("/auth/resend-email", methods=["GET"])
+@bp.route("/auth/resend-email", methods=["POST"])
 def test():
     email = get_request_json(request, "email")
     name = get_request_json(request, "name", True) or "User"
