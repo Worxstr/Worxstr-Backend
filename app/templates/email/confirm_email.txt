@@ -1,5 +1,5 @@
 Dear {{ user }},
 We are excited to have you joining Worxstr! Please use the link below in order to confirm your email.
-{{ url }}/confirm-email?token={{ token }}?email={{ email }}
+{{ url }}
 Sincerely,
 The Worxstr Team

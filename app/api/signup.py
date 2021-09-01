@@ -13,6 +13,7 @@ from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app import payments
 
 from itsdangerous import URLSafeTimedSerializer
+from urllib.parse import quote, urlencode
 
 
 @bp.route("/auth/sign-up/org", methods=["POST"])
@@ -143,23 +144,27 @@ def test():
 def send_confirmation_email(email, name):
     serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
     token = serializer.dumps(email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
+    params = {"token": token, "email": email}
+    confirmation_url = (
+        current_app.config["FRONT_URL"] + "/confirm-email" + "?" + urlencode(params)
+    )
     send_email(
         "[Worxstr] Please Confirm your email",
         sender=current_app.config["ADMINS"][0],
         recipients=[email],
         text_body=render_template(
             "email/confirm_email.txt",
-            token=token,
+            token=quote(token),
             user=name,
-            email=email,
-            url=current_app.config["FRONT_URL"],
+            email=quote(email),
+            url=confirmation_url,
         ),
         html_body=render_template(
             "email/confirm_email.html",
-            token=token,
+            token=quote(token),
             user=name,
-            email=email,
-            url=current_app.config["FRONT_URL"],
+            email=quote(email),
+            url=confirmation_url,
         ),
     )
     return OK_RESPONSE
