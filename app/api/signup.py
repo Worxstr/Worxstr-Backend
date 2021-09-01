@@ -132,10 +132,7 @@ def confirm_email():
     return 401
 
 
-@bp.route("/test", methods=["GET"])
-def send_confirmation_email():
-    email = get_request_arg(request, "email")
-    name = get_request_arg(request, "name")
+def send_confirmation_email(email, name):
     serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
     token = serializer.dumps(email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
     send_email(
