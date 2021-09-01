@@ -7,7 +7,8 @@ load_dotenv(os.path.join(basedir, ".env"))
 
 class Config(object):
 
-    BASE_URL = os.environ.get("BASE_URL") or "localhost:8080/{}"
+    BASE_URL = os.environ.get("BASE_URL") or "localhost:5000/{}"
+    FRONT_URL = os.environ.get("FRONT_URL" or "localhost:8080/")
 
     SECRET_KEY = os.environ.get("SECRET_KEY") or "you-will-never-guess"
 
