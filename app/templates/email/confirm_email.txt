@@ -1,0 +1,5 @@
+Dear {{ user }},
+We are excited to have you joining Worxstr! Please use the link below in order to confirm your email.
+https://test.worxstr.com/confirm-email?token={{ token }}
+Sincerely,
+The Worxstr Team
