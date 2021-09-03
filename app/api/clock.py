@@ -188,11 +188,6 @@ def clock_out():
     db.session.commit()
     calculate_timecard(timecard_id)
     result = timeclock.to_dict()
-    result["need_info"] = (
-        db.session.query(ContractorInfo.need_info)
-        .filter(ContractorInfo.id == current_user.id)
-        .one()[0]
-    )
     return {"event": result}
 
 
@@ -325,27 +320,3 @@ def calculate_timecard(timecard_id):
         }
     )
     db.session.commit()
-    info = (
-        db.session.query(ContractorInfo)
-        .filter(ContractorInfo.id == timecard.contractor_id)
-        .one()
-    )
-    if not info.need_info and (info.ssn is None or info.address is None):
-        total_wage = 0.0
-        begin_year = datetime.date(datetime.date.today().year, 1, 1)
-        timecards = (
-            db.session.query(TimeCard)
-            .join(TimeClock)
-            .filter(
-                TimeCard.contractor_id == timecard.contractor_id,
-                TimeClock.time >= begin_year,
-            )
-            .all()
-        )
-        for i in timecards:
-            total_wage = total_wage + (float(i.wage_payment) - float(i.fees_payment))
-        if total_wage > 400:
-            db.session.query(ContractorInfo).filter(
-                ContractorInfo.id == timecard.contractor_id
-            ).update({ContractorInfo.need_info: True})
-            db.session.commit()
