@@ -56,7 +56,6 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
     organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"))
     manager_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     password = db.Column(db.String(255))
-    dwolla_customer_url = db.Column(db.String(255))
     last_login_at = db.Column(db.DateTime())
     current_login_at = db.Column(db.DateTime())
     last_login_ip = db.Column(db.String(100))
@@ -68,6 +67,23 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "Role", secondary="roles_users", backref=db.backref("users", lazy="dynamic")
     )
     fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
+
+    @hybrid_property
+    def dwolla_customer_url(self):
+        customer_url = None
+        if current_user.has_role("contractor"):
+            customer_url = (
+                db.session.query(ContractorInfo.dwolla_customer_url)
+                .filter(ContractorInfo.id == current_user.id)
+                .one()[0]
+            )
+        else:
+            customer_url = (
+                db.session.query(Organization.dwolla_customer_url)
+                .filter(Organization.id == current_user.organization_id)
+                .one()[0]
+            )
+        return customer_url
 
 
 class ManagerReference(db.Model):
@@ -183,6 +199,7 @@ class ContractorInfo(db.Model, CustomSerializerMixin):
     __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
     hourly_rate = db.Column(db.Numeric)
+    dwolla_customer_url = db.Column(db.String(255))
 
 
 class Message(db.Model, CustomSerializerMixin):

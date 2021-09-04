@@ -18,14 +18,7 @@ def access_payment_facilitator():
 @bp.route("/payments/user", methods=["GET"])
 @login_required
 def get_user_info():
-    if current_user.has_role("contractor"):
-        customer_url = current_user.dwolla_customer_url
-    else:
-        customer_url = (
-            db.session.query(Organization.dwolla_customer_url)
-            .filter(Organization.id == current_user.organization_id)
-            .one()[0]
-        )
+    customer_url = current_user.dwolla_customer_url
     return payments.get_customer_info(customer_url)
 
 
@@ -34,28 +27,14 @@ def get_user_info():
 def get_transfers():
     limit = int(get_request_arg(request, "limit", True)) or 15
     offset = limit * int(get_request_arg(request, "offset", True)) or 0
-    if current_user.has_role("contractor"):
-        customer_url = current_user.dwolla_customer_url
-    else:
-        customer_url = (
-            db.session.query(Organization.dwolla_customer_url)
-            .filter(Organization.id == current_user.organization_id)
-            .one()[0]
-        )
+    customer_url = current_user.dwolla_customer_url
     return payments.get_transfers(customer_url, limit, offset)
 
 
 @bp.route("/payments/balance", methods=["GET"])
 @login_required
 def get_balance():
-    if current_user.has_role("contractor"):
-        customer_url = current_user.dwolla_customer_url
-    else:
-        customer_url = (
-            db.session.query(Organization.dwolla_customer_url)
-            .filter(Organization.id == current_user.organization_id)
-            .one()[0]
-        )
+    customer_url = current_user.dwolla_customer_url
     return payments.get_balance(customer_url)
 
 
@@ -64,14 +43,7 @@ def get_balance():
 def add_balance():
     location = get_request_json(request, "location")
     amount = get_request_json(request, "amount")
-    if current_user.has_role("contractor"):
-        customer_url = current_user.dwolla_customer_url
-    else:
-        customer_url = (
-            db.session.query(Organization.dwolla_customer_url)
-            .filter(Organization.id == current_user.organization_id)
-            .one()[0]
-        )
+    customer_url = current_user.dwolla_customer_url
     balance = payments.get_balance(customer_url)["location"]
     return payments.transfer_funds(str(amount), location, balance)
 
@@ -81,14 +53,7 @@ def add_balance():
 def remove_balance():
     location = get_request_json(request, "location")
     amount = get_request_json(request, "amount")
-    if current_user.has_role("contractor"):
-        customer_url = current_user.dwolla_customer_url
-    else:
-        customer_url = (
-            db.session.query(Organization.dwolla_customer_url)
-            .filter(Organization.id == current_user.organization_id)
-            .one()[0]
-        )
+    customer_url = current_user.dwolla_customer_url
     balance = payments.get_balance(customer_url)["location"]
     return payments.transfer_funds(str(amount), balance, location)
 
@@ -101,14 +66,7 @@ def add_account():
     account_name = get_request_json(request, "name")
 
     dwolla_token = payments_auth.get_dwolla_token(public_token, account_id)
-    if current_user.has_role("contractor"):
-        customer_url = current_user.dwolla_customer_url
-    else:
-        customer_url = (
-            db.session.query(Organization.dwolla_customer_url)
-            .filter(Organization.id == current_user.organization_id)
-            .one()[0]
-        )
+    customer_url = current_user.dwolla_customer_url
     return payments.authenticate_funding_source(
         customer_url, dwolla_token, account_name
     )
@@ -117,14 +75,7 @@ def add_account():
 @bp.route("/payments/accounts", methods=["GET"])
 @login_required
 def get_accounts():
-    if current_user.has_role("contractor"):
-        customer_url = current_user.dwolla_customer_url
-    else:
-        customer_url = (
-            db.session.query(Organization.dwolla_customer_url)
-            .filter(Organization.id == current_user.organization_id)
-            .one()[0]
-        )
+    customer_url = current_user.dwolla_customer_url
     return payments.get_funding_sources(customer_url)
 
 
@@ -160,14 +111,7 @@ def complete_payments():
         .filter(User.id == TimeCard.contractor_id, TimeCard.id.in_(timecard_ids))
         .all()
     )
-    if current_user.has_role("contractor"):
-        customer_url = current_user.dwolla_customer_url
-    else:
-        customer_url = (
-            db.session.query(Organization.dwolla_customer_url)
-            .filter(Organization.id == current_user.organization_id)
-            .one()[0]
-        )
+    customer_url = current_user.dwolla_customer_url
     for timecard in timecards:
         fees = [
             {
