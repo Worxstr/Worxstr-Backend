@@ -111,7 +111,10 @@ def sign_up_contractor():
     )
     db.session.commit()
 
-    contractor_info = ContractorInfo(id=user.id, dwolla_customer_url=customer_url,)
+    contractor_info = ContractorInfo(
+        id=user.id,
+        dwolla_customer_url=customer_url,
+    )
     db.session.add(contractor_info)
     db.session.commit()
     send_confirmation_email(user.email, user.first_name)
