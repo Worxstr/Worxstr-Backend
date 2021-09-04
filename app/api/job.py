@@ -301,7 +301,10 @@ def job_detail(job_id):
     job["shifts"] = shifts
     job["managers"] = get_managers()
     job["contractors"] = []
-    contractors = db.session.query(User).filter(User.organization_id == current_user.organization_id, User.has_role("contractor"))
+    contractors = db.session.query(User).filter(
+        User.organization_id == current_user.organization_id,
+        User.has_role("contractor"),
+    )
     for contractor in contractors:
         job["contractors"].append(contractor.to_dict())
 
