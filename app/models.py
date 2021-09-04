@@ -43,7 +43,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "username",
         "organization_id",
         "manager_id",
-        "dwolla_customer_url"
+        "dwolla_customer_url",
     )
     serialize_rules = ()
 
