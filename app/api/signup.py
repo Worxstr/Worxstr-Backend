@@ -53,7 +53,6 @@ def sign_up_org():
         last_name=customer["lastName"],
         email=customer["email"],
         organization_id=organization.id,
-        dwolla_customer_url=customer_url,
         roles=roles,
         password=hash_password(password),
     )
@@ -107,13 +106,12 @@ def sign_up_contractor():
         email=email,
         organization_id=organization_id,
         manager_id=manager_id,
-        dwolla_customer_url=customer_url,
         roles=roles,
         password=hash_password(password),
     )
     db.session.commit()
 
-    contractor_info = ContractorInfo(id=user.id)
+    contractor_info = ContractorInfo(id=user.id, dwolla_customer_url=customer_url,)
     db.session.add(contractor_info)
     db.session.commit()
     send_confirmation_email(user.email, user.first_name)

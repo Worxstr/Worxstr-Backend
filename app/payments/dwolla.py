@@ -58,7 +58,7 @@ class Dwolla:
             transfer = self.app_token.post("transfers", request_body)
         except ValidationError:
             return {
-                "message": "Additional information required. Please check settings.",
+                "message": "Beneficial owner information required. Please check settings.",
                 "actions": [
                     {"name": "VERIFY_BENEFICIAL_OWNERS", "action_text": "Verify"}
                 ],
