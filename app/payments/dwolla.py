@@ -59,7 +59,9 @@ class Dwolla:
         except ValidationError:
             return {
                 "message": "Additional information required. Please check settings.",
-                "actions": ["VERIFY_BENEFICIAL_OWNERS"],
+                "actions": [
+                    {"name": "VERIFY_BENEFICIAL_OWNERS", "action_text": "Verify"}
+                ],
             }, 401
         transfer_obj = self.get_customer_info(transfer.headers._store["location"][1])
         transfer_obj["_links"]["destination"][
