@@ -58,7 +58,7 @@ def sign_up_org():
     )
     db.session.commit()
     send_confirmation_email(user.email, user.first_name)
-    return user.to_dict()
+    return OK_RESPONSE
 
 
 @bp.route("/auth/sign-up/contractor", methods=["POST"])
