@@ -118,7 +118,7 @@ def sign_up_contractor():
     db.session.add(contractor_info)
     db.session.commit()
     send_confirmation_email(user.email, user.first_name)
-    return user.to_dict(), 201
+    return OK_RESPONSE
 
 
 @bp.route("/auth/confirm-email", methods=["PUT"])
@@ -149,6 +149,7 @@ def send_confirmation_email(email, name):
     confirmation_url = (
         current_app.config["FRONT_URL"] + "/confirm-email" + "?" + urlencode(params)
     )
+    print(confirmation_url)
     send_email(
         "[Worxstr] Please Confirm your email",
         sender=current_app.config["ADMINS"][0],
