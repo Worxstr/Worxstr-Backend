@@ -1,4 +1,5 @@
 import dwollav2
+from dwollav2.error import ValidationError
 
 
 class Dwolla:
@@ -53,7 +54,10 @@ class Dwolla:
             "amount": {"currency": "USD", "value": amount},
             "fees": fees,
         }
-        transfer = self.app_token.post("transfers", request_body)
+        try:
+            transfer = self.app_token.post("transfers", request_body)
+        except ValidationError:
+            return {"message": "Additional information required. Please check settings."}, 401
         transfer_obj = self.get_customer_info(transfer.headers._store["location"][1])
         transfer_obj["_links"]["destination"][
             "additional-information"
