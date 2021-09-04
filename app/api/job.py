@@ -301,16 +301,9 @@ def job_detail(job_id):
     job["shifts"] = shifts
     job["managers"] = get_managers()
     job["contractors"] = []
-    contractors = db.session.query(User).filter(User.manager_id == current_user.id)
-
-    for contractor in [e.to_dict() for e in contractors if e.has_role("contractor")]:
-        contractor["contractor_info"] = (
-            db.session.query(ContractorInfo)
-            .filter(ContractorInfo.id == contractor["id"])
-            .one()
-            .to_dict()
-        )
-        job["contractors"].append(contractor)
+    contractors = db.session.query(User).filter(User.organization_id == current_user.organization_id, User.has_role("contractor"))
+    for contractor in contractors:
+        job["contractors"].append(contractor.to_dict())
 
     job["contractor_manager"] = (
         db.session.query(User)
@@ -387,6 +380,27 @@ def get_managers():
         "organization_managers": organization_managers,
         "contractor_managers": contractor_managers,
     }
+
+
+def get_lower_managers(manager_id):
+    users = (
+        db.session.query(User)
+        .filter(
+            User.manager_id == manager_id,
+            User.organization_id == current_user.organization_id,
+        )
+        .all()
+    )
+
+    lower_managers = []
+    for user in users:
+        if user.has_role("contractor_manager") or user.has_role("organization_manager"):
+            lower_managers.append(user.id)
+            for i in get_lower_managers(user.id):
+                # TODO: a recursive database call could be a _very_ bad idea
+                lower_managers.append(i)
+
+    return lower_managers
 
 
 @bp.route("/jobs/<job_id>", methods=["PUT"])
