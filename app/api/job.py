@@ -383,7 +383,10 @@ def get_managers():
         if user.has_role("organization_manager"):
             organization_managers.append(user.to_dict())
 
-    return {"organization_managers": organization_managers, "contractor_managers": contractor_managers}
+    return {
+        "organization_managers": organization_managers,
+        "contractor_managers": contractor_managers,
+    }
 
 
 @bp.route("/jobs/<job_id>", methods=["PUT"])
