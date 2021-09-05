@@ -87,7 +87,7 @@ def list_jobs():
     """
     result = {
         "jobs": [],
-        "managers": get_managers(current_user.manager_id or current_user.id),
+        "managers": get_managers(),
     }
 
     direct_ids = []
@@ -303,10 +303,10 @@ def job_detail(job_id):
     job["contractors"] = []
     contractors = db.session.query(User).filter(
         User.organization_id == current_user.organization_id,
-        User.has_role("contractor"),
     )
     for contractor in contractors:
-        job["contractors"].append(contractor.to_dict())
+        if contractor.has_role("contractor"):
+            job["contractors"].append(contractor.to_dict())
 
     job["contractor_manager"] = (
         db.session.query(User)
