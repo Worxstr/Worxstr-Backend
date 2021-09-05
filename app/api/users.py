@@ -278,15 +278,11 @@ def list_contractors():
             schema:
                 $ref: '#/definitions/User'
     """
-    result = (
-        db.session.query(User)
-        .filter(User.roles.any(name="contractor"))
-        .all()
-    )
+    result = db.session.query(User).filter(User.roles.any(name="contractor")).all()
     return {"users": [x.to_dict() for x in result]}, 200
 
 
-@bp.route("/users/contractors/<id>", methods=["PUT"])
+@bp.route("/users/contractors/<user_id>", methods=["PATCH"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def edit_contractor(id):
@@ -296,11 +292,16 @@ def edit_contractor(id):
         200:
             description: Contractor edited
     """
-    hourly_rate = get_request_json(request, "hourly_rate")
-
-    db.session.query(ContractorInfo).filter(ContractorInfo.id == id).update(
-        {ContractorInfo.hourly_rate: hourly_rate}
-    )
+    hourly_rate = get_request_json(request, "hourly_rate", optional=True)
+    direct_manager = get_request_json(request, "direct_manager", optional=True)
+    if direct_manager:
+        db.session.query(User).filter(User.id == id).update(
+            {User.manager_id: direct_manager}
+        )
+    if hourly_rate:
+        db.session.query(ContractorInfo).filter(ContractorInfo.id == id).update(
+            {ContractorInfo.hourly_rate: hourly_rate}
+        )
     db.session.commit()
 
     result = db.session.query(User).filter(User.id == id).one().to_dict()
