@@ -87,7 +87,7 @@ def list_jobs():
     """
     result = {
         "jobs": [],
-        "managers": get_managers(current_user.manager_id or current_user.id),
+        "managers": get_managers(),
     }
 
     direct_ids = []
