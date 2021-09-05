@@ -71,16 +71,16 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
     @hybrid_property
     def dwolla_customer_url(self):
         customer_url = None
-        if current_user.has_role("contractor"):
+        if self.has_role("contractor"):
             customer_url = (
                 db.session.query(ContractorInfo.dwolla_customer_url)
-                .filter(ContractorInfo.id == current_user.id)
+                .filter(ContractorInfo.id == self.id)
                 .one()[0]
             )
         else:
             customer_url = (
                 db.session.query(Organization.dwolla_customer_url)
-                .filter(Organization.id == current_user.organization_id)
+                .filter(Organization.id == self.organization_id)
                 .one()[0]
             )
         return customer_url
