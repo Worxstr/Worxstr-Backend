@@ -285,7 +285,7 @@ def list_contractors():
 @bp.route("/users/contractors/<user_id>", methods=["PATCH"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
-def edit_contractor(id):
+def edit_contractor(user_id):
     """Gives manager the ability to edit an contractor's pay and direct manager
     ---
     responses:
@@ -295,18 +295,21 @@ def edit_contractor(id):
     hourly_rate = get_request_json(request, "hourly_rate", optional=True)
     direct_manager = get_request_json(request, "direct_manager", optional=True)
     if direct_manager:
-        db.session.query(User).filter(User.id == id).update(
-            {User.manager_id: direct_manager}
+        db.session.query(User).filter(User.id == user_id).update(
+            {User.manager_id: int(direct_manager)}
         )
     if hourly_rate:
-        db.session.query(ContractorInfo).filter(ContractorInfo.id == id).update(
-            {ContractorInfo.hourly_rate: hourly_rate}
+        db.session.query(ContractorInfo).filter(ContractorInfo.id == user_id).update(
+            {ContractorInfo.hourly_rate: float(hourly_rate)}
         )
     db.session.commit()
 
-    result = db.session.query(User).filter(User.id == id).one().to_dict()
+    result = db.session.query(User).filter(User.id == user_id).one().to_dict()
     result["contractor_info"] = (
-        db.session.query(ContractorInfo).filter(ContractorInfo.id == id).one().to_dict()
+        db.session.query(ContractorInfo)
+        .filter(ContractorInfo.id == user_id)
+        .one()
+        .to_dict()
     )
 
     return {"event": result}, 200
