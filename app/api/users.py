@@ -270,7 +270,7 @@ def edit_user():
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def list_contractors():
-    """Returns list of contractors associated with the current manager
+    """Returns list of contractors associated with the current user's organization
     ---
     responses:
         200:
@@ -280,7 +280,7 @@ def list_contractors():
     """
     result = (
         db.session.query(User)
-        .filter(User.manager_id == current_user.id, User.roles.any(name="contractor"))
+        .filter(User.roles.any(name="contractor"))
         .all()
     )
     return {"users": [x.to_dict() for x in result]}, 200
