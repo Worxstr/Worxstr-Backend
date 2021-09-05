@@ -107,7 +107,7 @@ def get_link_token():
 def complete_payments():
     timecard_ids = get_request_json(request, "timecard_ids")
     timecards = (
-        db.session.query(TimeCard, User.dwolla_customer_url)
+        db.session.query(TimeCard)
         .filter(User.id == TimeCard.contractor_id, TimeCard.id.in_(timecard_ids))
         .all()
     )
