@@ -112,6 +112,7 @@ def complete_payments():
         .all()
     )
     customer_url = current_user.dwolla_customer_url
+    transfers = []
     for timecard in timecards:
         fees = [
             {
@@ -119,7 +120,7 @@ def complete_payments():
                 "amount": {"value": str(timecard[0].fees_payment), "currency": "USD"},
             }
         ]
-        payments.transfer_funds(
+        transfer = payments.transfer_funds(
             str(timecard[0].wage_payment),
             payments.get_balance(customer_url)["location"],
             payments.get_balance(timecard[1].dwolla_customer_url)["location"],
@@ -128,8 +129,9 @@ def complete_payments():
         db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
             {TimeCard.paid: True}
         )
+        transfers.append(transfer["transfer"])
     db.session.commit()
-    return OK_RESPONSE
+    return {"transfers": transfers}
 
 
 @bp.route("/payments/deny", methods=["PUT"])
