@@ -57,10 +57,10 @@ class Dwolla:
         try:
             transfer = self.app_token.post("transfers", request_body)
         except ValidationError as e:
-            #TODO: If there is a an error raised while exectued /payments/complete this is added to the response
+            # TODO: If there is a an error raised while exectued /payments/complete this is added to the response
             return {
                 "message": "Beneficial owner information required. Please check settings.",
-                "error": e.body['_embedded']['errors'][0]['message'],
+                "error": e.body["_embedded"]["errors"][0]["message"],
                 "actions": [
                     {"name": "VERIFY_BENEFICIAL_OWNERS", "action_text": "Verify"}
                 ],
