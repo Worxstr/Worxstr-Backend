@@ -129,7 +129,7 @@ def complete_payments():
         db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
             {TimeCard.paid: True}
         )
-        transfers.append(transfer["transfer"])
+        transfers.append(transfer)
     db.session.commit()
     return {"transfers": transfers}
 
