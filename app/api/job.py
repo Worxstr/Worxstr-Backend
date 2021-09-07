@@ -87,7 +87,7 @@ def list_jobs():
     """
     result = {
         "jobs": [],
-        "managers": get_managers(current_user.manager_id or current_user.id),
+        "managers": get_managers(),
     }
 
     direct_ids = []
@@ -299,18 +299,14 @@ def job_detail(job_id):
         shifts.append(shift)
 
     job["shifts"] = shifts
-    job["managers"] = get_managers(current_user.manager_id or current_user.id)
+    job["managers"] = get_managers()
     job["contractors"] = []
-    contractors = db.session.query(User).filter(User.manager_id == current_user.id)
-
-    for contractor in [e.to_dict() for e in contractors if e.has_role("contractor")]:
-        contractor["contractor_info"] = (
-            db.session.query(ContractorInfo)
-            .filter(ContractorInfo.id == contractor["id"])
-            .one()
-            .to_dict()
-        )
-        job["contractors"].append(contractor)
+    contractors = db.session.query(User).filter(
+        User.organization_id == current_user.organization_id,
+    )
+    for contractor in contractors:
+        if contractor.has_role("contractor"):
+            job["contractors"].append(contractor.to_dict())
 
     job["contractor_manager"] = (
         db.session.query(User)
@@ -330,9 +326,9 @@ def job_detail(job_id):
 @login_required
 @roles_accepted("contractor_manager", "organization_manager")
 @bp.route("/jobs/managers", methods=["GET"])
-def get_managers(manager_id=None):
+def get_managers():
     """
-    Get list of subordinate managers, including the calling manager.
+    Get list of managers.
     Data is separated into lists of who manages contractors and the organization.
     ---
     parameters:
@@ -349,7 +345,7 @@ def get_managers(manager_id=None):
                     items:
                         $ref '#/definitions/User'
                     description:
-                        "List of sub-manangers with the role
+                        "List of with the role
                         'organization_manager', including the
                         calling user, if applicable."
                 contractor_managers:
@@ -357,7 +353,7 @@ def get_managers(manager_id=None):
                     items:
                         $ref '#/definitions/User'
                     description:
-                        "List of sub-manangers with the role
+                        "List of with the role
                         'contractor_manager', including the
                         calling user, if applicable."
     responses:
@@ -366,25 +362,27 @@ def get_managers(manager_id=None):
             schema:
                 $ref: '#/definitions/ManagersList'
     """
-    if not manager_id:
-        manager_id = get_request_arg(request, "manager_id")
+    organization_managers = []
+    contractor_managers = []
 
-    managers = get_lower_managers(manager_id)
-    result = {"organization_managers": [], "contractor_managers": []}
+    users = (
+        db.session.query(User)
+        .filter(
+            User.organization_id == current_user.organization_id,
+        )
+        .all()
+    )
 
-    for manager in managers:
-        user = db.session.query(User).filter(User.id == manager).one()
-        if user.has_role("organization_manager"):
-            result["organization_managers"].append(user.to_dict())
+    for user in users:
         if user.has_role("contractor_manager"):
-            result["contractor_managers"].append(user.to_dict())
+            contractor_managers.append(user.to_dict())
+        if user.has_role("organization_manager"):
+            organization_managers.append(user.to_dict())
 
-    if current_user.has_role("organization_manager"):
-        result["organization_managers"].append(current_user.to_dict())
-    if current_user.has_role("contractor_manager"):
-        result["contractor_managers"].append(current_user.to_dict())
-
-    return result
+    return {
+        "organization_managers": organization_managers,
+        "contractor_managers": contractor_managers,
+    }
 
 
 def get_lower_managers(manager_id):

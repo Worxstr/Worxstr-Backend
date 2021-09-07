@@ -43,6 +43,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "username",
         "organization_id",
         "manager_id",
+        "dwolla_customer_url",
     )
     serialize_rules = ()
 
@@ -55,7 +56,6 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
     organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"))
     manager_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     password = db.Column(db.String(255))
-    dwolla_customer_url = db.Column(db.String(255))
     last_login_at = db.Column(db.DateTime())
     current_login_at = db.Column(db.DateTime())
     last_login_ip = db.Column(db.String(100))
@@ -67,6 +67,23 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "Role", secondary="roles_users", backref=db.backref("users", lazy="dynamic")
     )
     fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
+
+    @hybrid_property
+    def dwolla_customer_url(self):
+        customer_url = None
+        if self.has_role("contractor"):
+            customer_url = (
+                db.session.query(ContractorInfo.dwolla_customer_url)
+                .filter(ContractorInfo.id == self.id)
+                .one()[0]
+            )
+        else:
+            customer_url = (
+                db.session.query(Organization.dwolla_customer_url)
+                .filter(Organization.id == self.organization_id)
+                .one()[0]
+            )
+        return customer_url
 
 
 class ManagerReference(db.Model):
@@ -174,36 +191,15 @@ class TimeCard(db.Model, CustomSerializerMixin):
     wage_payment = db.Column(db.Numeric)
     fees_payment = db.Column(db.Numeric)
     total_payment = db.Column(db.Numeric)
-    approved = db.Column(db.Boolean, default=False)
     paid = db.Column(db.Boolean, default=False)
     denied = db.Column(db.Boolean, default=False)
-    transaction_id = db.Column(db.String(255))
-    payout_id = db.Column(db.String(255))
 
 
 class ContractorInfo(db.Model, CustomSerializerMixin):
-    serialize_only = (
-        "id",
-        "address",
-        "city",
-        "state",
-        "zip_code",
-        "longitude",
-        "latitude",
-        "hourly_rate",
-        "need_info",
-    )
     __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
-    ssn = db.Column(db.String(9), unique=True)
-    address = db.Column(db.String(255))
-    city = db.Column(db.String(255))
-    state = db.Column(db.String(255))
-    zip_code = db.Column(db.String(10))
-    longitude = db.Column(db.Float(precision=52))
-    latitude = db.Column(db.Float(precision=52))
     hourly_rate = db.Column(db.Numeric)
-    need_info = db.Column(db.Boolean, default=False)
+    dwolla_customer_url = db.Column(db.String(255))
 
 
 class Message(db.Model, CustomSerializerMixin):

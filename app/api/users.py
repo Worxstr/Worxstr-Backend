@@ -36,7 +36,11 @@ def list_users():
                 items:
                     $ref: '#/definitions/User'
     """
-    result = db.session.query(User).all()
+    result = (
+        db.session.query(User)
+        .filter(User.organization_id == current_user.organization_id)
+        .all()
+    )
     return {"users": [x.to_dict() for x in result]}
 
 
@@ -152,101 +156,6 @@ def manager_reference_generator():
     return rand
 
 
-@bp.route("/users/add-contractor", methods=["POST"])
-def add_contractor():
-    """
-    Add a new contractor.
-    ---
-    parameters:
-        - name: first_name
-          in: body
-          type: string
-        - name: last_name
-          in: body
-          type: string
-        - name: username
-          in: body
-          type: string
-        - name: email
-          in: body
-          type: string
-        - name: phone
-          in: body
-          type: string
-        - name: password
-          in: body
-          type: string
-        - name: hourly_rate
-          in: body
-          type: string
-        - name: manager_id
-          in: body
-          type: string
-    responses:
-        201:
-            description: Contractor successfully created.
-    """
-    first_name = get_request_json(request, "first_name")
-    last_name = get_request_json(request, "last_name")
-    email = get_request_json(request, "email")
-    phone_raw = get_request_json(request, "phone")
-    phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
-    password = get_request_json(request, "password")
-    hourly_rate = get_request_json(request, "hourly_rate")
-    roles = ["contractor"]
-    manager_id = get_request_json(request, "manager_id", optional=True)
-
-    organization_id = None
-    confirmed_at = None
-
-    if current_user:
-        organization_id = current_user.organization_id
-        organization_name = (
-            db.session.query(Organization.name)
-            .filter(Organization.id == organization_id)
-            .one()[0]
-        )
-        confirmed_at = datetime.datetime.utcnow()
-        password = "".join(random.choices(string.ascii_letters + string.digits, k=10))
-
-    user = user_datastore.create_user(
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-        phone=phone,
-        organization_id=organization_id,
-        manager_id=manager_id,
-        confirmed_at=confirmed_at,
-        roles=roles,
-        password=hash_password(password),
-    )
-    db.session.commit()
-
-    contractor_info = ContractorInfo(id=user.id, hourly_rate=float(hourly_rate))
-    db.session.add(contractor_info)
-    db.session.commit()
-
-    if current_user:
-        send_email(
-            "[Worxstr] Welcome!",
-            sender=current_app.config["ADMINS"][0],
-            recipients=[email],
-            text_body=render_template(
-                "email/temp_password.txt",
-                user=first_name,
-                organization=organization_name,
-                password=password,
-            ),
-            html_body=render_template(
-                "email/temp_password.html",
-                user=first_name,
-                organization=organization_name,
-                password=password,
-            ),
-        )
-    return user.to_dict(), 201
-
-
 @bp.route("/users/check-email/<email>", methods=["GET"])
 def check_email(email):
     """
@@ -308,17 +217,6 @@ def get_user(id):
     return result, 200
 
 
-@bp.route("/users/me/ssn", methods=["PUT"])
-@login_required
-@roles_accepted("contractor")
-def set_user_ssn():
-    db.session.query(ContractorInfo).filter(
-        ContractorInfo.id == current_user.id
-    ).update({ContractorInfo.ssn: get_request_json(request, "ssn")})
-    db.session.commit()
-    return OK_RESPONSE
-
-
 @bp.route("/users/me", methods=["GET"])
 @login_required
 def get_authenticated_user():
@@ -347,34 +245,12 @@ def get_authenticated_user():
 @login_required
 @roles_accepted("contractor")
 def edit_user():
-    # TODO: Are all of the fields required?
     phone = get_request_json(request, "phone")
     email = get_request_json(request, "email")
-    address = get_request_json(request, "address")
-    city = get_request_json(request, "city")
-    state = get_request_json(request, "state")
-    zip_code = get_request_json(request, "zip_code")
 
     db.session.query(User).filter(User.id == current_user.id).update(
         {User.phone: phone, User.email: email}
     )
-
-    if current_user.has_role("contractor"):
-        location = geolocator.geocode(
-            address + " " + city + " " + state + " " + zip_code
-        )
-        db.session.query(ContractorInfo).filter(
-            ContractorInfo.id == current_user.id
-        ).update(
-            {
-                ContractorInfo.address: address,
-                ContractorInfo.city: city,
-                ContractorInfo.state: state,
-                ContractorInfo.zip_code: zip_code,
-                ContractorInfo.longitude: location.longitude,
-                ContractorInfo.latitude: location.latitude,
-            }
-        )
 
     db.session.commit()
     result = current_user.to_dict()
@@ -394,7 +270,7 @@ def edit_user():
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def list_contractors():
-    """Returns list of contractors associated with the current manager
+    """Returns list of contractors associated with the current user's organization
     ---
     responses:
         200:
@@ -402,34 +278,38 @@ def list_contractors():
             schema:
                 $ref: '#/definitions/User'
     """
-    result = (
-        db.session.query(User)
-        .filter(User.manager_id == current_user.id, User.roles.any(name="contractor"))
-        .all()
-    )
+    result = db.session.query(User).filter(User.roles.any(name="contractor")).all()
     return {"users": [x.to_dict() for x in result]}, 200
 
 
-@bp.route("/users/contractors/<id>", methods=["PUT"])
+@bp.route("/users/contractors/<user_id>", methods=["PATCH"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
-def edit_contractor(id):
+def edit_contractor(user_id):
     """Gives manager the ability to edit an contractor's pay and direct manager
     ---
     responses:
         200:
             description: Contractor edited
     """
-    hourly_rate = get_request_json(request, "hourly_rate")
-
-    db.session.query(ContractorInfo).filter(ContractorInfo.id == id).update(
-        {ContractorInfo.hourly_rate: hourly_rate}
-    )
+    hourly_rate = get_request_json(request, "hourly_rate", optional=True)
+    direct_manager = get_request_json(request, "direct_manager", optional=True)
+    if direct_manager:
+        db.session.query(User).filter(User.id == user_id).update(
+            {User.manager_id: int(direct_manager)}
+        )
+    if hourly_rate:
+        db.session.query(ContractorInfo).filter(ContractorInfo.id == user_id).update(
+            {ContractorInfo.hourly_rate: float(hourly_rate)}
+        )
     db.session.commit()
 
-    result = db.session.query(User).filter(User.id == id).one().to_dict()
+    result = db.session.query(User).filter(User.id == user_id).one().to_dict()
     result["contractor_info"] = (
-        db.session.query(ContractorInfo).filter(ContractorInfo.id == id).one().to_dict()
+        db.session.query(ContractorInfo)
+        .filter(ContractorInfo.id == user_id)
+        .one()
+        .to_dict()
     )
 
     return {"event": result}, 200

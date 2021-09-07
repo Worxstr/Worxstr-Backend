@@ -1,15 +1,20 @@
 import datetime
 
-from flask import request
+from flask import request, render_template, current_app
 from flask_security import (
     hash_password,
 )
 
 from app import db, user_datastore
 from app.api import bp
+from app.api.users import manager_reference_generator
 from app.models import ManagerReference, User, ContractorInfo, Organization
+from app.email import send_email
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app import payments
+
+from itsdangerous import URLSafeTimedSerializer
+from urllib.parse import quote, urlencode
 
 
 @bp.route("/auth/sign-up/org", methods=["POST"])
@@ -43,20 +48,24 @@ def sign_up_org():
     db.session.add(organization)
     db.session.commit()
 
-    confirmed_at = datetime.datetime.utcnow()
     roles = ["organization_manager", "contractor_manager"]
     user = user_datastore.create_user(
         first_name=customer["firstName"],
         last_name=customer["lastName"],
         email=customer["email"],
         organization_id=organization.id,
-        dwolla_customer_url=customer_url,
-        confirmed_at=confirmed_at,
         roles=roles,
         password=hash_password(password),
     )
+
     db.session.commit()
-    return user.to_dict()
+    manager_reference = ManagerReference(
+        user_id=user.id, reference_number=manager_reference_generator()
+    )
+    db.session.add(manager_reference)
+    db.session.commit()
+    send_confirmation_email(user.email, user.first_name)
+    return OK_RESPONSE
 
 
 @bp.route("/auth/sign-up/contractor", methods=["POST"])
@@ -88,7 +97,6 @@ def sign_up_contractor():
     last_name = customer["lastName"]
     email = customer["email"]
 
-    confirmed_at = datetime.datetime.utcnow()
     roles = ["contractor"]
     manager_id = (
         db.session.query(ManagerReference.user_id)
@@ -105,15 +113,78 @@ def sign_up_contractor():
         email=email,
         organization_id=organization_id,
         manager_id=manager_id,
-        confirmed_at=confirmed_at,
-        dwolla_customer_url=customer_url,
         roles=roles,
         password=hash_password(password),
     )
     db.session.commit()
 
-    contractor_info = ContractorInfo(id=user.id)
+    contractor_info = ContractorInfo(
+        id=user.id,
+        dwolla_customer_url=customer_url,
+    )
     db.session.add(contractor_info)
     db.session.commit()
+    send_confirmation_email(user.email, user.first_name)
+    return OK_RESPONSE
 
-    return user.to_dict(), 201
+
+@bp.route("/auth/confirm-email", methods=["PUT"])
+def confirm_email():
+    token = get_request_json(request, "token")
+    email = confirm_token(token)
+    if email:
+        db.session.query(User).filter(User.email == email).update(
+            {User.confirmed_at: datetime.datetime.utcnow()}
+        )
+        db.session.commit()
+        return OK_RESPONSE
+    return {"message": "Invalid token."}, 401
+
+
+@bp.route("/auth/resend-email", methods=["POST"])
+def test():
+    email = get_request_json(request, "email")
+    name = get_request_json(request, "name", True) or "User"
+    send_confirmation_email(email, name)
+    return OK_RESPONSE
+
+
+def send_confirmation_email(email, name):
+    serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    token = serializer.dumps(email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
+    params = {"token": token, "email": email}
+    confirmation_url = (
+        current_app.config["FRONT_URL"] + "/confirm-email" + "?" + urlencode(params)
+    )
+    print(confirmation_url)
+    send_email(
+        "[Worxstr] Please Confirm your email",
+        sender=current_app.config["ADMINS"][0],
+        recipients=[email],
+        text_body=render_template(
+            "email/confirm_email.txt",
+            token=quote(token),
+            user=name,
+            email=quote(email),
+            url=confirmation_url,
+        ),
+        html_body=render_template(
+            "email/confirm_email.html",
+            token=quote(token),
+            user=name,
+            email=quote(email),
+            url=confirmation_url,
+        ),
+    )
+    return OK_RESPONSE
+
+
+def confirm_token(token, expiration=3600):
+    serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    try:
+        email = serializer.loads(
+            token, salt=current_app.config["SECURITY_PASSWORD_SALT"], max_age=expiration
+        )
+    except:
+        return False
+    return email
