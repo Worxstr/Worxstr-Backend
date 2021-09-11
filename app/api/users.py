@@ -87,13 +87,16 @@ def add_manager():
     password = "".join(random.choices(string.ascii_letters + string.digits, k=10))
     confirmed_at = datetime.datetime.utcnow()
     organization_id = current_user.organization_id
+    role_names = []
+    for role in roles:
+        role_names.append(role["name"])
 
     manager = user_datastore.create_user(
         first_name=first_name,
         last_name=last_name,
         email=email,
         phone=phone,
-        roles=roles,
+        roles=role_names,
         manager_id=manager_id,
         organization_id=organization_id,
         confirmed_at=confirmed_at,
