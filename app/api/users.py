@@ -17,7 +17,7 @@ from sqlalchemy.sql.operators import op
 from app import db, user_datastore, geolocator, payments
 from app.api import bp
 from app.email import send_email
-from app.models import ManagerReference, User, ContractorInfo, Organization
+from app.models import ManagerInfo, User, ContractorInfo, Organization
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 
@@ -101,7 +101,7 @@ def add_manager():
     )
     db.session.commit()
 
-    manager_reference = ManagerReference(
+    manager_reference = ManagerInfo(
         user_id=manager.id, reference_number=manager_reference_generator()
     )
     db.session.add(manager_reference)
@@ -144,8 +144,8 @@ def manager_reference_generator():
 
     # TODO: Generate a unique number without querying the databse in a while loop
     while (
-        db.session.query(ManagerReference)
-        .filter(ManagerReference.reference_number == rand)
+        db.session.query(ManagerInfo)
+        .filter(ManagerInfo.reference_number == rand)
         .limit(1)
         .first()
         is not None
@@ -214,6 +214,13 @@ def get_user(id):
                 .one()
                 .to_dict()
             )
+        else:
+            result["manager_info"] = (
+                db.session.query(ManagerInfo)
+                .filter(ManagerInfo.id == id)
+                .one()
+                .to_dict()
+            )
     return result, 200
 
 
@@ -238,6 +245,13 @@ def get_authenticated_user():
             .one()
             .to_dict()
         )
+    else:
+        authenticated_user["manager_info"] = (
+            db.session.query(ManagerInfo)
+            .filter(ManagerInfo.id == current_user.id)
+            .one()
+            .to_dict()
+        )
     return {"authenticated_user": authenticated_user}, 200
 
 
@@ -259,6 +273,13 @@ def edit_user():
         result["contractor_info"] = (
             db.session.query(ContractorInfo)
             .filter(ContractorInfo.id == current_user.id)
+            .one()
+            .to_dict()
+        )
+    else:
+        result["manager_info"] = (
+            db.session.query(ManagerInfo)
+            .filter(ManagerInfo.id == current_user.id)
             .one()
             .to_dict()
         )
