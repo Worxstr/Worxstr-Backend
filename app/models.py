@@ -86,9 +86,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):
-    serialize_only = (
-        "reference_number",
-    )
+    serialize_only = ("reference_number",)
     __tablename__ = "manager_info"
     id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"), primary_key=True)
     reference_number = db.Column("reference_number", db.String(), unique=True)
@@ -197,9 +195,7 @@ class TimeCard(db.Model, CustomSerializerMixin):
 
 
 class ContractorInfo(db.Model, CustomSerializerMixin):
-    serialize_only = (
-        "hourly_rate",
-    )
+    serialize_only = ("hourly_rate",)
     __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
     hourly_rate = db.Column(db.Numeric)
