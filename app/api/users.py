@@ -191,6 +191,16 @@ def deactivate_manager(id):
     return OK_RESPONSE
 
 
+@bp.route("/users/contractors/<id>", methods=["DELETE"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def deactivate_manager(id):
+    db.session.query(User).filter(
+        User.id == id, User.organization_id == current_user.organization_id
+    ).update({User.active: False})
+    return OK_RESPONSE
+
+
 @bp.route("/users/<id>", methods=["GET"])
 @login_required
 @roles_accepted("contractor_manager", "organization_manager")
