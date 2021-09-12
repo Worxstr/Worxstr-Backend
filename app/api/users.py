@@ -302,7 +302,11 @@ def list_contractors():
             schema:
                 $ref: '#/definitions/User'
     """
-    result = db.session.query(User).filter(User.organization_id == current_user.organization_id).all()
+    result = (
+        db.session.query(User)
+        .filter(User.organization_id == current_user.organization_id)
+        .all()
+    )
     return {"users": [x.to_dict() for x in result]}, 200
 
 
