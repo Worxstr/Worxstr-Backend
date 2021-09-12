@@ -88,7 +88,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
 class ManagerInfo(db.Model, CustomSerializerMixin):
     serialize_only = ("reference_number",)
     __tablename__ = "manager_info"
-    user_id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"), primary_key=True)
+    id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"), primary_key=True)
     reference_number = db.Column("reference_number", db.String(), unique=True)
 
 

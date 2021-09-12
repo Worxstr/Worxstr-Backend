@@ -60,7 +60,7 @@ def sign_up_org():
 
     db.session.commit()
     manager_reference = ManagerInfo(
-        user_id=user.id, reference_number=manager_reference_generator()
+        id=user.id, reference_number=manager_reference_generator()
     )
     db.session.add(manager_reference)
     db.session.commit()
@@ -99,7 +99,7 @@ def sign_up_contractor():
 
     roles = ["contractor"]
     manager_id = (
-        db.session.query(ManagerInfo.user_id)
+        db.session.query(ManagerInfo.id)
         .filter(ManagerInfo.reference_number == manager_reference)
         .one()[0]
     )

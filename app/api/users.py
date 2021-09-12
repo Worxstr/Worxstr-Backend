@@ -105,7 +105,7 @@ def add_manager():
     db.session.commit()
 
     manager_reference = ManagerInfo(
-        user_id=manager.id, reference_number=manager_reference_generator()
+        id=manager.id, reference_number=manager_reference_generator()
     )
     db.session.add(manager_reference)
     db.session.commit()
