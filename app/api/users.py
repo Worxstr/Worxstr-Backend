@@ -38,7 +38,9 @@ def list_users():
     """
     result = (
         db.session.query(User)
-        .filter(User.organization_id == current_user.organization_id)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
         .all()
     )
     return {"users": [x.to_dict() for x in result]}
@@ -179,6 +181,16 @@ def check_email(email):
     return {"success": account is None}, 200
 
 
+@bp.route("/users/managers/<id>", methods=["DELETE"])
+@login_required
+@roles_accepted("organization_manager")
+def deactivate_manager(id):
+    db.session.query(User).filter(
+        User.id == id, User.organization_id == current_user.organization_id
+    ).update({User.active: False})
+    return OK_RESPONSE
+
+
 @bp.route("/users/<id>", methods=["GET"])
 @login_required
 @roles_accepted("contractor_manager", "organization_manager")
@@ -206,7 +218,9 @@ def get_user(id):
             schema:
                 $ref: '#/definitions/User'
     """
-    user = db.session.query(User).filter(User.id == id).one_or_none()
+    user = (
+        db.session.query(User).filter(User.id == id, User.active == True).one_or_none()
+    )
     result = user
     if user:
         result = user.to_dict()
@@ -290,7 +304,7 @@ def edit_user():
     return {"event": result}, 200
 
 
-@bp.route("/users/organization", methods=["GET"])
+@bp.route("/organizations/me/users", methods=["GET"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def list_contractors():
@@ -304,7 +318,9 @@ def list_contractors():
     """
     result = (
         db.session.query(User)
-        .filter(User.organization_id == current_user.organization_id)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
         .all()
     )
     return {"users": [x.to_dict() for x in result]}, 200
@@ -323,16 +339,23 @@ def edit_contractor(user_id):
     hourly_rate = get_request_json(request, "hourly_rate", optional=True)
     direct_manager = get_request_json(request, "direct_manager", optional=True)
     if direct_manager:
-        db.session.query(User).filter(User.id == user_id).update(
-            {User.manager_id: int(direct_manager)}
-        )
+        db.session.query(User).filter(
+            User.id == user_id, User.organization_id == current_user.organization_id
+        ).update({User.manager_id: int(direct_manager)})
     if hourly_rate:
         db.session.query(ContractorInfo).filter(ContractorInfo.id == user_id).update(
             {ContractorInfo.hourly_rate: float(hourly_rate)}
         )
     db.session.commit()
 
-    result = db.session.query(User).filter(User.id == user_id).one().to_dict()
+    result = (
+        db.session.query(User)
+        .filter(
+            User.id == user_id, User.organization_id == current_user.organization_id
+        )
+        .one()
+        .to_dict()
+    )
     result["contractor_info"] = (
         db.session.query(ContractorInfo)
         .filter(ContractorInfo.id == user_id)
