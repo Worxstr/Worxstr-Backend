@@ -188,6 +188,7 @@ def deactivate_manager(id):
     db.session.query(User).filter(
         User.id == id, User.organization_id == current_user.organization_id
     ).update({User.active: False})
+    db.session.commit()
     return OK_RESPONSE
 
 
