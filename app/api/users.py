@@ -290,7 +290,7 @@ def edit_user():
     return {"event": result}, 200
 
 
-@bp.route("/users/contractors", methods=["GET"])
+@bp.route("/users/organization", methods=["GET"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def list_contractors():
@@ -302,7 +302,7 @@ def list_contractors():
             schema:
                 $ref: '#/definitions/User'
     """
-    result = db.session.query(User).filter(User.roles.any(name="contractor")).all()
+    result = db.session.query(User).filter(User.organization_id == current_user.organization_id).all()
     return {"users": [x.to_dict() for x in result]}, 200
 
 
