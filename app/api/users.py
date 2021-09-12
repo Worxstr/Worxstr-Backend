@@ -181,19 +181,9 @@ def check_email(email):
     return {"success": account is None}, 200
 
 
-@bp.route("/users/managers/<id>", methods=["DELETE"])
+@bp.route("/users/<id>", methods=["DELETE"])
 @login_required
 @roles_accepted("organization_manager")
-def deactivate_manager(id):
-    db.session.query(User).filter(
-        User.id == id, User.organization_id == current_user.organization_id
-    ).update({User.active: False})
-    return OK_RESPONSE
-
-
-@bp.route("/users/contractors/<id>", methods=["DELETE"])
-@login_required
-@roles_accepted("organization_manager", "contractor_manager")
 def deactivate_manager(id):
     db.session.query(User).filter(
         User.id == id, User.organization_id == current_user.organization_id
