@@ -40,10 +40,10 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "phone",
         "first_name",
         "last_name",
-        "username",
         "organization_id",
         "manager_id",
         "dwolla_customer_url",
+        "roles",
     )
     serialize_rules = ()
 
@@ -52,7 +52,6 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
     phone = db.Column(db.String(10))
     first_name = db.Column(db.String(255))
     last_name = db.Column(db.String(255))
-    username = db.Column(db.String(255))
     organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"))
     manager_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     password = db.Column(db.String(255))
@@ -86,10 +85,10 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         return customer_url
 
 
-class ManagerReference(db.Model):
-    __tablename__ = "manager_reference"
-    id = db.Column(db.Integer(), primary_key=True)
-    user_id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"))
+class ManagerInfo(db.Model, CustomSerializerMixin):
+    serialize_only = ("reference_number",)
+    __tablename__ = "manager_info"
+    id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"), primary_key=True)
     reference_number = db.Column("reference_number", db.String(), unique=True)
 
 
@@ -196,6 +195,7 @@ class TimeCard(db.Model, CustomSerializerMixin):
 
 
 class ContractorInfo(db.Model, CustomSerializerMixin):
+    serialize_only = ("hourly_rate",)
     __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
     hourly_rate = db.Column(db.Numeric)

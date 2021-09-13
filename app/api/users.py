@@ -17,7 +17,7 @@ from sqlalchemy.sql.operators import op
 from app import db, user_datastore, geolocator, payments
 from app.api import bp
 from app.email import send_email
-from app.models import ManagerReference, User, ContractorInfo, Organization
+from app.models import ManagerInfo, User, ContractorInfo, Organization
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 
@@ -38,7 +38,9 @@ def list_users():
     """
     result = (
         db.session.query(User)
-        .filter(User.organization_id == current_user.organization_id)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
         .all()
     )
     return {"users": [x.to_dict() for x in result]}
@@ -87,13 +89,16 @@ def add_manager():
     password = "".join(random.choices(string.ascii_letters + string.digits, k=10))
     confirmed_at = datetime.datetime.utcnow()
     organization_id = current_user.organization_id
+    role_names = []
+    for role in roles:
+        role_names.append(role["name"])
 
     manager = user_datastore.create_user(
         first_name=first_name,
         last_name=last_name,
         email=email,
         phone=phone,
-        roles=roles,
+        roles=role_names,
         manager_id=manager_id,
         organization_id=organization_id,
         confirmed_at=confirmed_at,
@@ -101,8 +106,8 @@ def add_manager():
     )
     db.session.commit()
 
-    manager_reference = ManagerReference(
-        user_id=manager.id, reference_number=manager_reference_generator()
+    manager_reference = ManagerInfo(
+        id=manager.id, reference_number=manager_reference_generator()
     )
     db.session.add(manager_reference)
     db.session.commit()
@@ -144,8 +149,8 @@ def manager_reference_generator():
 
     # TODO: Generate a unique number without querying the databse in a while loop
     while (
-        db.session.query(ManagerReference)
-        .filter(ManagerReference.reference_number == rand)
+        db.session.query(ManagerInfo)
+        .filter(ManagerInfo.reference_number == rand)
         .limit(1)
         .first()
         is not None
@@ -176,6 +181,17 @@ def check_email(email):
     return {"success": account is None}, 200
 
 
+@bp.route("/users/<id>", methods=["DELETE"])
+@login_required
+@roles_accepted("organization_manager")
+def deactivate_manager(id):
+    db.session.query(User).filter(
+        User.id == id, User.organization_id == current_user.organization_id
+    ).update({User.active: False})
+    db.session.commit()
+    return OK_RESPONSE
+
+
 @bp.route("/users/<id>", methods=["GET"])
 @login_required
 @roles_accepted("contractor_manager", "organization_manager")
@@ -203,7 +219,9 @@ def get_user(id):
             schema:
                 $ref: '#/definitions/User'
     """
-    user = db.session.query(User).filter(User.id == id).one_or_none()
+    user = (
+        db.session.query(User).filter(User.id == id, User.active == True).one_or_none()
+    )
     result = user
     if user:
         result = user.to_dict()
@@ -211,6 +229,13 @@ def get_user(id):
             result["contractor_info"] = (
                 db.session.query(ContractorInfo)
                 .filter(ContractorInfo.id == id)
+                .one()
+                .to_dict()
+            )
+        else:
+            result["manager_info"] = (
+                db.session.query(ManagerInfo)
+                .filter(ManagerInfo.id == id)
                 .one()
                 .to_dict()
             )
@@ -238,6 +263,13 @@ def get_authenticated_user():
             .one()
             .to_dict()
         )
+    else:
+        authenticated_user["manager_info"] = (
+            db.session.query(ManagerInfo)
+            .filter(ManagerInfo.id == current_user.id)
+            .one()
+            .to_dict()
+        )
     return {"authenticated_user": authenticated_user}, 200
 
 
@@ -262,11 +294,18 @@ def edit_user():
             .one()
             .to_dict()
         )
+    else:
+        result["manager_info"] = (
+            db.session.query(ManagerInfo)
+            .filter(ManagerInfo.id == current_user.id)
+            .one()
+            .to_dict()
+        )
 
     return {"event": result}, 200
 
 
-@bp.route("/users/contractors", methods=["GET"])
+@bp.route("/organizations/me/users", methods=["GET"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def list_contractors():
@@ -278,7 +317,13 @@ def list_contractors():
             schema:
                 $ref: '#/definitions/User'
     """
-    result = db.session.query(User).filter(User.roles.any(name="contractor")).all()
+    result = (
+        db.session.query(User)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
+        .all()
+    )
     return {"users": [x.to_dict() for x in result]}, 200
 
 
@@ -295,16 +340,23 @@ def edit_contractor(user_id):
     hourly_rate = get_request_json(request, "hourly_rate", optional=True)
     direct_manager = get_request_json(request, "direct_manager", optional=True)
     if direct_manager:
-        db.session.query(User).filter(User.id == user_id).update(
-            {User.manager_id: int(direct_manager)}
-        )
+        db.session.query(User).filter(
+            User.id == user_id, User.organization_id == current_user.organization_id
+        ).update({User.manager_id: int(direct_manager)})
     if hourly_rate:
         db.session.query(ContractorInfo).filter(ContractorInfo.id == user_id).update(
             {ContractorInfo.hourly_rate: float(hourly_rate)}
         )
     db.session.commit()
 
-    result = db.session.query(User).filter(User.id == user_id).one().to_dict()
+    result = (
+        db.session.query(User)
+        .filter(
+            User.id == user_id, User.organization_id == current_user.organization_id
+        )
+        .one()
+        .to_dict()
+    )
     result["contractor_info"] = (
         db.session.query(ContractorInfo)
         .filter(ContractorInfo.id == user_id)

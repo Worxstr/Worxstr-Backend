@@ -8,7 +8,7 @@ from flask_security import (
 from app import db, user_datastore
 from app.api import bp
 from app.api.users import manager_reference_generator
-from app.models import ManagerReference, User, ContractorInfo, Organization
+from app.models import ManagerInfo, User, ContractorInfo, Organization
 from app.email import send_email
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app import payments
@@ -59,8 +59,8 @@ def sign_up_org():
     )
 
     db.session.commit()
-    manager_reference = ManagerReference(
-        user_id=user.id, reference_number=manager_reference_generator()
+    manager_reference = ManagerInfo(
+        id=user.id, reference_number=manager_reference_generator()
     )
     db.session.add(manager_reference)
     db.session.commit()
@@ -99,8 +99,8 @@ def sign_up_contractor():
 
     roles = ["contractor"]
     manager_id = (
-        db.session.query(ManagerReference.user_id)
-        .filter(ManagerReference.reference_number == manager_reference)
+        db.session.query(ManagerInfo.id)
+        .filter(ManagerInfo.reference_number == manager_reference)
         .one()[0]
     )
     organization_id = (
