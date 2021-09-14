@@ -82,7 +82,7 @@ def get_accounts():
 @bp.route("/payments/accounts", methods=["PUT"])
 @login_required
 def edit_account():
-    location = get_request_json(request, "location")
+    location = get_request_json(request, "_links")["self"]["href"]
     account_name = get_request_json(request, "name")
     return payments.edit_funding_source(location, account_name)
 
