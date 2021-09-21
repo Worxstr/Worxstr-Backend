@@ -435,6 +435,11 @@ def edit_job(job_id):
     original_email = job.consultant_email
     original_code = job.consultant_code
 
+    consultant_phone_raw = get_request_json(request, "consultant_phone")
+    consultant_phone = (
+        consultant_phone_raw["areaCode"] + consultant_phone_raw["phoneNumber"]
+    )
+
     try:
         db.session.query(Job).filter(Job.id == job_id).update(
             {
@@ -452,7 +457,7 @@ def edit_job(job_id):
                 Job.longitude: get_request_json(request, "longitude"),
                 Job.latitude: get_request_json(request, "latitude"),
                 Job.consultant_name: get_request_json(request, "consultant_name"),
-                Job.consultant_phone: get_request_json(request, "consultant_phone"),
+                Job.consultant_phone: consultant_phone,
                 Job.consultant_email: get_request_json(request, "consultant_email"),
                 Job.color: get_request_json(request, "color"),
                 Job.radius: get_request_json(request, "radius"),
