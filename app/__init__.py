@@ -58,7 +58,10 @@ def create_app(config_class=Config):
             jsonify(
                 success=False,
                 data={"login_required": True},
-                message="Authorize please to access this page.",
+                message="You need to sign in first.",
+                actions=[
+                    {"name": "AUTHENTICATE", "action_text": "Sign in"}
+                ]
             ),
             401,
         )
