@@ -107,6 +107,12 @@ def sign_up_contractor():
         db.session.query(User.organization_id).filter(User.id == manager_id).one()[0]
     )
 
+    wage = (
+        db.session.query(Organization.minimum_wage)
+        .filter(Organization.id == organization_id)
+        .one()[0]
+    )
+
     user = user_datastore.create_user(
         first_name=first_name,
         last_name=last_name,
@@ -119,8 +125,7 @@ def sign_up_contractor():
     db.session.commit()
 
     contractor_info = ContractorInfo(
-        id=user.id,
-        dwolla_customer_url=customer_url,
+        id=user.id, dwolla_customer_url=customer_url, hourly_rate=wage
     )
     db.session.add(contractor_info)
     db.session.commit()
