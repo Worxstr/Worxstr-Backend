@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from flask_security import UserMixin, RoleMixin, current_user
+from sqlalchemy.sql.expression import null
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
@@ -97,6 +98,7 @@ class Organization(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     dwolla_customer_url = db.Column(db.String(255))
+    minimum_wage = db.Column(db.Numeric, nullable=False, default=7.5)
 
     def __repr__(self):
         return "<Organization {}>".format(self.name)
