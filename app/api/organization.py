@@ -10,6 +10,7 @@ from app.api import bp
 from app.models import Organization
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
+
 @bp.route("/organization", methods=["GET"])
 @login_required
 def get_organization():
@@ -29,4 +30,4 @@ def get_organization():
         .filter(Organization.id == current_user.organization_id)
         .one()
     )
-    return {"organization":result.to_dict()}
+    return {"organization": result.to_dict()}
