@@ -104,7 +104,9 @@ def shifts():
     contractor_ids = get_request_json(request, "contractor_ids")
 
     if len(site_locations) != len(contractor_ids):
-        return {"message":"Must supply the same number of Contractor IDs and Site Locations."}, 400
+        return {
+            "message": "Must supply the same number of Contractor IDs and Site Locations."
+        }, 400
 
     shifts = []
     for (e, s) in zip(contractor_ids, site_locations):
