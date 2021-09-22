@@ -84,11 +84,10 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
                 .one()[0]
             )
         return customer_url
+
     @hybrid_property
     def direct(self):
-        return (
-            int(current_user.id) == self.manager_id
-        )
+        return int(current_user.id) == self.manager_id
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):
