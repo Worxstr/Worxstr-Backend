@@ -130,7 +130,9 @@ def contacts():
     # TODO: Implement paging here
     org_contacts = (
         db.session.query(User)
-        .filter(User.organization_id == current_user.organization_id)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
         .all()
     )
     return {"contacts": [contact.to_dict() for contact in org_contacts]}

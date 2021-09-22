@@ -275,7 +275,7 @@ def job_detail(job_id):
         shift["contractor"] = (
             db.session.query(User)
             .filter(User.id == shift["contractor_id"])
-            .one()
+            .one_or_none()
             .to_dict()
         )
         shifts.append(shift)
@@ -290,12 +290,15 @@ def job_detail(job_id):
             .all()
         )
         shift["timeclock_actions"] = [timeclock.to_dict() for timeclock in timeclocks]
-        shift["contractor"] = (
+        contractor = (
             db.session.query(User)
             .filter(User.id == shift["contractor_id"])
-            .one()
-            .to_dict()
+            .one_or_none()
         )
+        if contractor == None:
+            shift["contractor"] = None
+        else:
+            shift["contractor"] = contractor.to_dict()
         shifts.append(shift)
 
     job["shifts"] = shifts
@@ -303,6 +306,7 @@ def job_detail(job_id):
     job["contractors"] = []
     contractors = db.session.query(User).filter(
         User.organization_id == current_user.organization_id,
+        User.active == True,
     )
     for contractor in contractors:
         if contractor.has_role("contractor"):
@@ -391,6 +395,7 @@ def get_lower_managers(manager_id):
         .filter(
             User.manager_id == manager_id,
             User.organization_id == current_user.organization_id,
+            User.active == True,
         )
         .all()
     )
