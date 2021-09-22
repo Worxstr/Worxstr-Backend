@@ -13,4 +13,5 @@ from app.api import (
     calendar,
     contact,
     signup,
+    organization,
 )
