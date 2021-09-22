@@ -11,7 +11,7 @@ from app.models import Organization
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 
-@bp.route("/organization", methods=["GET"])
+@bp.route("/organizations/me", methods=["GET"])
 @login_required
 def get_organization():
     """
@@ -33,7 +33,7 @@ def get_organization():
     return {"organization": result.to_dict()}
 
 
-@bp.route("/organization", methods=["PATCH"])
+@bp.route("/organizations/me", methods=["PATCH"])
 @login_required
 @roles_required("organization_manager")
 def edit_organization():
