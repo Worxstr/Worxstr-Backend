@@ -369,6 +369,7 @@ def get_managers():
         db.session.query(User)
         .filter(
             User.organization_id == current_user.organization_id,
+            User.active == True
         )
         .all()
     )
