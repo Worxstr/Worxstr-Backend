@@ -29,8 +29,10 @@ class Dwolla:
 
     def get_funding_sources(self, customer_url):
         funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
-        beneficial_ownership = self.app_token.get("%s/beneficial-ownership" % customer_url)
-        if beneficial_ownership.body['status'] == "certified":
+        beneficial_ownership = self.app_token.get(
+            "%s/beneficial-ownership" % customer_url
+        )
+        if beneficial_ownership.body["status"] == "certified":
             ownership_flag = True
         else:
             ownership_flag = False
@@ -38,8 +40,8 @@ class Dwolla:
         for funding_source in funding_sources.body["_embedded"]["funding-sources"]:
             if not funding_source["removed"] and funding_source["type"] != "balance":
                 result.append(funding_source)
-    
-        return {"funding_sources": result, "certified_ownership":ownership_flag}
+
+        return {"funding_sources": result, "certified_ownership": ownership_flag}
 
     def edit_funding_source(self, location, account_name):
         request_body = {"name": account_name}
