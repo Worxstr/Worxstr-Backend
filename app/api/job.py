@@ -290,10 +290,11 @@ def job_detail(job_id):
             .all()
         )
         shift["timeclock_actions"] = [timeclock.to_dict() for timeclock in timeclocks]
-        contractor = (db.session.query(User)
+        contractor = (
+            db.session.query(User)
             .filter(User.id == shift["contractor_id"])
             .one_or_none()
-            )
+        )
         if contractor == None:
             shift["contractor"] = None
         else:
