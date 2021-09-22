@@ -136,7 +136,21 @@ def clock_in():
     )
 
     if code != correct_code[0]:
-        abort(401, "Unauthorized")
+        return {"message": "Unauthorized"}, 401
+
+    timeclock_state = (
+        db.session.query(TimeClock.action)
+        .filter(TimeClock.contractor_id == current_user.id)
+        .order_by(TimeClock.time.desc())
+        .first()
+    )
+    if timeclock_state != None:
+        if (
+            timeclock_state[0] == TimeClockAction.clock_in
+            or timeclock_state[0] == TimeClockAction.start_break
+            or timeclock_state[0] == TimeClockAction.end_break
+        ):
+            return {"message": "User is currently clocked in"}, 409
 
     time_in = datetime.datetime.utcnow()
 
@@ -172,21 +186,25 @@ def clock_out():
                 $ref: '#/definitions/TimeClock'
     """
     time_out = datetime.datetime.utcnow()
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock.timecard_id, TimeClock.action)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info[1] == TimeClockAction.clock_out:
+        return {"message": "Already clocked out"}, 409
+
     timeclock = TimeClock(
         time=time_out,
-        timecard_id=timecard_id,
+        timecard_id=timecard_info[0],
         contractor_id=current_user.id,
         action=TimeClockAction.clock_out,
     )
     db.session.add(timeclock)
     db.session.commit()
-    calculate_timecard(timecard_id)
+    calculate_timecard(timecard_info[0])
     result = timeclock.to_dict()
     return {"event": result}
 
@@ -202,15 +220,21 @@ def start_break():
             schema:
                 $ref: '#/definitions/TimeClock'
     """
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock.timecard_id, TimeClock.action)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info[1] == TimeClockAction.start_break:
+        return {"message": "Already on break"}, 409
+    if timecard_info[1] == TimeClockAction.clock_out:
+        return {"message": "Not currently clocked in"}, 409
+
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
-        timecard_id=timecard_id,
+        timecard_id=timecard_info[0],
         contractor_id=current_user.id,
         action=TimeClockAction.start_break,
     )
@@ -231,15 +255,21 @@ def end_break():
             schema:
                 $ref: '#/definitions/TimeClock'
     """
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock.timecard_id, TimeClock.action)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info[1] == TimeClockAction.end_break:
+        return {"message": "Not currently on break"}, 409
+    if timecard_info[1] == TimeClockAction.clock_out:
+        return {"message": "Not currently clocked in"}, 409
+
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
-        timecard_id=timecard_id,
+        timecard_id=timecard_info[0],
         contractor_id=current_user.id,
         action=TimeClockAction.end_break,
     )
