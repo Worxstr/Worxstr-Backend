@@ -136,7 +136,20 @@ def clock_in():
     )
 
     if code != correct_code[0]:
-        return {"message":"Unauthorized"}, 401
+        return {"message": "Unauthorized"}, 401
+
+    timeclock_state = (
+        db.session.query(TimeClock.action)
+        .filter(TimeClock.contractor_id == current_user.id)
+        .order_by(TimeClock.time.desc())
+        .first()[0]
+    )
+    if (
+        timeclock_state == TimeClockAction.clock_in
+        or timeclock_state == TimeClockAction.start_break
+        or timeclock_state == TimeClockAction.end_break
+    ):
+        return {"message": "User is currently clocked in"}, 409
 
     time_in = datetime.datetime.utcnow()
 
@@ -180,7 +193,7 @@ def clock_out():
     )
 
     if timecard_info[1] == TimeClockAction.clock_out:
-        return {"message":"Already clocked out"}, 409
+        return {"message": "Already clocked out"}, 409
 
     timeclock = TimeClock(
         time=time_out,
@@ -206,15 +219,21 @@ def start_break():
             schema:
                 $ref: '#/definitions/TimeClock'
     """
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock.timecard_id, TimeClock.action)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info[1] == TimeClockAction.start_break:
+        return {"message": "Already on break"}, 409
+    if timecard_info[1] == TimeClockAction.clock_out:
+        return {"message": "Not currently clocked in"}, 409
+
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
-        timecard_id=timecard_id,
+        timecard_id=timecard_info[0],
         contractor_id=current_user.id,
         action=TimeClockAction.start_break,
     )
@@ -235,15 +254,21 @@ def end_break():
             schema:
                 $ref: '#/definitions/TimeClock'
     """
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock.timecard_id, TimeClock.action)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info[1] == TimeClockAction.end_break:
+        return {"message": "Not currently on break"}, 409
+    if timecard_info[1] == TimeClockAction.clock_out:
+        return {"message": "Not currently clocked in"}, 409
+
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
-        timecard_id=timecard_id,
+        timecard_id=timecard_info[0],
         contractor_id=current_user.id,
         action=TimeClockAction.end_break,
     )
