@@ -142,14 +142,15 @@ def clock_in():
         db.session.query(TimeClock.action)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
-        .first()[0]
+        .first()
     )
-    if (
-        timeclock_state == TimeClockAction.clock_in
-        or timeclock_state == TimeClockAction.start_break
-        or timeclock_state == TimeClockAction.end_break
-    ):
-        return {"message": "User is currently clocked in"}, 409
+    if timeclock_state != None:
+        if (
+            timeclock_state[0] == TimeClockAction.clock_in
+            or timeclock_state[0] == TimeClockAction.start_break
+            or timeclock_state[0] == TimeClockAction.end_break
+        ):
+            return {"message": "User is currently clocked in"}, 409
 
     time_in = datetime.datetime.utcnow()
 
