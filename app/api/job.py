@@ -303,6 +303,7 @@ def job_detail(job_id):
     job["contractors"] = []
     contractors = db.session.query(User).filter(
         User.organization_id == current_user.organization_id,
+        User.active == True,
     )
     for contractor in contractors:
         if contractor.has_role("contractor"):
@@ -391,6 +392,7 @@ def get_lower_managers(manager_id):
         .filter(
             User.manager_id == manager_id,
             User.organization_id == current_user.organization_id,
+            User.active == True,
         )
         .all()
     )
