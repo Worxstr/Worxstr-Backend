@@ -172,21 +172,25 @@ def clock_out():
                 $ref: '#/definitions/TimeClock'
     """
     time_out = datetime.datetime.utcnow()
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock.timecard_id, TimeClock.action)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info[1] == TimeClockAction.clock_out:
+        return {"message":"Already clocked out"}, 409
+
     timeclock = TimeClock(
         time=time_out,
-        timecard_id=timecard_id,
+        timecard_id=timecard_info[0],
         contractor_id=current_user.id,
         action=TimeClockAction.clock_out,
     )
     db.session.add(timeclock)
     db.session.commit()
-    calculate_timecard(timecard_id)
+    calculate_timecard(timecard_info[0])
     result = timeclock.to_dict()
     return {"event": result}
 
