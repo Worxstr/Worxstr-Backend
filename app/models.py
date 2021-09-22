@@ -44,6 +44,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "manager_id",
         "dwolla_customer_url",
         "roles",
+        "direct",
     )
     serialize_rules = ()
 
@@ -83,6 +84,11 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
                 .one()[0]
             )
         return customer_url
+    @hybrid_property
+    def direct(self):
+        return (
+            int(current_user.id) == self.manager_id
+        )
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):
