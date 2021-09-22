@@ -136,7 +136,7 @@ def clock_in():
     )
 
     if code != correct_code[0]:
-        abort(401, "Unauthorized")
+        return {"message":"Unauthorized"}, 401
 
     time_in = datetime.datetime.utcnow()
 
