@@ -16,6 +16,7 @@ cryptography==3.3.2
 dnspython==2.1.0
 dwollav2==2.2.0
 email-validator==1.1.2
+eventlet==0.32.0
 flasgger==0.9.5
 Flask==1.1.2
 Flask-BabelEx==0.9.4
@@ -31,6 +32,7 @@ Flask-WTF==0.14.3
 future==0.18.2
 geographiclib==1.50
 geopy==2.1.0
+greenlet==1.1.1
 idna==2.10
 importlib-metadata==3.4.0
 isort==5.7.0

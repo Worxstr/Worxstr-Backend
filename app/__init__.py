@@ -48,7 +48,7 @@ def create_app(config_class=Config):
     mail.init_app(app)
     swagger.init_app(app)
     security.init_app(app, user_datastore)
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="eventlet")
     scheduler.add_job(func=payments.refresh_app_token, trigger="interval", seconds=3600)
     scheduler.start()
 
