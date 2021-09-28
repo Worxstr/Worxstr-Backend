@@ -22,6 +22,8 @@ from app.api import bp
 from app.models import Message, User, Conversation
 from app.utils import get_request_arg, get_request_json
 
+import datetime
+
 
 ##################################################
 # Manages and links socket io user and session ids
@@ -106,20 +108,13 @@ def get_user_from_token(token):
     return _security.login_manager.anonymous_user()
 
 @socketio.on("connect")
-@login_required
+# @login_required
 def on_connect():
     print("SocketIO client connected")
     print("SocketIO Session ID:", request.sid)
     print("\n\n")
     print(request.headers)
     print("\n\n")
-
-
-@socketio.on("test")
-@login_required
-def test(arg):
-    print(current_user.id)
-    print(arg)
 
 @socketio.on("disconnect")
 def on_disconnect():
@@ -373,16 +368,9 @@ def send_message(conversation_id, user_id, message):
     db.session.add(db_message)
     db.session.commit()
 
-    socket_message = {
-        "id": db_message.id,
-        "sender_id": user_id,
-        "conversation_id": conversation_id,
-        "body": message.get("body"),
-    }
-
     socketio.emit(
-        "message:create",
-        {"message": socket_message, "conversation_id": conversation_id},
+        "conversations/messages:create",
+        db_message.to_dict(),
     )
 
-    return socket_message
+    return db_message
