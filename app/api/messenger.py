@@ -106,6 +106,7 @@ def get_user_from_token(token):
     return _security.login_manager.anonymous_user()
 
 @socketio.on("connect")
+@login_required
 def on_connect():
     print("SocketIO client connected")
     print("SocketIO Session ID:", request.sid)
@@ -113,6 +114,12 @@ def on_connect():
     print(request.headers)
     print("\n\n")
 
+
+@socketio.on("test")
+@login_required
+def test(arg):
+    print(current_user.id)
+    print(arg)
 
 @socketio.on("disconnect")
 def on_disconnect():
