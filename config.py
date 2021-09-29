@@ -7,7 +7,8 @@ load_dotenv(os.path.join(basedir, ".env"))
 
 class Config(object):
 
-    BASE_URL = os.environ.get("BASE_URL") or "localhost:8080/{}"
+    BASE_URL = os.environ.get("BASE_URL") or "localhost:5000/{}"
+    FRONT_URL = os.environ.get("FRONT_URL") or "localhost:8080/"
 
     SECRET_KEY = os.environ.get("SECRET_KEY") or "you-will-never-guess"
 
@@ -89,3 +90,8 @@ class Config(object):
     }
 
     CLICKUP_KEY = os.environ.get("CLICKUP_KEY")
+    DWOLLA_APP_KEY = os.environ.get("DWOLLA_APP_KEY")
+    DWOLLA_APP_SECRET = os.environ.get("DWOLLA_APP_SECRET")
+    PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID")
+    PLAID_SECRET = os.environ.get("PLAID_SECRET")
+    PLAID_HOST = os.environ.get("PLAID_HOST")

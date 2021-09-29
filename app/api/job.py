@@ -87,26 +87,25 @@ def list_jobs():
     """
     result = {
         "jobs": [],
-        "managers": get_managers(current_user.manager_id or current_user.get_id()),
+        "managers": get_managers(),
     }
 
     direct_ids = []
     direct_jobs = (
         db.session.query(Job)
         .filter(
-            Job.contractor_manager_id == current_user.get_id()
-            or Job.organization_manager_id == current_user.get_id(),
+            Job.contractor_manager_id == current_user.id
+            or Job.organization_manager_id == current_user.id,
             Job.active,
         )
         .all()
     )
     for direct_job in direct_jobs:
         job = direct_job.to_dict()
-        job["direct"] = True
         result["jobs"].append(job)
         direct_ids.append(direct_job.id)
 
-    lower_managers = get_lower_managers(current_user.get_id())
+    lower_managers = get_lower_managers(current_user.id)
     indirect_jobs = (
         db.session.query(Job)
         .filter(
@@ -122,7 +121,6 @@ def list_jobs():
 
     for indirect_job in indirect_jobs:
         job = indirect_job.to_dict()
-        job["direct"] = False
         result["jobs"].append(job)
 
     return result
@@ -189,6 +187,15 @@ def add_job():
           type: string
           format: email
           required: true
+        - name: color
+          in: body
+          type: string
+          format: hex
+          required: true
+        - name: radius
+          in: body
+          type: int
+          required: true
     responses:
         200:
             description: The newly created job.
@@ -215,6 +222,8 @@ def add_job():
         consultant_phone=consultant_phone,
         consultant_email=get_request_json(request, "consultant_email"),
         consultant_code=str(randint(000000, 999999)),
+        color=get_request_json(request, "color"),
+        radius=get_request_json(request, "radius"),
     )
     db.session.add(job)
     db.session.commit()
@@ -266,7 +275,7 @@ def job_detail(job_id):
         shift["contractor"] = (
             db.session.query(User)
             .filter(User.id == shift["contractor_id"])
-            .one()
+            .one_or_none()
             .to_dict()
         )
         shifts.append(shift)
@@ -281,27 +290,27 @@ def job_detail(job_id):
             .all()
         )
         shift["timeclock_actions"] = [timeclock.to_dict() for timeclock in timeclocks]
-        shift["contractor"] = (
+        contractor = (
             db.session.query(User)
             .filter(User.id == shift["contractor_id"])
-            .one()
-            .to_dict()
+            .one_or_none()
         )
+        if contractor == None:
+            shift["contractor"] = None
+        else:
+            shift["contractor"] = contractor.to_dict()
         shifts.append(shift)
 
     job["shifts"] = shifts
-    job["managers"] = get_managers(current_user.manager_id or current_user.get_id())
+    job["managers"] = get_managers()
     job["contractors"] = []
-    contractors = db.session.query(User).filter(User.manager_id == current_user.id)
-
-    for contractor in [e.to_dict() for e in contractors if e.has_role("contractor")]:
-        contractor["contractor_info"] = (
-            db.session.query(ContractorInfo)
-            .filter(ContractorInfo.id == contractor["id"])
-            .one()
-            .to_dict()
-        )
-        job["contractors"].append(contractor)
+    contractors = db.session.query(User).filter(
+        User.organization_id == current_user.organization_id,
+        User.active == True,
+    )
+    for contractor in contractors:
+        if contractor.has_role("contractor"):
+            job["contractors"].append(contractor.to_dict())
 
     job["contractor_manager"] = (
         db.session.query(User)
@@ -321,9 +330,9 @@ def job_detail(job_id):
 @login_required
 @roles_accepted("contractor_manager", "organization_manager")
 @bp.route("/jobs/managers", methods=["GET"])
-def get_managers(manager_id=None):
+def get_managers():
     """
-    Get list of subordinate managers, including the calling manager.
+    Get list of managers.
     Data is separated into lists of who manages contractors and the organization.
     ---
     parameters:
@@ -340,7 +349,7 @@ def get_managers(manager_id=None):
                     items:
                         $ref '#/definitions/User'
                     description:
-                        "List of sub-manangers with the role
+                        "List of with the role
                         'organization_manager', including the
                         calling user, if applicable."
                 contractor_managers:
@@ -348,7 +357,7 @@ def get_managers(manager_id=None):
                     items:
                         $ref '#/definitions/User'
                     description:
-                        "List of sub-manangers with the role
+                        "List of with the role
                         'contractor_manager', including the
                         calling user, if applicable."
     responses:
@@ -357,25 +366,27 @@ def get_managers(manager_id=None):
             schema:
                 $ref: '#/definitions/ManagersList'
     """
-    if not manager_id:
-        manager_id = get_request_arg(request, "manager_id")
+    organization_managers = []
+    contractor_managers = []
 
-    managers = get_lower_managers(manager_id)
-    result = {"organization_managers": [], "contractor_managers": []}
+    users = (
+        db.session.query(User)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
+        .all()
+    )
 
-    for manager in managers:
-        user = db.session.query(User).filter(User.id == manager).one()
-        if user.has_role("organization_manager"):
-            result["organization_managers"].append(user.to_dict())
+    for user in users:
         if user.has_role("contractor_manager"):
-            result["contractor_managers"].append(user.to_dict())
+            contractor_managers.append(user.to_dict())
+        if user.has_role("organization_manager"):
+            organization_managers.append(user.to_dict())
 
-    if current_user.has_role("organization_manager"):
-        result["organization_managers"].append(current_user.to_dict())
-    if current_user.has_role("contractor_manager"):
-        result["contractor_managers"].append(current_user.to_dict())
-
-    return result
+    return {
+        "organization_managers": organization_managers,
+        "contractor_managers": contractor_managers,
+    }
 
 
 def get_lower_managers(manager_id):
@@ -384,6 +395,7 @@ def get_lower_managers(manager_id):
         .filter(
             User.manager_id == manager_id,
             User.organization_id == current_user.organization_id,
+            User.active == True,
         )
         .all()
     )
@@ -428,6 +440,11 @@ def edit_job(job_id):
     original_email = job.consultant_email
     original_code = job.consultant_code
 
+    consultant_phone_raw = get_request_json(request, "consultant_phone")
+    consultant_phone = (
+        consultant_phone_raw["areaCode"] + consultant_phone_raw["phoneNumber"]
+    )
+
     try:
         db.session.query(Job).filter(Job.id == job_id).update(
             {
@@ -445,8 +462,10 @@ def edit_job(job_id):
                 Job.longitude: get_request_json(request, "longitude"),
                 Job.latitude: get_request_json(request, "latitude"),
                 Job.consultant_name: get_request_json(request, "consultant_name"),
-                Job.consultant_phone: get_request_json(request, "consultant_phone"),
+                Job.consultant_phone: consultant_phone,
                 Job.consultant_email: get_request_json(request, "consultant_email"),
+                Job.color: get_request_json(request, "color"),
+                Job.radius: get_request_json(request, "radius"),
             }
         )
 

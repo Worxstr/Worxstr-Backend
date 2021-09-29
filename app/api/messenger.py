@@ -50,7 +50,7 @@ def get_conversations():
     # TODO: This can be a single comprehension without a nested loop
     for i in all_conversations:
         for participant in i.participants:
-            if int(current_user.get_id()) == participant.id:
+            if int(current_user.id) == participant.id:
                 user_conversations.append(i.to_dict())
     return {"conversations": user_conversations}
 
@@ -130,7 +130,9 @@ def contacts():
     # TODO: Implement paging here
     org_contacts = (
         db.session.query(User)
-        .filter(User.organization_id == current_user.organization_id)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
         .all()
     )
     return {"contacts": [contact.to_dict() for contact in org_contacts]}
@@ -250,7 +252,7 @@ def create_messages(conversation_id):
 
     return {
         "message": send_message(
-            conversation_id, current_user.get_id(), {"body": message_body}
+            conversation_id, current_user.id, {"body": message_body}
         )
     }
 

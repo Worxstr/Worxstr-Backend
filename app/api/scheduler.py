@@ -104,7 +104,9 @@ def shifts():
     contractor_ids = get_request_json(request, "contractor_ids")
 
     if len(site_locations) != len(contractor_ids):
-        abort(400, "Must supply the same number of Contractor IDs and Site Locations.")
+        return {
+            "message": "Must supply the same number of Contractor IDs and Site Locations."
+        }, 400
 
     shifts = []
     for (e, s) in zip(contractor_ids, site_locations):
@@ -219,7 +221,7 @@ def get_next_shift():
     result = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.contractor_id == current_user.get_id(),
+            ScheduleShift.contractor_id == current_user.id,
             ScheduleShift.time_end > current_time,
         )
         .order_by(ScheduleShift.time_end)
