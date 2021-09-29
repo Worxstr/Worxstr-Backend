@@ -57,7 +57,7 @@ def create_app(config_class=Config):
         return (
             jsonify(
                 success=False,
-                data={"login_required": True},
+                login_required=True,
                 message="Authorize please to access this page.",
             ),
             401,
