@@ -136,7 +136,7 @@ def clock_in():
     )
 
     if code != correct_code[0]:
-        return {"message": "Unauthorized"}, 401
+        return {"message": "Invalid clock-in code."}, 401
 
     timeclock_state = (
         db.session.query(TimeClock.action)
