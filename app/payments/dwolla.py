@@ -6,9 +6,9 @@ class Dwolla:
     app_token = None
     client = None
 
-    def __init__(self, app_key, app_secret):
+    def __init__(self, app_key, app_secret, host):
         self.client = dwollav2.Client(
-            key=app_key, secret=app_secret, environment="sandbox"
+            key=app_key, secret=app_secret, environment=host
         )
 
         self.refresh_app_token()
