@@ -92,6 +92,7 @@ class Config(object):
     CLICKUP_KEY = os.environ.get("CLICKUP_KEY")
     DWOLLA_APP_KEY = os.environ.get("DWOLLA_APP_KEY")
     DWOLLA_APP_SECRET = os.environ.get("DWOLLA_APP_SECRET")
+    DWOLLA_HOST = os.environ.get("DWOLLA_HOST")
     PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID")
     PLAID_SECRET = os.environ.get("PLAID_SECRET")
     PLAID_HOST = os.environ.get("PLAID_HOST")
