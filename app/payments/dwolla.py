@@ -58,8 +58,9 @@ class Dwolla:
                 "destination": {"href": destination},
             },
             "amount": {"currency": "USD", "value": amount},
-            "fees": fees,
         }
+        if fees != None:
+            request_body["fees"] = fees
         try:
             transfer = self.app_token.post("transfers", request_body)
         except ValidationError as e:
