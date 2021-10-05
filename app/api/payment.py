@@ -76,7 +76,9 @@ def add_account():
 @login_required
 def get_accounts():
     customer_url = current_user.dwolla_customer_url
-    return payments.get_funding_sources(customer_url, current_user.has_role("contractor"))
+    return payments.get_funding_sources(
+        customer_url, current_user.has_role("contractor")
+    )
 
 
 @bp.route("/payments/accounts", methods=["PUT"])
