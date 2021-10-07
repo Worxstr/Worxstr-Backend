@@ -21,11 +21,12 @@ def get_user_info():
     customer_url = current_user.dwolla_customer_url
     return payments.get_customer_info(customer_url)
 
-@bp.route("/payments/dwolla/customers", methods=["GET"])
+@bp.route("/payments/dwolla/customers/email", methods=["GET"])
 def get_dwolla_customer():
     customer = payments.get_customer_info(request.args.get('customer_id'))
-    print(customer)
-    return customer
+    return {
+        'email': customer['email']
+    }
 
 @bp.route("/payments/transfers", methods=["GET"])
 @login_required
