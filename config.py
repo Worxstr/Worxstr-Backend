@@ -49,10 +49,8 @@ class Config(object):
 
     # These need to be defined to handle redirects
     # As defined in the API documentation - they will receive the relevant context
-    SECURITY_POST_CONFIRM_VIEW = "/confirmed"
-    SECURITY_CONFIRM_ERROR_VIEW = "/confirm-error"
-    SECURITY_RESET_VIEW = "/reset-password"
-    SECURITY_RESET_ERROR_VIEW = "/reset-password"
+    SECURITY_RESET_VIEW = FRONT_URL + "/auth/reset"
+    SECURITY_RESET_ERROR_VIEW = FRONT_URL + "/auth/reset/error"
     SECURITY_REDIRECT_BEHAVIOR = "spa"
     SECURITY_PASSWORD_SALT = (
         os.environ.get("SECURITY_PASSWORD_SALT")
