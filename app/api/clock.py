@@ -136,7 +136,7 @@ def clock_in():
     )
 
     if code != correct_code[0]:
-        return {"message": "Unauthorized"}, 401
+        return {"message": "Invalid clock-in code."}, 401
 
     timeclock_state = (
         db.session.query(TimeClock.action)
@@ -315,7 +315,7 @@ def calculate_timecard(timecard_id):
         .one()
     )
     wage = round(float(rate[0]) * total_time_hours, 2)
-    transaction_fees = round(wage * 0.025, 2)
+    transaction_fees = round(wage * 0.02, 2)
     total_payment = wage + transaction_fees
     # TODO: Does this need to be an iter? Can we iterate over it as a list?
     breaks = iter(

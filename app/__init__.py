@@ -31,7 +31,11 @@ security = Security()
 csrf = CSRFProtect()
 socketio = SocketIO()
 geolocator = Nominatim(user_agent="worxstr")
-payments = Dwolla(app_key=Config.DWOLLA_APP_KEY, app_secret=Config.DWOLLA_APP_SECRET)
+payments = Dwolla(
+    app_key=Config.DWOLLA_APP_KEY,
+    app_secret=Config.DWOLLA_APP_SECRET,
+    host=Config.DWOLLA_HOST,
+)
 payments_auth = Plaid(
     client_id=Config.PLAID_CLIENT_ID, secret=Config.PLAID_SECRET, host=Config.PLAID_HOST
 )
@@ -57,7 +61,7 @@ def create_app(config_class=Config):
         return (
             jsonify(
                 success=False,
-                data={"login_required": True},
+                login_required=True,
                 message="Authorize please to access this page.",
             ),
             401,

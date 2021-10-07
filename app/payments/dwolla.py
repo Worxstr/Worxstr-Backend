@@ -6,10 +6,8 @@ class Dwolla:
     app_token = None
     client = None
 
-    def __init__(self, app_key, app_secret):
-        self.client = dwollav2.Client(
-            key=app_key, secret=app_secret, environment="sandbox"
-        )
+    def __init__(self, app_key, app_secret, host):
+        self.client = dwollav2.Client(key=app_key, secret=app_secret, environment=host)
 
         self.refresh_app_token()
 
@@ -27,15 +25,17 @@ class Dwolla:
         )
         return self.get_customer_info(customer.headers["location"])
 
-    def get_funding_sources(self, customer_url):
+    def get_funding_sources(self, customer_url, is_contractor):
         funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
-        beneficial_ownership = self.app_token.get(
-            "%s/beneficial-ownership" % customer_url
-        )
-        if beneficial_ownership.body["status"] == "certified":
-            ownership_flag = True
-        else:
-            ownership_flag = False
+        ownership_flag = None
+        if not is_contractor:
+            beneficial_ownership = self.app_token.get(
+                "%s/beneficial-ownership" % customer_url
+            )
+            if beneficial_ownership.body["status"] == "certified":
+                ownership_flag = True
+            else:
+                ownership_flag = False
         result = []
         for funding_source in funding_sources.body["_embedded"]["funding-sources"]:
             if not funding_source["removed"] and funding_source["type"] != "balance":
@@ -60,8 +60,9 @@ class Dwolla:
                 "destination": {"href": destination},
             },
             "amount": {"currency": "USD", "value": amount},
-            "fees": fees,
         }
+        if fees != None:
+            request_body["fees"] = fees
         try:
             transfer = self.app_token.post("transfers", request_body)
         except ValidationError as e:
