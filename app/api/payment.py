@@ -15,12 +15,17 @@ def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
 
 
-@bp.route("/payments/user", methods=["GET"])
+@bp.route("/payments/dwolla/customers/me", methods=["GET"])
 @login_required
 def get_user_info():
     customer_url = current_user.dwolla_customer_url
     return payments.get_customer_info(customer_url)
 
+@bp.route("/payments/dwolla/customers", methods=["GET"])
+def get_dwolla_customer():
+    customer = payments.get_customer_info(request.args.get('customer_id'))
+    print(customer)
+    return customer
 
 @bp.route("/payments/transfers", methods=["GET"])
 @login_required
