@@ -116,21 +116,25 @@ def complete_payments():
     customer_url = current_user.dwolla_customer_url
     transfers = []
     for timecard in timecards:
-        fees = [
-            {
-                "_links": {"charge-to": {"href": customer_url}},
-                "amount": {"value": str(timecard[0].fees_payment), "currency": "USD"},
-            }
-        ]
+        fees = None
+        fee = timecard[0].fees_payment
+        if fee > 0:
+            fees = [
+                {
+                    "_links": {"charge-to": {"href": customer_url}},
+                    "amount": {"value": str(fee), "currency": "USD"},
+                }
+            ]
         transfer = payments.transfer_funds(
             str(timecard[0].wage_payment),
             payments.get_balance(customer_url)["location"],
             payments.get_balance(timecard[1].dwolla_customer_url)["location"],
             fees,
         )
-        db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
-            {TimeCard.paid: True}
-        )
+        if type(transfer) is not tuple:
+            db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
+                {TimeCard.paid: True}
+            )
         transfers.append(transfer)
     db.session.commit()
     return {"transfers": transfers}
