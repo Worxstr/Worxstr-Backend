@@ -14,4 +14,5 @@ from app.api import (
     contact,
     signup,
     organization,
+    sockets,
 )
