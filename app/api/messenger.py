@@ -6,8 +6,6 @@ from app.api import bp
 from app.models import Message, User, Conversation
 from app.utils import get_request_arg, get_request_json
 
-import datetime
-
 
 @bp.route("/conversations", methods=["GET"])
 @login_required
@@ -242,14 +240,12 @@ def send_message(conversation_id, user_id, message):
     conversation = db.session.query(Conversation).get(conversation_id).to_dict()
 
     new_message = Message(
-        sender_id=user_id,
-        body=message.get("body"),
-        conversation_id=conversation_id
+        sender_id=user_id, body=message.get("body"), conversation_id=conversation_id
     )
     db.session.add(new_message)
     db.session.commit()
 
-    participant_ids = [c['id'] for c in conversation['participants']]
+    participant_ids = [c["id"] for c in conversation["participants"]]
 
     emit_to_users("ADD_MESSAGE", new_message.to_dict(), participant_ids)
 

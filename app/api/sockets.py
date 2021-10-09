@@ -18,6 +18,7 @@ from flask import request
 
 from app import socketio, db
 from app.models import User
+
 ##################################################
 # Manages and links socket io user and session ids
 # TODO: Move this to a separate module
@@ -32,6 +33,7 @@ by_user_id = {
     # "123": ["A-Q9HUwePySd5HNoAAAC"]
 }
 
+
 def add_session(session_id, user_id):
 
     # Add user id to by_session_id dict
@@ -45,29 +47,33 @@ def add_session(session_id, user_id):
 
 
 def remove_session(session_id):
-    
+
     if session_id in by_session_id:
-        
+
         # Delete session_id from array in by_user_id dict
         user_id = by_session_id[session_id]
         by_user_id[user_id].remove(session_id)
         if len(by_user_id[user_id]) == 0:
             del by_user_id[user_id]
-        
+
         # Delete user id from by_session_id dict
         del by_session_id[session_id]
+
 
 def lookup_session_ids(user_id):
     return by_user_id.get(user_id, [])
 
+
 def lookup_user_id(session_id):
     return by_session_id.get(session_id, None)
+
 
 def emit_to_users(event_name, payload, user_ids):
     for user_id in user_ids:
         session_ids = lookup_session_ids(user_id)
         for session_id in session_ids:
             socketio.emit(event_name, payload, room=session_id)
+
 
 ######################################
 
@@ -78,9 +84,11 @@ def get_user_from_uniquifier(uniquifier):
         user = None
     return user
 
+
 @socketio.on("disconnect")
 def on_disconnect():
     remove_session(request.sid)
+
 
 @socketio.on("connect")
 @socketio.on("sign-in")
@@ -89,6 +97,7 @@ def sign_in(uniquifier):
     if user != None:
         add_session(request.sid, user.id)
     print(by_user_id)
+
 
 @socketio.on("sign-out")
 def sign_out(uniquifier):
