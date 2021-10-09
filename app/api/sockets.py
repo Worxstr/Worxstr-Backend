@@ -85,11 +85,6 @@ def get_user_from_uniquifier(uniquifier):
     return user
 
 
-@socketio.on("disconnect")
-def on_disconnect():
-    remove_session(request.sid)
-
-
 @socketio.on("connect")
 @socketio.on("sign-in")
 def sign_in(auth=None):
@@ -100,6 +95,7 @@ def sign_in(auth=None):
     print(by_user_id)
 
 
+@socketio.on("disconnect")
 @socketio.on("sign-out")
 def sign_out():
     remove_session(request.sid)

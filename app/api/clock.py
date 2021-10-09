@@ -5,6 +5,7 @@ from flask_security import login_required, current_user, roles_accepted, roles_r
 
 from app import db
 from app.api import bp
+from app.api.sockets import emit_to_users
 from app.models import (
     Job,
     ScheduleShift,
@@ -13,8 +14,24 @@ from app.models import (
     TimeCard,
     User,
     ContractorInfo,
+    Role,
 )
 from app.utils import get_request_arg, get_request_json
+
+
+def get_manager_user_ids(organization_id):
+    # Get the ids of managers within the current organization
+    return [
+        r[0]
+        for r in db.session.query(User.id)
+        .filter(
+            User.organization_id == organization_id,
+            User.roles.any(
+                Role.name.in_(["contractor_manager", "organization_manager"])
+            ),
+        )
+        .all()
+    ]
 
 
 @bp.route("/clock/history", methods=["GET"])
@@ -169,7 +186,12 @@ def clock_in():
 
     db.session.add(timeclock)
     db.session.commit()
-    return {"event": timeclock.to_dict()}
+
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 @bp.route("/clock/clock-out", methods=["POST"])
@@ -205,8 +227,12 @@ def clock_out():
     db.session.add(timeclock)
     db.session.commit()
     calculate_timecard(timecard_info[0])
-    result = timeclock.to_dict()
-    return {"event": result}
+
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 @bp.route("/clock/start-break", methods=["POST"])
@@ -241,7 +267,11 @@ def start_break():
     db.session.add(timeclock)
     db.session.commit()
 
-    return {"data": timeclock.to_dict()}
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 @bp.route("/clock/end-break", methods=["POST"])
@@ -276,7 +306,11 @@ def end_break():
     db.session.add(timeclock)
     db.session.commit()
 
-    return {"data": timeclock.to_dict()}
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 def calculate_timecard(timecard_id):
