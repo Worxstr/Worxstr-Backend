@@ -16,8 +16,8 @@ broadcasts to certain clients.
 from flask_security.core import _security
 from flask import request
 
-from app import socketio
-
+from app import socketio, db
+from app.models import User
 ##################################################
 # Manages and links socket io user and session ids
 # TODO: Move this to a separate module
@@ -72,53 +72,24 @@ def emit_to_users(event_name, payload, user_ids):
 ######################################
 
 
-def get_user_from_token(token):
-    try:
-        data = _security.remember_token_serializer.loads(
-            token, max_age=_security.token_max_age
-        )
-        uniquifier_index = 0 if len(data) == 1 else 2
-
-        if hasattr(_security.datastore.user_model, "fs_token_uniquifier"):
-            user = _security.datastore.find_user(
-                fs_token_uniquifier=data[uniquifier_index]
-            )
-            print("user token_uniqifier", user)
-        else:
-            user = _security.datastore.find_user(fs_uniquifier=data[uniquifier_index])
-            print("user uniquifier", user)
-
-        if not user.active:
-            user = None
-
-    except Exception:
+def get_user_from_uniquifier(uniquifier):
+    user = db.session.query(User).filter(User.fs_uniquifier == uniquifier).one_or_none()
+    if user != None and not user.active:
         user = None
-
-    if user and user.verify_auth_token(data):
-        return user
-
-    # User not found
-    return _security.login_manager.anonymous_user()
-
-@socketio.on("connect")
-# @login_required
-def on_connect():
-    print("SocketIO client connected")
-    print("SocketIO Session ID:", request.sid)
-    print("\n\n")
-    print(request.headers)
-    print("\n\n")
+    return user
 
 @socketio.on("disconnect")
 def on_disconnect():
     remove_session(request.sid)
 
+@socketio.on("connect")
 @socketio.on("sign-in")
-def sign_in(auth_token):
-    user = get_user_from_token(auth_token)
-    add_session(request.sid, user.id)
+def sign_in(uniquifier):
+    user = get_user_from_uniquifier(uniquifier)
+    if user != None:
+        add_session(request.sid, user.id)
     print(by_user_id)
 
 @socketio.on("sign-out")
-def sign_out(auth_token):
+def sign_out(uniquifier):
     remove_session(request.sid)
