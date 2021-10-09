@@ -505,7 +505,9 @@ def edit_job(job_id):
         send_consultant_code(job.id)
 
     response = job.to_dict()
-    emit_to_users("ADD_JOB", response, get_manager_user_ids(current_user.organization_id))
+    emit_to_users(
+        "ADD_JOB", response, get_manager_user_ids(current_user.organization_id)
+    )
     return response
 
 
