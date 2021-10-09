@@ -1,5 +1,5 @@
 from app import create_app, db, cli, socketio
-from app.models import User, Job, TimeClock, ScheduleShift
+from app.models import Role, User, Job, TimeClock, ScheduleShift
 
 application = create_app()
 cli.register(application)
@@ -17,4 +17,5 @@ def make_shell_context():
         "Job": Job,
         "TimeClock": TimeClock,
         "ScheduleShift": ScheduleShift,
+        "Role": Role,
     }

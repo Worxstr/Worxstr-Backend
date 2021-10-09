@@ -17,8 +17,9 @@ from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 def get_manager_user_ids(organization_id):
     # Get the ids of managers within the current organization
-    return (
-        db.session.query(User.id)
+    return [
+        r[0]
+        for r in db.session.query(User.id)
         .filter(
             User.organization_id == organization_id,
             User.roles.any(
@@ -26,7 +27,7 @@ def get_manager_user_ids(organization_id):
             ),
         )
         .all()
-    )
+    ]
 
 
 @bp.route("/jobs", methods=["GET"])
@@ -504,9 +505,7 @@ def edit_job(job_id):
         send_consultant_code(job.id)
 
     response = job.to_dict()
-    emit_to_users(
-        "ADD_JOB", response, get_manager_user_ids(current_user.organization_id)
-    )
+    emit_to_users("ADD_JOB", response, get_manager_user_ids(current_user.organization_id))
     return response
 
 
