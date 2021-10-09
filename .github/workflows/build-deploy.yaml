@@ -9,6 +9,7 @@ on:
 env:
   DWOLLA_APP_KEY: ${{ secrets.DWOLLA_SANDBOX_KEY }}
   DWOLLA_APP_SECRET: ${{ secrets.DWOLLA_SANDBOX_SECRET }}
+  DWOLLA_HOST: "sandbox"
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -239,16 +239,18 @@ def create_messages(conversation_id):
 
 
 def send_message(conversation_id, user_id, message):
-    # TODO: Get user ID from database by querying for socket session id
-    db_message = Message(
-        sender_id=user_id, body=message.get("body"), conversation_id=conversation_id
+    conversation = db.session.query(Conversation).get(conversation_id).to_dict()
+
+    new_message = Message(
+        sender_id=user_id,
+        body=message.get("body"),
+        conversation_id=conversation_id
     )
-    db.session.add(db_message)
+    db.session.add(new_message)
     db.session.commit()
 
-    socketio.emit(
-        "conversations/messages:create",
-        db_message.to_dict(),
-    )
+    participant_ids = [c['id'] for c in conversation['participants']]
 
-    return db_message
+    emit_to_users("ADD_MESSAGE", new_message.to_dict(), participant_ids)
+
+    return new_message.to_dict()

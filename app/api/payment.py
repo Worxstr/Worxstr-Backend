@@ -15,11 +15,17 @@ def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
 
 
-@bp.route("/payments/user", methods=["GET"])
+@bp.route("/payments/dwolla/customers/me", methods=["GET"])
 @login_required
 def get_user_info():
     customer_url = current_user.dwolla_customer_url
     return payments.get_customer_info(customer_url)
+
+
+@bp.route("/payments/dwolla/customers/email", methods=["GET"])
+def get_dwolla_customer():
+    customer = payments.get_customer_info(request.args.get("customer_id"))
+    return {"email": customer["email"]}
 
 
 @bp.route("/payments/transfers", methods=["GET"])
@@ -76,7 +82,9 @@ def add_account():
 @login_required
 def get_accounts():
     customer_url = current_user.dwolla_customer_url
-    return payments.get_funding_sources(customer_url)
+    return payments.get_funding_sources(
+        customer_url, current_user.has_role("contractor")
+    )
 
 
 @bp.route("/payments/accounts", methods=["PUT"])
@@ -114,21 +122,25 @@ def complete_payments():
     customer_url = current_user.dwolla_customer_url
     transfers = []
     for timecard in timecards:
-        fees = [
-            {
-                "_links": {"charge-to": {"href": customer_url}},
-                "amount": {"value": str(timecard[0].fees_payment), "currency": "USD"},
-            }
-        ]
+        fees = None
+        fee = timecard[0].fees_payment
+        if fee > 0:
+            fees = [
+                {
+                    "_links": {"charge-to": {"href": customer_url}},
+                    "amount": {"value": str(fee), "currency": "USD"},
+                }
+            ]
         transfer = payments.transfer_funds(
             str(timecard[0].wage_payment),
             payments.get_balance(customer_url)["location"],
             payments.get_balance(timecard[1].dwolla_customer_url)["location"],
             fees,
         )
-        db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
-            {TimeCard.paid: True}
-        )
+        if type(transfer) is not tuple:
+            db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
+                {TimeCard.paid: True}
+            )
         transfers.append(transfer)
     db.session.commit()
     return {"transfers": transfers}
