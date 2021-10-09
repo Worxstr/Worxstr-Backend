@@ -92,13 +92,14 @@ def on_disconnect():
 
 @socketio.on("connect")
 @socketio.on("sign-in")
-def sign_in(uniquifier):
-    user = get_user_from_uniquifier(uniquifier)
-    if user != None:
-        add_session(request.sid, user.id)
+def sign_in(auth=None):
+    if auth != None:
+        user = get_user_from_uniquifier(auth["fs_uniquifier"])
+        if user != None:
+            add_session(request.sid, user.id)
     print(by_user_id)
 
 
 @socketio.on("sign-out")
-def sign_out(uniquifier):
+def sign_out():
     remove_session(request.sid)

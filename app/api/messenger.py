@@ -5,6 +5,7 @@ from app import db, socketio
 from app.api import bp
 from app.models import Message, User, Conversation
 from app.utils import get_request_arg, get_request_json
+from app.api.sockets import emit_to_users
 
 
 @bp.route("/conversations", methods=["GET"])
