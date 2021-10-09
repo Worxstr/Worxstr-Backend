@@ -6,12 +6,27 @@ from flask import abort, request, render_template, current_app
 from flask_security import login_required, current_user, roles_required, roles_accepted
 from sqlalchemy import or_, not_
 import pyqrcode
+from app.api.sockets import emit_to_users
 
 from app import db
 from app.api import bp
 from app.email import send_email
-from app.models import ContractorInfo, Job, User, ScheduleShift, TimeClock
+from app.models import ContractorInfo, Job, User, ScheduleShift, TimeClock, Role
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
+
+
+def get_manager_user_ids(organization_id):
+    # Get the ids of managers within the current organization
+    return (
+        db.session.query(User.id)
+        .filter(
+            User.organization_id == organization_id,
+            User.roles.any(
+                Role.name.in_(["contractor_manager", "organization_manager"])
+            ),
+        )
+        .all()
+    )
 
 
 @bp.route("/jobs", methods=["GET"])
@@ -230,7 +245,11 @@ def add_job():
 
     send_consultant_code(job.id)
 
-    return {"job": job.to_dict()}
+    response = job.to_dict()
+    emit_to_users(
+        "ADD_JOB", response, get_manager_user_ids(current_user.organization_id)
+    )
+    return response
 
 
 @bp.route("/jobs/<job_id>", methods=["GET"])
@@ -484,7 +503,11 @@ def edit_job(job_id):
     if job.consultant_email != original_email or job.consultant_code != original_code:
         send_consultant_code(job.id)
 
-    return {"job": job.to_dict()}
+    response = job.to_dict()
+    emit_to_users(
+        "ADD_JOB", response, get_manager_user_ids(current_user.organization_id)
+    )
+    return response
 
 
 def send_consultant_code(job_id):
@@ -533,4 +556,9 @@ def close_job(job_id):
     """
     db.session.query(Job).filter(Job.id == job_id).update({Job.active: False})
     db.session.commit()
+
+    emit_to_users(
+        "REMOVE_JOB", job_id, get_manager_user_ids(current_user.organization_id)
+    )
+
     return OK_RESPONSE
