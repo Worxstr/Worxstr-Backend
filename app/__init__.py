@@ -9,7 +9,6 @@ from flask_mail import Mail
 from flask_security import Security, SQLAlchemyUserDatastore
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
-from flask_session import Session
 from flask_socketio import SocketIO
 from flasgger import Swagger
 from geopy.geocoders import Nominatim
@@ -28,7 +27,6 @@ swagger = Swagger(config=Config.SWAGGER_CONFIG)
 from app.models import User, Role
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-session = Session()
 security = Security()
 csrf = CSRFProtect()
 socketio = SocketIO()
@@ -54,8 +52,7 @@ def create_app(config_class=Config):
     mail.init_app(app)
     swagger.init_app(app)
     security.init_app(app, user_datastore)
-    # session.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*", manage_session=False, async_mode="eventlet")
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="eventlet")
     scheduler.add_job(func=payments.refresh_app_token, trigger="interval", seconds=3600)
     scheduler.start()
 
