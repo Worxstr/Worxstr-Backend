@@ -5,9 +5,25 @@ from sqlalchemy.sql.elements import Null
 from app import db, payments, payments_auth
 from app.api import bp
 from app.errors.customs import MissingParameterException
-from app.models import Organization, TimeCard, User, TimeClock, ContractorInfo
+from app.models import Organization, TimeCard, User, TimeClock, ContractorInfo, Role
 from app.api.clock import calculate_timecard
+from app.api.sockets import emit_to_users
 from app.utils import OK_RESPONSE, get_request_arg, get_request_json
+
+
+def get_manager_user_ids(organization_id):
+    # Get the ids of managers within the current organization
+    return [
+        r[0]
+        for r in db.session.query(User.id)
+        .filter(
+            User.organization_id == organization_id,
+            User.roles.any(
+                Role.name.in_(["contractor_manager", "organization_manager"])
+            ),
+        )
+        .all()
+    ]
 
 
 @bp.route("/payments/access", methods=["POST"])
@@ -51,7 +67,13 @@ def add_balance():
     amount = get_request_json(request, "amount")
     customer_url = current_user.dwolla_customer_url
     balance = payments.get_balance(customer_url)["location"]
-    return payments.transfer_funds(str(amount), location, balance)
+    response = payments.transfer_funds(str(amount), location, balance)
+    emit_to_users(
+        "ADD_TRANSFER",
+        response["transfer"],
+        get_manager_user_ids(current_user.organization_id),
+    )
+    return response
 
 
 @bp.route("/payments/balance/remove", methods=["POST"])
@@ -61,7 +83,16 @@ def remove_balance():
     amount = get_request_json(request, "amount")
     customer_url = current_user.dwolla_customer_url
     balance = payments.get_balance(customer_url)["location"]
-    return payments.transfer_funds(str(amount), balance, location)
+    if current_user.has_role("contractor"):
+        user_ids = [current_user.id]
+    else:
+        user_ids = get_manager_user_ids(current_user.organization_id)
+    response = payments.transfer_funds(str(amount), balance, location)
+    new_balance = payments.get_balance(customer_url)["balance"]
+    response["transfer"]["new_balance"] = new_balance
+    emit_to_users("ADD_TRANSFER", response["transfer"], user_ids)
+    emit_to_users("SET_BALANCE", new_balance, user_ids)
+    return response
 
 
 @bp.route("/payments/accounts", methods=["POST"])
@@ -73,9 +104,15 @@ def add_account():
 
     dwolla_token = payments_auth.get_dwolla_token(public_token, account_id)
     customer_url = current_user.dwolla_customer_url
-    return payments.authenticate_funding_source(
+    if current_user.has_role("contractor"):
+        user_ids = [current_user.id]
+    else:
+        user_ids = get_manager_user_ids(current_user.organization_id)
+    response = payments.authenticate_funding_source(
         customer_url, dwolla_token, account_name
     )
+    emit_to_users("ADD_FUNDING_SOURCE", response, user_ids)
+    return response
 
 
 @bp.route("/payments/accounts", methods=["GET"])
@@ -92,7 +129,13 @@ def get_accounts():
 def edit_account():
     location = get_request_json(request, "_links")["self"]["href"]
     account_name = get_request_json(request, "name")
-    return payments.edit_funding_source(location, account_name)
+    if current_user.has_role("contractor"):
+        user_ids = [current_user.id]
+    else:
+        user_ids = get_manager_user_ids(current_user.organization_id)
+    response = payments.edit_funding_source(location, account_name)
+    emit_to_users("ADD_FUNDING_SOURCE", response, user_ids)
+    return response
 
 
 @bp.route("/payments/accounts", methods=["DELETE"])
@@ -100,6 +143,11 @@ def edit_account():
 def remove_account():
     location = get_request_json(request, "location")
     payments.remove_funding_source(location)
+    if current_user.has_role("contractor"):
+        user_ids = [current_user.id]
+    else:
+        user_ids = get_manager_user_ids(current_user.organization_id)
+    emit_to_users("REMOVE_FUNDING_SOURCE", location, user_ids)
     return OK_RESPONSE
 
 
@@ -141,9 +189,35 @@ def complete_payments():
             db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
                 {TimeCard.paid: True}
             )
-        transfers.append(transfer)
+        transfers.append(transfer["transfer"])
     db.session.commit()
-    return {"transfers": transfers}
+    response = transfers
+    user_ids = get_manager_user_ids(current_user.organization_id)
+
+    for transfer in transfers:
+        # TODO: When a contractor has multiple shifts approved their transfer history will only show
+        # a single transfer of the last amount. This can be fixed by querying on transfer id.
+        receiving_customer_url = transfer["_links"]["destination"]["href"]
+        receiving_user_id = [
+            db.session.query(ContractorInfo.id)
+            .filter(ContractorInfo.dwolla_customer_url == receiving_customer_url)
+            .one()[0]
+        ]
+        receiving_transfer = payments.get_transfers(receiving_customer_url, 1, 0)[
+            "transfers"
+        ][0]
+        receiving_balance = payments.get_balance(receiving_customer_url)["balance"]
+        emit_to_users("SET_BALANCE", receiving_balance, receiving_user_id)
+        emit_to_users("ADD_TRANSFER", receiving_transfer, receiving_user_id)
+        emit_to_users("ADD_TRANSFER", transfer, user_ids)
+
+    for timecard_id in timecard_ids:
+        emit_to_users("REMOVE_TIMECARD", timecard_id, user_ids)
+
+    balance = payments.get_balance(customer_url)["balance"]
+    emit_to_users("SET_BALANCE", balance, user_ids)
+
+    return {"transfers": response, "balance": balance}
 
 
 @bp.route("/payments/deny", methods=["PUT"])
@@ -155,6 +229,10 @@ def deny_payment():
         {TimeCard.denied: True}, synchronize_session=False
     )
     db.session.commit()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+
+    for timecard_id in timecard_ids:
+        emit_to_users("REMOVE_TIMECARD", timecard_id, user_ids)
     return OK_RESPONSE
 
 
@@ -334,4 +412,8 @@ def edit_timecard(timecard_id):
         .order_by(TimeClock.time)
         .all()
     ]
-    return {"timecard": result}
+    user_ids = get_manager_user_ids(current_user.organization_id)
+
+    emit_to_users("ADD_TIMECARD", result, user_ids)
+
+    return result
