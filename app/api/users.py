@@ -305,28 +305,6 @@ def edit_user():
     return {"event": result}, 200
 
 
-@bp.route("/organizations/me/users", methods=["GET"])
-@login_required
-@roles_accepted("organization_manager", "contractor_manager")
-def list_contractors():
-    """Returns list of contractors associated with the current user's organization
-    ---
-    responses:
-        200:
-            description: A list of users
-            schema:
-                $ref: '#/definitions/User'
-    """
-    result = (
-        db.session.query(User)
-        .filter(
-            User.organization_id == current_user.organization_id, User.active == True
-        )
-        .all()
-    )
-    return {"users": [x.to_dict() for x in result]}, 200
-
-
 @bp.route("/users/contractors/<user_id>", methods=["PATCH"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
