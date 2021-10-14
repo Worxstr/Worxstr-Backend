@@ -30,14 +30,14 @@ def get_organization():
         .filter(Organization.id == current_user.organization_id)
         .one()
     )
-    return {"organization": result.to_dict()}
+    return result.to_dict()
 
 
 @bp.route("/organizations/me", methods=["PATCH"])
 @login_required
 @roles_required("organization_manager")
 def edit_organization():
-    org_wage = float(get_request_json(request, "minimum_wage"))
+    org_wage = float(get_request_json(request, "default_wage"))
 
     db.session.query(Organization).filter(
         Organization.id == current_user.organization_id
@@ -51,26 +51,4 @@ def edit_organization():
     )
     result = org.to_dict()
 
-    return {"organization": result}, 200
-
-
-@bp.route("/organizations/me/users", methods=["GET"])
-@login_required
-@roles_accepted("organization_manager", "contractor_manager")
-def list_contractors():
-    """Returns list of contractors associated with the current user's organization
-    ---
-    responses:
-        200:
-            description: A list of users
-            schema:
-                $ref: '#/definitions/User'
-    """
-    result = (
-        db.session.query(User)
-        .filter(
-            User.organization_id == current_user.organization_id, User.active == True
-        )
-        .all()
-    )
-    return {"users": [x.to_dict() for x in result]}, 200
+    return result, 200
