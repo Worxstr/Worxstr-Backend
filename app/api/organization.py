@@ -10,6 +10,7 @@ from app.api import bp
 from app.models import Organization, User
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
+
 @bp.route("/organizations/me", methods=["GET"])
 @login_required
 def get_organization():
