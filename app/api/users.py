@@ -364,4 +364,4 @@ def list_contractors():
         )
         .all()
     )
-    return {'users': [x.to_dict() for x in result]}, 200
+    return {"users": [x.to_dict() for x in result]}, 200
