@@ -36,6 +36,7 @@ def get_manager_user_ids(organization_id):
         .all()
     ]
 
+
 @bp.route("/users", methods=["GET"])
 @login_required
 @roles_required("organization_manager")
@@ -326,7 +327,9 @@ def edit_user():
             .to_dict()
         )
 
-    emit_to_users("ADD_USER", result, get_manager_user_ids(current_user.organization_id))
+    emit_to_users(
+        "ADD_USER", result, get_manager_user_ids(current_user.organization_id)
+    )
     return {"event": result}, 200
 
 
@@ -367,7 +370,9 @@ def edit_contractor(user_id):
         .to_dict()
     )
 
-    emit_to_users("ADD_USER", result, get_manager_user_ids(current_user.organization_id))
+    emit_to_users(
+        "ADD_USER", result, get_manager_user_ids(current_user.organization_id)
+    )
 
     return {"event": result}, 200
 
