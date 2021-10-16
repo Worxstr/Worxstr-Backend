@@ -186,6 +186,8 @@ class TimeClock(db.Model, CustomSerializerMixin):
     time = db.Column(db.DateTime)
     action = db.Column(db.Enum(TimeClockAction))
     timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
+    job_id = db.Column(db.Integer, db.ForeignKey("job.id"))
+    shift_id = db.Column(db.Integer, db.ForeignKey("schedule_shift.id"))
     contractor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
 

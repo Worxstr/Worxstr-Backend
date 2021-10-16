@@ -144,15 +144,15 @@ def clock_in():
     """
     shift_id = get_request_arg(request, "shift_id")
     code = str(get_request_json(request, "code"))
-
-    correct_code = (
-        db.session.query(Job.consultant_code)
+    job = (
+        db.session.query(Job)
         .join(ScheduleShift)
         .filter(ScheduleShift.id == shift_id)
         .one()
     )
+    correct_code = job.consultant_code
 
-    if code != correct_code[0]:
+    if code != correct_code:
         return {"message": "Invalid clock-in code."}, 401
 
     timeclock_state = (
@@ -182,6 +182,8 @@ def clock_in():
         contractor_id=current_user.id,
         action=TimeClockAction.clock_in,
         timecard_id=timecard.id,
+        shift_id=shift_id,
+        job_id=job.id
     )
 
     db.session.add(timeclock)

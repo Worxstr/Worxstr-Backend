@@ -5,11 +5,22 @@ from flask_security import current_user, login_required, roles_accepted
 
 from app import db
 from app.api import bp
-from app.models import ScheduleShift, User
+from app.models import ScheduleShift, User, Organization, Job
 from app.scheduler import add_shift
 from app.users import get_users_list
 from app.utils import get_request_arg, get_request_json, get_key, OK_RESPONSE
+from app.api.sockets import emit_to_users
 
+
+def get_organization_user_ids(job_id):
+    # Get the ids of all within the current organization from a job id
+    org_id = db.session.query(Organization.id).join(Job).filter(Job.id==job_id).one()[0]
+    return [
+        r[0]
+        for r in db.session.query(User.id)
+        .filter(User.organization_id == org_id)
+        .all()
+    ]
 
 @bp.route("/shifts", methods=["POST"])
 @login_required
@@ -140,8 +151,14 @@ def shifts():
                 and shift.time_end >= datetime.datetime.utcnow()
             ),
         )
+    result = []
+    user_ids = get_organization_user_ids(job_id)
+    for s in shifts:
+        shift = s.to_dict()
+        result.append(shift)
+        emit_to_users("ADD_EVENT", s.to_dict() , user_ids)
 
-    return {"shifts": [s.to_dict() for s in shifts]}, 201
+    return {"shifts": result}, 201
 
 
 @bp.route("/shifts/<shift_id>", methods=["PUT"])
