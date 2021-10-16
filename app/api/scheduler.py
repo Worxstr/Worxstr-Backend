@@ -156,9 +156,13 @@ def shifts():
     user_ids = get_organization_user_ids(job_id)
     for s in shifts:
         shift = s.to_dict()
+        next_shift = get_next_shift(s.contractor_id)
+        if next_shift != None:
+            next_shift = next_shift["shift"]["id"]
         result.append(shift)
         emit_to_users("ADD_SHIFT", s.to_dict(), user_ids)
         emit_to_users("ADD_EVENT", s.to_dict(), user_ids)
+        emit_to_users("SET_NEXT_SHIFT", next_shift, [s.contractor_id])
 
     return {"shifts": result}, 201
 
@@ -200,9 +204,12 @@ def update_shift(shift_id):
 
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
     result = shift.to_dict()
+    next_shift = get_next_shift(shift.contractor_id)
+    if next_shift != None:
+        next_shift = next_shift["shift"]["id"]
     emit_to_users("ADD_SHIFT", result, get_organization_user_ids(shift.job_id))
     emit_to_users("ADD_EVENT", result, get_organization_user_ids(shift.job_id))
-
+    emit_to_users("SET_NEXT_SHIFT", next_shift, [shift.contractor_id])
     return {"shift": result}
 
 
@@ -217,24 +224,29 @@ def delete_shift(shift_id):
         200:
             description: Shift deleted.
     """
-    job_id = (
-        db.session.query(ScheduleShift.job_id)
+    shift = (
+        db.session.query(ScheduleShift)
         .filter(ScheduleShift.id == shift_id)
-        .one()[0]
+        .one()
     )
+    job_id = shift.job_id
+    contractor_id = shift.contractor_id
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
     db.session.commit()
 
-    emit_to_users("REMOVE_SHIFT", shift_id, get_organization_user_ids(job_id))
-    emit_to_users("REMOVE_EVENT", shift_id, get_organization_user_ids(job_id))
+    next_shift = get_next_shift(contractor_id)
+    if next_shift != None:
+        next_shift = next_shift["shift"]["id"]
 
+    emit_to_users("REMOVE_SHIFT", int(shift_id), get_organization_user_ids(job_id))
+    emit_to_users("REMOVE_EVENT", int(shift_id), get_organization_user_ids(job_id))
+    emit_to_users("SET_NEXT_SHIFT", next_shift, [contractor_id])
     return OK_RESPONSE
 
 
 @bp.route("/shifts/next", methods=["GET"])
 @login_required
-@roles_accepted("contractor")
-def get_next_shift():
+def get_next_shift(id=None):
     """
     Get the next shift an contractor is assigned to.
     ---
@@ -247,11 +259,13 @@ def get_next_shift():
                     shift:
                         $ref: '#/definitions/Shift'
     """
+    if id == None:
+        id = current_user.id
     current_time = datetime.datetime.utcnow()
     result = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.contractor_id == current_user.id,
+            ScheduleShift.contractor_id == id,
             ScheduleShift.time_end > current_time,
         )
         .order_by(ScheduleShift.time_end)

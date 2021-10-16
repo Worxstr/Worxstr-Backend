@@ -559,7 +559,7 @@ def close_job(job_id):
     db.session.commit()
 
     emit_to_users(
-        "REMOVE_JOB", job_id, get_manager_user_ids(current_user.organization_id)
+        "REMOVE_JOB", int(job_id), get_manager_user_ids(current_user.organization_id)
     )
 
     return OK_RESPONSE
