@@ -156,9 +156,9 @@ def shifts():
     user_ids = get_organization_user_ids(job_id)
     for s in shifts:
         shift = s.to_dict()
-        next_shift = get_next_shift(s.contractor_id)
+        next_shift = get_next_shift(s.contractor_id)["shift"]
         if next_shift != None:
-            next_shift = next_shift["shift"]["id"]
+            next_shift = next_shift["id"]
         result.append(shift)
         emit_to_users("ADD_SHIFT", s.to_dict(), user_ids)
         emit_to_users("ADD_EVENT", s.to_dict(), user_ids)
@@ -204,9 +204,9 @@ def update_shift(shift_id):
 
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
     result = shift.to_dict()
-    next_shift = get_next_shift(shift.contractor_id)
+    next_shift = get_next_shift(shift.contractor_id)["shift"]
     if next_shift != None:
-        next_shift = next_shift["shift"]["id"]
+        next_shift = next_shift["id"]
     emit_to_users("ADD_SHIFT", result, get_organization_user_ids(shift.job_id))
     emit_to_users("ADD_EVENT", result, get_organization_user_ids(shift.job_id))
     emit_to_users("SET_NEXT_SHIFT", next_shift, [shift.contractor_id])
@@ -234,9 +234,9 @@ def delete_shift(shift_id):
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
     db.session.commit()
 
-    next_shift = get_next_shift(contractor_id)
+    next_shift = get_next_shift(contractor_id)["shift"]
     if next_shift != None:
-        next_shift = next_shift["shift"]["id"]
+        next_shift = next_shift["id"]
 
     emit_to_users("REMOVE_SHIFT", int(shift_id), get_organization_user_ids(job_id))
     emit_to_users("REMOVE_EVENT", int(shift_id), get_organization_user_ids(job_id))
