@@ -146,8 +146,10 @@ def sign_up_contractor():
     db.session.add(contractor_info)
     db.session.commit()
     send_confirmation_email(user.email, user.first_name)
+    user_ids = get_manager_user_ids(organization_id)
 
-    emit_to_users("ADD_USER", user.to_dict(), get_manager_user_ids(organization_id))
+    emit_to_users("ADD_USER", user.to_dict(), user_ids)
+    emit_to_users("ADD_WORKFORCE_MEMBER", user.to_dict(), user_ids)
 
     return OK_RESPONSE
 

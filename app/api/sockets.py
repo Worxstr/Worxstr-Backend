@@ -21,7 +21,6 @@ from app.models import User
 
 ##################################################
 # Manages and links socket io user and session ids
-# TODO: Move this to a separate module
 ######################################
 
 # Store all user ids associated per session

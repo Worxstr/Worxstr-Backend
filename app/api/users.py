@@ -151,7 +151,9 @@ def add_manager():
         ),
     )
     result = manager.to_dict()
-    emit_to_users("ADD_USER", result, get_manager_user_ids(current_user.organization_id))
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    emit_to_users("ADD_USER", result, user_ids)
+    emit_to_users("ADD_WORKFORCE_MEMBER", manager.id, user_ids)
     return result
 
 
@@ -207,7 +209,9 @@ def deactivate_manager(id):
     ).update({User.active: False})
     db.session.commit()
 
-    emit_to_users("DELETE_USER", id, get_manager_user_ids(current_user.organization_id))
+    user_ids = get_manager_user_ids(current_user.organization_id)
+
+    emit_to_users("REMOVE_USER", id, user_ids)
 
     return OK_RESPONSE
 
