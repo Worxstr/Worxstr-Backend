@@ -57,7 +57,7 @@ def clock_history():
     # ? Week offset should begin at 0. There is probably a better way to write this
     week_offset = int(get_request_arg(request, "week_offset") or 0) + 1
     today = datetime.datetime.combine(
-        datetime.date.today(), datetime.datetime.max.time()
+        datetime.datetime.utcnow().date(), datetime.datetime.max.time()
     )
     num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
     num_weeks_end = today - datetime.timedelta(weeks=int(week_offset) - 1)
@@ -183,7 +183,7 @@ def clock_in():
         action=TimeClockAction.clock_in,
         timecard_id=timecard.id,
         shift_id=shift_id,
-        job_id=job.id
+        job_id=job.id,
     )
 
     db.session.add(timeclock)

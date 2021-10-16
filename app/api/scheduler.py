@@ -14,13 +14,14 @@ from app.api.sockets import emit_to_users
 
 def get_organization_user_ids(job_id):
     # Get the ids of all within the current organization from a job id
-    org_id = db.session.query(Organization.id).join(Job).filter(Job.id==job_id).one()[0]
+    org_id = (
+        db.session.query(Organization.id).join(Job).filter(Job.id == job_id).one()[0]
+    )
     return [
         r[0]
-        for r in db.session.query(User.id)
-        .filter(User.organization_id == org_id)
-        .all()
+        for r in db.session.query(User.id).filter(User.organization_id == org_id).all()
     ]
+
 
 @bp.route("/shifts", methods=["POST"])
 @login_required
@@ -156,8 +157,8 @@ def shifts():
     for s in shifts:
         shift = s.to_dict()
         result.append(shift)
-        emit_to_users("ADD_SHIFT", s.to_dict() , user_ids)
-        emit_to_users("ADD_EVENT", s.to_dict() , user_ids)
+        emit_to_users("ADD_SHIFT", s.to_dict(), user_ids)
+        emit_to_users("ADD_EVENT", s.to_dict(), user_ids)
 
     return {"shifts": result}, 201
 
@@ -216,7 +217,11 @@ def delete_shift(shift_id):
         200:
             description: Shift deleted.
     """
-    job_id = db.session.query(ScheduleShift.job_id).filter(ScheduleShift.id == shift_id).one()[0]
+    job_id = (
+        db.session.query(ScheduleShift.job_id)
+        .filter(ScheduleShift.id == shift_id)
+        .one()[0]
+    )
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
     db.session.commit()
 
