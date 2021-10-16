@@ -149,7 +149,7 @@ def sign_up_contractor():
     user_ids = get_manager_user_ids(organization_id)
 
     emit_to_users("ADD_USER", user.to_dict(), user_ids)
-    emit_to_users("ADD_WORKFORCE_MEMBER", user.to_dict(), user_ids)
+    emit_to_users("ADD_WORKFORCE_MEMBER", user.id, user_ids)
 
     return OK_RESPONSE
 
