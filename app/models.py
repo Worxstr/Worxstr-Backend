@@ -89,7 +89,10 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
 
     @hybrid_property
     def direct(self):
-        return int(current_user.id) == self.manager_id
+        if current_user.is_authenticated:
+            return int(current_user.id) == self.manager_id
+        else:
+            return None
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):

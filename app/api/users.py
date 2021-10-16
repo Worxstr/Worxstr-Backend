@@ -212,7 +212,7 @@ def deactivate_manager(id):
 
     user_ids = get_manager_user_ids(current_user.organization_id)
 
-    emit_to_users("REMOVE_USER", id, user_ids)
+    emit_to_users("REMOVE_USER", int(id), user_ids)
 
     return OK_RESPONSE
 
