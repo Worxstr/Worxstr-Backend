@@ -17,9 +17,24 @@ from sqlalchemy.sql.operators import op
 from app import db, user_datastore, geolocator, payments
 from app.api import bp
 from app.email import send_email
-from app.models import ManagerInfo, User, ContractorInfo, Organization
+from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
+from app.api.sockets import emit_to_users
 
+
+def get_manager_user_ids(organization_id):
+    # Get the ids of managers within the current organization
+    return [
+        r[0]
+        for r in db.session.query(User.id)
+        .filter(
+            User.organization_id == organization_id,
+            User.roles.any(
+                Role.name.in_(["contractor_manager", "organization_manager"])
+            ),
+        )
+        .all()
+    ]
 
 @bp.route("/users", methods=["GET"])
 @login_required
@@ -135,7 +150,9 @@ def add_manager():
             password=password,
         ),
     )
-    return manager.to_dict()
+    result = manager.to_dict()
+    emit_to_users("ADD_USER", result, get_manager_user_ids(current_user.organization_id))
+    return result
 
 
 def manager_reference_generator():
@@ -189,6 +206,9 @@ def deactivate_manager(id):
         User.id == id, User.organization_id == current_user.organization_id
     ).update({User.active: False})
     db.session.commit()
+
+    emit_to_users("DELETE_USER", id, get_manager_user_ids(current_user.organization_id))
+
     return OK_RESPONSE
 
 
@@ -302,6 +322,7 @@ def edit_user():
             .to_dict()
         )
 
+    emit_to_users("ADD_USER", result, get_manager_user_ids(current_user.organization_id))
     return {"event": result}, 200
 
 
@@ -341,6 +362,8 @@ def edit_contractor(user_id):
         .one()
         .to_dict()
     )
+
+    emit_to_users("ADD_USER", result, get_manager_user_ids(current_user.organization_id))
 
     return {"event": result}, 200
 

@@ -211,24 +211,26 @@ def clock_out():
     """
     time_out = datetime.datetime.utcnow()
     timecard_info = (
-        db.session.query(TimeClock.timecard_id, TimeClock.action)
+        db.session.query(TimeClock)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
 
-    if timecard_info[1] == TimeClockAction.clock_out:
+    if timecard_info.action == TimeClockAction.clock_out:
         return {"message": "Already clocked out"}, 409
 
     timeclock = TimeClock(
         time=time_out,
-        timecard_id=timecard_info[0],
+        timecard_id=timecard_info.timecard_id,
         contractor_id=current_user.id,
         action=TimeClockAction.clock_out,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
     )
     db.session.add(timeclock)
     db.session.commit()
-    calculate_timecard(timecard_info[0])
+    calculate_timecard(timecard_info.timecard_id)
 
     payload = timeclock.to_dict()
     user_ids = get_manager_user_ids(current_user.organization_id)
@@ -249,22 +251,24 @@ def start_break():
                 $ref: '#/definitions/TimeClock'
     """
     timecard_info = (
-        db.session.query(TimeClock.timecard_id, TimeClock.action)
+        db.session.query(TimeClock)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
 
-    if timecard_info[1] == TimeClockAction.start_break:
+    if timecard_info.action == TimeClockAction.start_break:
         return {"message": "Already on break"}, 409
-    if timecard_info[1] == TimeClockAction.clock_out:
+    if timecard_info.action == TimeClockAction.clock_out:
         return {"message": "Not currently clocked in"}, 409
 
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
-        timecard_id=timecard_info[0],
+        timecard_id=timecard_info.timecard_id,
         contractor_id=current_user.id,
         action=TimeClockAction.start_break,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
     )
     db.session.add(timeclock)
     db.session.commit()
@@ -288,22 +292,24 @@ def end_break():
                 $ref: '#/definitions/TimeClock'
     """
     timecard_info = (
-        db.session.query(TimeClock.timecard_id, TimeClock.action)
+        db.session.query(TimeClock)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
 
-    if timecard_info[1] == TimeClockAction.end_break:
+    if timecard_info.action == TimeClockAction.end_break:
         return {"message": "Not currently on break"}, 409
-    if timecard_info[1] == TimeClockAction.clock_out:
+    if timecard_info.action == TimeClockAction.clock_out:
         return {"message": "Not currently clocked in"}, 409
 
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
-        timecard_id=timecard_info[0],
+        timecard_id=timecard_info.timecard_id,
         contractor_id=current_user.id,
         action=TimeClockAction.end_break,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
     )
     db.session.add(timeclock)
     db.session.commit()
