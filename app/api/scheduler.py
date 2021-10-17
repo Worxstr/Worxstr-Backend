@@ -5,10 +5,22 @@ from flask_security import current_user, login_required, roles_accepted
 
 from app import db
 from app.api import bp
-from app.models import ScheduleShift, User
+from app.models import ScheduleShift, User, Organization, Job
 from app.scheduler import add_shift
 from app.users import get_users_list
 from app.utils import get_request_arg, get_request_json, get_key, OK_RESPONSE
+from app.api.sockets import emit_to_users
+
+
+def get_organization_user_ids(job_id):
+    # Get the ids of all within the current organization from a job id
+    org_id = (
+        db.session.query(Organization.id).join(Job).filter(Job.id == job_id).one()[0]
+    )
+    return [
+        r[0]
+        for r in db.session.query(User.id).filter(User.organization_id == org_id).all()
+    ]
 
 
 @bp.route("/shifts", methods=["POST"])
@@ -140,8 +152,19 @@ def shifts():
                 and shift.time_end >= datetime.datetime.utcnow()
             ),
         )
+    result = []
+    user_ids = get_organization_user_ids(job_id)
+    for s in shifts:
+        shift = s.to_dict()
+        next_shift = get_next_shift(s.contractor_id)["shift"]
+        if next_shift != None:
+            next_shift = next_shift["id"]
+        result.append(shift)
+        emit_to_users("ADD_SHIFT", s.to_dict(), user_ids)
+        emit_to_users("ADD_EVENT", s.to_dict(), user_ids)
+        emit_to_users("SET_NEXT_SHIFT", next_shift, [s.contractor_id])
 
-    return {"shifts": [s.to_dict() for s in shifts]}, 201
+    return {"shifts": result}, 201
 
 
 @bp.route("/shifts/<shift_id>", methods=["PUT"])
@@ -180,8 +203,14 @@ def update_shift(shift_id):
     db.session.commit()
 
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
-
-    return {"shift": shift.to_dict()}
+    result = shift.to_dict()
+    next_shift = get_next_shift(shift.contractor_id)["shift"]
+    if next_shift != None:
+        next_shift = next_shift["id"]
+    emit_to_users("ADD_SHIFT", result, get_organization_user_ids(shift.job_id))
+    emit_to_users("ADD_EVENT", result, get_organization_user_ids(shift.job_id))
+    emit_to_users("SET_NEXT_SHIFT", next_shift, [shift.contractor_id])
+    return {"shift": result}
 
 
 @bp.route("/shifts/<shift_id>", methods=["DELETE"])
@@ -195,16 +224,25 @@ def delete_shift(shift_id):
         200:
             description: Shift deleted.
     """
+    shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+    job_id = shift.job_id
+    contractor_id = shift.contractor_id
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
     db.session.commit()
 
+    next_shift = get_next_shift(contractor_id)["shift"]
+    if next_shift != None:
+        next_shift = next_shift["id"]
+
+    emit_to_users("REMOVE_SHIFT", int(shift_id), get_organization_user_ids(job_id))
+    emit_to_users("REMOVE_EVENT", int(shift_id), get_organization_user_ids(job_id))
+    emit_to_users("SET_NEXT_SHIFT", next_shift, [contractor_id])
     return OK_RESPONSE
 
 
 @bp.route("/shifts/next", methods=["GET"])
 @login_required
-@roles_accepted("contractor")
-def get_next_shift():
+def get_next_shift(id=None):
     """
     Get the next shift an contractor is assigned to.
     ---
@@ -217,11 +255,13 @@ def get_next_shift():
                     shift:
                         $ref: '#/definitions/Shift'
     """
+    if id == None:
+        id = current_user.id
     current_time = datetime.datetime.utcnow()
     result = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.contractor_id == current_user.id,
+            ScheduleShift.contractor_id == id,
             ScheduleShift.time_end > current_time,
         )
         .order_by(ScheduleShift.time_end)

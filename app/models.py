@@ -46,6 +46,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "dwolla_customer_url",
         "roles",
         "direct",
+        "fs_uniquifier",
     )
     serialize_rules = ()
 
@@ -88,7 +89,10 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
 
     @hybrid_property
     def direct(self):
-        return int(current_user.id) == self.manager_id
+        if current_user.is_authenticated:
+            return int(current_user.id) == self.manager_id
+        else:
+            return None
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):
@@ -185,6 +189,8 @@ class TimeClock(db.Model, CustomSerializerMixin):
     time = db.Column(db.DateTime)
     action = db.Column(db.Enum(TimeClockAction))
     timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
+    job_id = db.Column(db.Integer, db.ForeignKey("job.id"))
+    shift_id = db.Column(db.Integer, db.ForeignKey("schedule_shift.id"))
     contractor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
 

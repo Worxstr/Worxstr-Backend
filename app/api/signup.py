@@ -8,13 +8,29 @@ from flask_security import (
 from app import db, user_datastore
 from app.api import bp
 from app.api.users import manager_reference_generator
-from app.models import ManagerInfo, User, ContractorInfo, Organization
+from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
 from app.email import send_email
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app import payments
+from app.api.sockets import emit_to_users
 
 from itsdangerous import URLSafeTimedSerializer
 from urllib.parse import quote, urlencode
+
+
+def get_manager_user_ids(organization_id):
+    # Get the ids of managers within the current organization
+    return [
+        r[0]
+        for r in db.session.query(User.id)
+        .filter(
+            User.organization_id == organization_id,
+            User.roles.any(
+                Role.name.in_(["contractor_manager", "organization_manager"])
+            ),
+        )
+        .all()
+    ]
 
 
 @bp.route("/auth/sign-up/org", methods=["POST"])
@@ -130,6 +146,11 @@ def sign_up_contractor():
     db.session.add(contractor_info)
     db.session.commit()
     send_confirmation_email(user.email, user.first_name)
+    user_ids = get_manager_user_ids(organization_id)
+
+    emit_to_users("ADD_USER", user.to_dict(), user_ids)
+    emit_to_users("ADD_WORKFORCE_MEMBER", user.id, user_ids)
+
     return OK_RESPONSE
 
 

@@ -17,8 +17,24 @@ from sqlalchemy.sql.operators import op
 from app import db, user_datastore, geolocator, payments
 from app.api import bp
 from app.email import send_email
-from app.models import ManagerInfo, User, ContractorInfo, Organization
+from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
+from app.api.sockets import emit_to_users
+
+
+def get_manager_user_ids(organization_id):
+    # Get the ids of managers within the current organization
+    return [
+        r[0]
+        for r in db.session.query(User.id)
+        .filter(
+            User.organization_id == organization_id,
+            User.roles.any(
+                Role.name.in_(["contractor_manager", "organization_manager"])
+            ),
+        )
+        .all()
+    ]
 
 
 @bp.route("/users", methods=["GET"])
@@ -135,7 +151,11 @@ def add_manager():
             password=password,
         ),
     )
-    return manager.to_dict()
+    result = manager.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    emit_to_users("ADD_USER", result, user_ids)
+    emit_to_users("ADD_WORKFORCE_MEMBER", manager.id, user_ids)
+    return result
 
 
 def manager_reference_generator():
@@ -189,6 +209,11 @@ def deactivate_manager(id):
         User.id == id, User.organization_id == current_user.organization_id
     ).update({User.active: False})
     db.session.commit()
+
+    user_ids = get_manager_user_ids(current_user.organization_id)
+
+    emit_to_users("REMOVE_USER", int(id), user_ids)
+
     return OK_RESPONSE
 
 
@@ -302,29 +327,10 @@ def edit_user():
             .to_dict()
         )
 
-    return {"event": result}, 200
-
-
-@bp.route("/organizations/me/users", methods=["GET"])
-@login_required
-@roles_accepted("organization_manager", "contractor_manager")
-def list_contractors():
-    """Returns list of contractors associated with the current user's organization
-    ---
-    responses:
-        200:
-            description: A list of users
-            schema:
-                $ref: '#/definitions/User'
-    """
-    result = (
-        db.session.query(User)
-        .filter(
-            User.organization_id == current_user.organization_id, User.active == True
-        )
-        .all()
+    emit_to_users(
+        "ADD_USER", result, get_manager_user_ids(current_user.organization_id)
     )
-    return {"users": [x.to_dict() for x in result]}, 200
+    return {"event": result}, 200
 
 
 @bp.route("/users/contractors/<user_id>", methods=["PATCH"])
@@ -364,4 +370,30 @@ def edit_contractor(user_id):
         .to_dict()
     )
 
+    emit_to_users(
+        "ADD_USER", result, get_manager_user_ids(current_user.organization_id)
+    )
+
     return {"event": result}, 200
+
+
+@bp.route("/users/organizations/me", methods=["GET"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def list_contractors():
+    """Returns list of contractors associated with the current user's organization
+    ---
+    responses:
+        200:
+            description: A list of users
+            schema:
+                $ref: '#/definitions/User'
+    """
+    result = (
+        db.session.query(User)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
+        .all()
+    )
+    return {"users": [x.to_dict() for x in result]}, 200
