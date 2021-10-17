@@ -88,7 +88,7 @@ def create_conversation():
     db.session.add(new_conversation)
     db.session.commit()
 
-    emit_to_users("ADD_CONVERSATION", new_conversation.to_dict(), participants)
+    emit_to_users("ADD_CONVERSATION", new_conversation.to_dict(), recipient_ids)
 
     return {"conversation": new_conversation.to_dict()}
 
