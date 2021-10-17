@@ -224,11 +224,7 @@ def delete_shift(shift_id):
         200:
             description: Shift deleted.
     """
-    shift = (
-        db.session.query(ScheduleShift)
-        .filter(ScheduleShift.id == shift_id)
-        .one()
-    )
+    shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
     job_id = shift.job_id
     contractor_id = shift.contractor_id
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
