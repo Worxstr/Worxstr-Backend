@@ -77,8 +77,9 @@ def create_conversation():
     participants = [current_user]
 
     recipients = get_request_json(request, "users")
-
+    recipient_ids = [current_user.id]
     for recipient_id in recipients:
+        recipient_ids.append(int(recipient_id))
         participants.append(
             db.session.query(User).filter(User.id == recipient_id).one()
         )
@@ -86,6 +87,8 @@ def create_conversation():
     new_conversation = Conversation(participants=participants)
     db.session.add(new_conversation)
     db.session.commit()
+
+    emit_to_users("ADD_CONVERSATION", new_conversation.to_dict(), participants)
 
     return {"conversation": new_conversation.to_dict()}
 
