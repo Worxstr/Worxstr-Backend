@@ -1,1 +1,1 @@
-web: gunicorn --bind :80 --worker-class eventlet -w 1 module:app
+web: gunicorn --bind :8000 --worker-class eventlet -w 1 module:app
