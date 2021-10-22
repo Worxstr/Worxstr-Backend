@@ -1,1 +1,1 @@
-web: gunicorn --bind :8000 --worker-class eventlet -w 1 module:app
+web: gunicorn --bind :8000 --worker-class eventlet --workers 3 --threads 15 project.wsgi:application
