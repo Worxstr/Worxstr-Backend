@@ -20,6 +20,12 @@ class RolesUsers(db.Model):
     role_id = db.Column("role_id", db.Integer(), db.ForeignKey("role.id"))
 
 
+class Sessions(db.Model):
+    __tablename__ = "sessions"
+    user_id = db.Column(db.Integer(), db.ForeignKey("user.id"))
+    session_id = db.Column(db.String(50), primary_key=True)
+
+
 class Role(db.Model, RoleMixin, CustomSerializerMixin):
 
     serialize_only = ("id", "name")

@@ -17,7 +17,7 @@ from flask_security.core import _security
 from flask import request
 
 from app import socketio, db
-from app.models import User
+from app.models import User, Sessions
 
 ##################################################
 # Manages and links socket io user and session ids
@@ -36,35 +36,28 @@ by_user_id = {
 def add_session(session_id, user_id):
 
     # Add user id to by_session_id dict
-    by_session_id[session_id] = user_id
 
-    # Add session id to by_user_id dict
-    if user_id in by_user_id:
-        by_user_id[user_id].append(session_id)
-    else:
-        by_user_id[user_id] = [session_id]
+    db.session.add(Sessions(user_id=user_id, session_id=session_id))
+    db.session.commit()
 
 
 def remove_session(session_id):
-
-    if session_id in by_session_id:
-
-        # Delete session_id from array in by_user_id dict
-        user_id = by_session_id[session_id]
-        by_user_id[user_id].remove(session_id)
-        if len(by_user_id[user_id]) == 0:
-            del by_user_id[user_id]
-
-        # Delete user id from by_session_id dict
-        del by_session_id[session_id]
+    db.session.query(Sessions).filter(Sessions.session_id == session_id).delete()
+    db.session.commit()
 
 
 def lookup_session_ids(user_id):
-    return by_user_id.get(user_id, [])
+    return (
+        db.session.query(Sessions.session_id).filter(Sessions.user_id == user_id).all()
+    )
 
 
 def lookup_user_id(session_id):
-    return by_session_id.get(session_id, None)
+    return (
+        db.session.query(Sessions.user_id)
+        .filter(Sessions.session_id == session_id)
+        .all()
+    )
 
 
 def emit_to_users(event_name, payload, user_ids):
@@ -91,7 +84,6 @@ def sign_in(auth=None):
         user = get_user_from_uniquifier(auth["fs_uniquifier"])
         if user != None:
             add_session(request.sid, user.id)
-    print(by_user_id)
 
 
 @socketio.on("disconnect")
