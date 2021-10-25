@@ -373,9 +373,7 @@ def edit_contractor(user_id):
     recipients = get_manager_user_ids(current_user.organization_id)
     recipients.append(user_id)
 
-    emit_to_users(
-        "ADD_USER", result, recipients
-    )
+    emit_to_users("ADD_USER", result, recipients)
 
     return {"event": result}, 200
 
