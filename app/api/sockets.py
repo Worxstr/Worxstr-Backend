@@ -80,6 +80,7 @@ def get_user_from_uniquifier(uniquifier):
 @socketio.on("connect")
 @socketio.on("sign-in")
 def sign_in(auth=None):
+    print("socket.io client connected: " + request.sid)
     if auth != None:
         user = get_user_from_uniquifier(auth["fs_uniquifier"])
         if user != None:
