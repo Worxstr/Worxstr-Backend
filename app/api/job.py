@@ -106,39 +106,41 @@ def list_jobs():
         "managers": get_managers(),
     }
 
-    direct_ids = []
-    direct_jobs = (
-        db.session.query(Job)
-        .filter(
-            Job.contractor_manager_id == current_user.id
-            or Job.organization_manager_id == current_user.id,
-            Job.active,
-        )
-        .all()
-    )
-    for direct_job in direct_jobs:
-        job = direct_job.to_dict()
-        result["jobs"].append(job)
-        direct_ids.append(direct_job.id)
+    # direct_ids = []
+    # direct_jobs = (
+    #     db.session.query(Job)
+    #     .filter(
+    #         Job.contractor_manager_id == current_user.id
+    #         or Job.organization_manager_id == current_user.id,
+    #         Job.active,
+    #     )
+    #     .all()
+    # )
+    # for direct_job in direct_jobs:
+    #     job = direct_job.to_dict()
+    #     result["jobs"].append(job)
+    #     direct_ids.append(direct_job.id)
 
-    lower_managers = get_lower_managers(current_user.id)
-    indirect_jobs = (
-        db.session.query(Job)
-        .filter(
-            not_(Job.id.in_(direct_ids)),
-            or_(
-                Job.organization_manager_id.in_(lower_managers),
-                Job.contractor_manager_id.in_(lower_managers),
-            ),
-            Job.active,
-        )
-        .all()
-    )
+    # lower_managers = get_lower_managers(current_user.id)
+    # indirect_jobs = (
+    #     db.session.query(Job)
+    #     .filter(
+    #         not_(Job.id.in_(direct_ids)),
+    #         or_(
+    #             Job.organization_manager_id.in_(lower_managers),
+    #             Job.contractor_manager_id.in_(lower_managers),
+    #         ),
+    #         Job.active,
+    #     )
+    #     .all()
+    # )
 
-    for indirect_job in indirect_jobs:
-        job = indirect_job.to_dict()
-        result["jobs"].append(job)
-
+    # for indirect_job in indirect_jobs:
+    #     job = indirect_job.to_dict()
+    #     result["jobs"].append(job)
+    jobs = db.session.query(Job).filter(Job.organization_id == current_user.organization_id).all()
+    for job in jobs:
+        result["jobs"].append(job.to_dict())
     return result
 
 
