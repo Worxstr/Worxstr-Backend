@@ -68,6 +68,8 @@ def add_balance():
     customer_url = current_user.dwolla_customer_url
     balance = payments.get_balance(customer_url)["location"]
     response = payments.transfer_funds(str(amount), location, balance)
+    if type(response) is tuple:
+        return response
     emit_to_users(
         "ADD_TRANSFER",
         response["transfer"],
