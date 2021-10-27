@@ -138,7 +138,11 @@ def list_jobs():
     # for indirect_job in indirect_jobs:
     #     job = indirect_job.to_dict()
     #     result["jobs"].append(job)
-    jobs = db.session.query(Job).filter(Job.organization_id == current_user.organization_id).all()
+    jobs = (
+        db.session.query(Job)
+        .filter(Job.organization_id == current_user.organization_id)
+        .all()
+    )
     for job in jobs:
         result["jobs"].append(job.to_dict())
     return result
