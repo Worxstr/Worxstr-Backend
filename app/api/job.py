@@ -140,7 +140,10 @@ def list_jobs():
     #     result["jobs"].append(job)
     jobs = (
         db.session.query(Job)
-        .filter(Job.organization_id == current_user.organization_id)
+        .filter(
+            Job.organization_id == current_user.organization_id,
+            Job.active,
+        )
         .all()
     )
     for job in jobs:
