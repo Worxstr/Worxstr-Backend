@@ -54,11 +54,11 @@ def sign_up_org():
     """
 
     first_name = get_request_json(request, "firstName")
-    last_name = get_request_json(request, "last_name")
+    last_name = get_request_json(request, "lastName")
     email = get_request_json(request, "email")
     phone_raw = get_request_json(request, "phone")
     phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
-    business_name = get_request_json("request", "businessName")
+    business_name = get_request_json(request, "businessName")
     password = get_request_json(request, "password")
 
     dwolla_request = request.get_json()
