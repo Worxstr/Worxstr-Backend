@@ -68,7 +68,9 @@ def sign_up_org():
 
     organization_name = business_name
     organization = Organization(
-        name=organization_name, dwolla_customer_url=dwolla_customer_url, dwolla_status=dwolla_customer_status
+        name=organization_name,
+        dwolla_customer_url=dwolla_customer_url,
+        dwolla_status=dwolla_customer_status,
     )
     db.session.add(organization)
     db.session.commit()
@@ -153,7 +155,10 @@ def sign_up_contractor():
     db.session.commit()
 
     contractor_info = ContractorInfo(
-        id=user.id, dwolla_customer_url=dwolla_customer_url, hourly_rate=wage, dwolla_status=dwolla_customer_status
+        id=user.id,
+        dwolla_customer_url=dwolla_customer_url,
+        hourly_rate=wage,
+        dwolla_status=dwolla_customer_status,
     )
     db.session.add(contractor_info)
     db.session.commit()
