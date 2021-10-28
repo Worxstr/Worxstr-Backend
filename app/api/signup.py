@@ -63,14 +63,14 @@ def sign_up_org():
 
     dwolla_request = request.get_json()
     dwolla_request["type"] = "business"
-    dwolla_customer_url = payments.create_personal_customer(dwolla_request)
+    dwolla_customer_url = payments.create_business_customer(dwolla_request)
     dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
 
     organization_name = business_name
     organization = Organization(
         name=organization_name,
         dwolla_customer_url=dwolla_customer_url,
-        dwolla_status=dwolla_customer_status,
+        dwolla_customer_status=dwolla_customer_status,
     )
     db.session.add(organization)
     db.session.commit()
@@ -158,7 +158,7 @@ def sign_up_contractor():
         id=user.id,
         dwolla_customer_url=dwolla_customer_url,
         hourly_rate=wage,
-        dwolla_status=dwolla_customer_status,
+        dwolla_customer_status=dwolla_customer_status,
     )
     db.session.add(contractor_info)
     db.session.commit()

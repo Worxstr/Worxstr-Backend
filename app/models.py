@@ -220,7 +220,7 @@ class ContractorInfo(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
     hourly_rate = db.Column(db.Numeric)
     dwolla_customer_url = db.Column(db.String(255))
-    dwolla_status = db.Column(db.String(10))
+    dwolla_customer_status = db.Column(db.String(10))
 
 
 class Message(db.Model, CustomSerializerMixin):
