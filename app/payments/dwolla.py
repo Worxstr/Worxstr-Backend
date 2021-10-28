@@ -105,97 +105,10 @@ class Dwolla:
         balance = self.app_token.get("%s/balance" % balance_location)
         return {"balance": balance.body["balance"], "location": balance_location}
 
-    def create_personal_customer(
-        self,
-        firstName,
-        lastName,
-        email,
-        address1,
-        city,
-        state,
-        postalCode,
-        dateOfBirth,
-        ssn,
-    ):
-        request_body = {
-            "firstName": firstName,
-            "lastName": lastName,
-            "email": email,
-            "type": "personal",
-            "address1": address1,
-            "city": city,
-            "state": state,
-            "postalCode": postalCode,
-            "dateOfBirth": dateOfBirth,
-            "ssn": ssn,
-        }
+    def create_personal_customer(self, request_body):
         customer = self.app_token.post("customers", request_body)
         return customer.headers["location"]
 
-    def create_business_customer(
-        self,
-        firstName,
-        lastName,
-        email,
-        ipAddress,
-        address1,
-        city,
-        state,
-        postalCode,
-        controller,
-        businessClassification,
-        businessType,
-        businessName,
-        ein,
-    ):
-        request_body = None
-        if businessType == "soleProprietorship":
-            request_body = {
-                "firstName": firstName,
-                "lastName": lastName,
-                "email": email,
-                "ipAddress": ipAddress,
-                "type": "business",
-                "dateOfBirth": controller["dateOfBirth"],
-                "ssn": controller["ssn"],
-                "address1": address1,
-                "city": city,
-                "state": state,
-                "postalCode": postalCode,
-                "businessClassification": businessClassification,
-                "businessType": businessType,
-                "businessName": businessName,
-                "ein": ein,
-            }
-        else:
-            request_body = {
-                "firstName": firstName,
-                "lastName": lastName,
-                "email": email,
-                "type": "business",
-                "address1": address1,
-                "city": city,
-                "state": state,
-                "postalCode": postalCode,
-                "controller": {
-                    "firstName": controller["firstName"],
-                    "lastName": controller["lastName"],
-                    "title": controller["title"],
-                    "dateOfBirth": controller["dateOfBirth"],
-                    "ssn": controller["ssn"],
-                    "address": {
-                        "address1": controller["address1"],
-                        "address2": controller["address2"],
-                        "city": controller["city"],
-                        "stateProvinceRegion": controller["stateProvinceRegion"],
-                        "postalCode": controller["postalCode"],
-                        "country": controller["country"],
-                    },
-                },
-                "businessClassification": businessClassification,
-                "businessType": businessType,
-                "businessName": businessName,
-                "ein": ein,
-            }
+    def create_business_customer(self, request_body):
         customer = self.app_token.post("customers", request_body)
         return customer.headers["location"]

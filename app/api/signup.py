@@ -5,7 +5,7 @@ from flask_security import (
     hash_password,
 )
 
-from app import db, user_datastore
+from app import db, user_datastore, payments
 from app.api import bp
 from app.api.users import manager_reference_generator
 from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
@@ -53,22 +53,32 @@ def sign_up_org():
                     $ref: '#/definitions/User'
     """
 
-    customer_url = get_request_json(request, "customer_url")
+    first_name = get_request_json(request, "firstName")
+    last_name = get_request_json(request, "last_name")
+    email = get_request_json(request, "email")
+    phone_raw = get_request_json(request, "phone")
+    phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
+    business_name = get_request_json("request", "businessName")
     password = get_request_json(request, "password")
-    customer = payments.get_customer_info(customer_url)
 
-    organization_name = customer["businessName"]
+    dwolla_request = request.get_json()
+    dwolla_request["type"] = "business"
+    dwolla_customer_url = payments.create_personal_customer(dwolla_request)
+    dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
+
+    organization_name = business_name
     organization = Organization(
-        name=organization_name, dwolla_customer_url=customer_url
+        name=organization_name, dwolla_customer_url=dwolla_customer_url, dwolla_status=dwolla_customer_status
     )
     db.session.add(organization)
     db.session.commit()
 
     roles = ["organization_manager", "contractor_manager"]
     user = user_datastore.create_user(
-        first_name=customer["firstName"],
-        last_name=customer["lastName"],
-        email=customer["email"],
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        phone=phone,
         organization_id=organization.id,
         roles=roles,
         password=hash_password(password),
@@ -103,16 +113,17 @@ def sign_up_contractor():
         201:
             description: Contractor successfully created.
     """
+    first_name = get_request_json(request, "firstName")
+    last_name = get_request_json(request, "lastName")
+    email = get_request_json(request, "email")
+    phone_raw = get_request_json(request, "phone")
+    phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
     password = get_request_json(request, "password")
     manager_reference = get_request_json(request, "manager_reference")
-    customer_url = get_request_json(request, "customer_url")
-
-    customer = payments.get_customer_info(customer_url)
-
-    first_name = customer["firstName"]
-    last_name = customer["lastName"]
-    email = customer["email"]
-
+    dwolla_request = request.get_json()
+    dwolla_request["type"] = "personal"
+    dwolla_customer_url = payments.create_personal_customer(dwolla_request)
+    dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
     roles = ["contractor"]
     manager_id = (
         db.session.query(ManagerInfo.id)
@@ -133,6 +144,7 @@ def sign_up_contractor():
         first_name=first_name,
         last_name=last_name,
         email=email,
+        phone=phone,
         organization_id=organization_id,
         manager_id=manager_id,
         roles=roles,
@@ -141,7 +153,7 @@ def sign_up_contractor():
     db.session.commit()
 
     contractor_info = ContractorInfo(
-        id=user.id, dwolla_customer_url=customer_url, hourly_rate=wage
+        id=user.id, dwolla_customer_url=dwolla_customer_url, hourly_rate=wage, dwolla_status=dwolla_customer_status
     )
     db.session.add(contractor_info)
     db.session.commit()
