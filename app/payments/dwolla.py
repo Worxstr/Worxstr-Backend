@@ -65,6 +65,7 @@ class Dwolla:
             request_body["fees"] = fees
         try:
             transfer = self.app_token.post("transfers", request_body)
+
         except ValidationError as e:
             # TODO: If there is a an error raised while exectued /payments/complete this is added to the response
             return {
@@ -74,6 +75,7 @@ class Dwolla:
                     {"name": "VERIFY_BENEFICIAL_OWNERS", "action_text": "Verify"}
                 ],
             }, 401
+
         transfer_obj = self.get_customer_info(transfer.headers._store["location"][1])
         transfer_obj["_links"]["destination"][
             "additional-information"
@@ -84,9 +86,11 @@ class Dwolla:
         return {"transfer": transfer_obj}
 
     def get_transfers(self, customer_url, limit, offset):
+
         request_body = {"limit": limit, "offset": offset}
         transfers = self.app_token.get("%s/transfers" % customer_url, request_body)
         result = {"transfers": transfers.body["_embedded"]["transfers"]}
+
         for transfer in result["transfers"]:
             transfer["_links"]["destination"][
                 "additional-information"
@@ -94,14 +98,17 @@ class Dwolla:
             transfer["_links"]["source"][
                 "additional-information"
             ] = self.get_customer_info(transfer["_links"]["source"]["href"])
+
         return result
 
     def get_balance(self, customer_url):
         funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
         balance_location = ""
+
         for source in funding_sources.body["_embedded"]["funding-sources"]:
             if source["type"] == "balance":
                 balance_location = source["_links"]["self"]["href"]
+
         balance = self.app_token.get("%s/balance" % balance_location)
         return {"balance": balance.body["balance"], "location": balance_location}
 
