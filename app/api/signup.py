@@ -5,7 +5,7 @@ from flask_security import (
     hash_password,
 )
 
-from app import db, user_datastore
+from app import db, user_datastore, payments
 from app.api import bp
 from app.api.users import manager_reference_generator
 from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
@@ -14,6 +14,7 @@ from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app import payments
 from app.api.sockets import emit_to_users
 
+from dwollav2.error import ValidationError
 from itsdangerous import URLSafeTimedSerializer
 from urllib.parse import quote, urlencode
 
@@ -53,35 +54,64 @@ def sign_up_org():
                     $ref: '#/definitions/User'
     """
 
-    customer_url = get_request_json(request, "customer_url")
+    first_name = get_request_json(request, "firstName")
+    last_name = get_request_json(request, "lastName")
+    email = get_request_json(request, "email")
+    phone_raw = get_request_json(request, "phone")
+    phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
+    business_name = get_request_json(request, "businessName")
     password = get_request_json(request, "password")
-    customer = payments.get_customer_info(customer_url)
 
-    organization_name = customer["businessName"]
-    organization = Organization(
-        name=organization_name, dwolla_customer_url=customer_url
-    )
-    db.session.add(organization)
-    db.session.commit()
+    dwolla_request = request.get_json()
+    dwolla_request["type"] = "business"
 
-    roles = ["organization_manager", "contractor_manager"]
-    user = user_datastore.create_user(
-        first_name=customer["firstName"],
-        last_name=customer["lastName"],
-        email=customer["email"],
-        organization_id=organization.id,
-        roles=roles,
-        password=hash_password(password),
-    )
+    try:
+        dwolla_customer_url = payments.create_business_customer(dwolla_request)
 
-    db.session.commit()
-    manager_reference = ManagerInfo(
-        id=user.id, reference_number=manager_reference_generator()
-    )
-    db.session.add(manager_reference)
-    db.session.commit()
-    send_confirmation_email(user.email, user.first_name)
-    return OK_RESPONSE
+        dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)[
+            "status"
+        ]
+
+        organization_name = business_name
+        organization = Organization(
+            name=organization_name,
+            dwolla_customer_url=dwolla_customer_url,
+            dwolla_customer_status=dwolla_customer_status,
+        )
+        db.session.add(organization)
+        db.session.commit()
+
+        roles = ["organization_manager", "contractor_manager"]
+        user = user_datastore.create_user(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phone=phone,
+            organization_id=organization.id,
+            roles=roles,
+            password=hash_password(password),
+        )
+
+        db.session.commit()
+        manager_reference = ManagerInfo(
+            id=user.id, reference_number=manager_reference_generator()
+        )
+        db.session.add(manager_reference)
+        db.session.commit()
+        send_confirmation_email(user.email, user.first_name)
+        return OK_RESPONSE
+
+    except ValidationError as e:
+
+        # TODO: Error handling is normall done in dwolla.py, but I think error handling is typically done in the route handlers.
+        # TODO: I am not sure though, let's look into it later.
+
+        error = e.body["_embedded"]["errors"][0]
+
+        return {
+            "message": error["message"],
+            "error": error,
+        }, 400
 
 
 @bp.route("/auth/sign-up/contractor", methods=["POST"])
@@ -103,16 +133,17 @@ def sign_up_contractor():
         201:
             description: Contractor successfully created.
     """
+    first_name = get_request_json(request, "firstName")
+    last_name = get_request_json(request, "lastName")
+    email = get_request_json(request, "email")
+    phone_raw = get_request_json(request, "phone")
+    phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
     password = get_request_json(request, "password")
     manager_reference = get_request_json(request, "manager_reference")
-    customer_url = get_request_json(request, "customer_url")
-
-    customer = payments.get_customer_info(customer_url)
-
-    first_name = customer["firstName"]
-    last_name = customer["lastName"]
-    email = customer["email"]
-
+    dwolla_request = request.get_json()
+    dwolla_request["type"] = "personal"
+    dwolla_customer_url = payments.create_personal_customer(dwolla_request)
+    dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
     roles = ["contractor"]
     manager_id = (
         db.session.query(ManagerInfo.id)
@@ -133,6 +164,7 @@ def sign_up_contractor():
         first_name=first_name,
         last_name=last_name,
         email=email,
+        phone=phone,
         organization_id=organization_id,
         manager_id=manager_id,
         roles=roles,
@@ -141,7 +173,10 @@ def sign_up_contractor():
     db.session.commit()
 
     contractor_info = ContractorInfo(
-        id=user.id, dwolla_customer_url=customer_url, hourly_rate=wage
+        id=user.id,
+        dwolla_customer_url=dwolla_customer_url,
+        hourly_rate=wage,
+        dwolla_customer_status=dwolla_customer_status,
     )
     db.session.add(contractor_info)
     db.session.commit()
