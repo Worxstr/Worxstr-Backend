@@ -82,7 +82,14 @@ def edit_organization():
 def retry_organization_payments():
     dwolla_request = request.get_json()
     dwolla_request["type"] = "business"
-    dwolla_request["email"] = db.session.query(User.email).filter(User.organization_id == current_user.organization_id, User.manager_id == None).one()[0]
+    dwolla_request["email"] = (
+        db.session.query(User.email)
+        .filter(
+            User.organization_id == current_user.organization_id,
+            User.manager_id == None,
+        )
+        .one()[0]
+    )
     status = payments.retry_business_customer(dwolla_request)
     db.session.query(Organization).filter(
         Organization.id == current_user.organization_id
