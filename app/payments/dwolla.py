@@ -119,3 +119,11 @@ class Dwolla:
     def create_business_customer(self, request_body):
         customer = self.app_token.post("customers", request_body)
         return customer.headers["location"]
+
+    def retry_personal_customer(self, request_body, customer_url):
+        self.app_token.post(customer_url, request_body)
+        return self.get_customer_info(customer_url)["status"]
+
+    def retry_business_customer(self, request_body, customer_url):
+        self.app_token.post(customer_url, request_body)
+        return self.get_customer_info(customer_url)["status"]
