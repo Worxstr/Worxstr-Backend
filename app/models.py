@@ -215,7 +215,6 @@ class TimeCard(db.Model, CustomSerializerMixin):
 
 
 class ContractorInfo(db.Model, CustomSerializerMixin):
-    serialize_only = ("hourly_rate",)
     __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
     hourly_rate = db.Column(db.Numeric)
