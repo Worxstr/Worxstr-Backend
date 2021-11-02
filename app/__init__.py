@@ -36,7 +36,7 @@ payments = Dwolla(
     app_secret=Config.DWOLLA_APP_SECRET,
     host=Config.DWOLLA_HOST,
     secret=Config.DWOLLA_WEBHOOK_SECRET,
-    url=Config.BASE_URL
+    url=Config.BASE_URL,
 )
 payments_auth = Plaid(
     client_id=Config.PLAID_CLIENT_ID, secret=Config.PLAID_SECRET, host=Config.PLAID_HOST

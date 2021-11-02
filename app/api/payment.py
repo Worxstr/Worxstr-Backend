@@ -25,6 +25,7 @@ def get_manager_user_ids(organization_id):
         .all()
     ]
 
+
 @bp.route("/payments/accounts/status", methods=["POST"])
 def update_account_status():
     topic = get_request_arg(request, "topic")

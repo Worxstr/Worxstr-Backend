@@ -2,6 +2,7 @@ import dwollav2
 from dwollav2.error import ValidationError, NotFoundError
 from functools import wraps
 
+
 def catch_errors(f):
     @wraps(f)
     def inner(*args, **kwargs):
@@ -23,11 +24,10 @@ def catch_errors(f):
                 "error": error,
             }, 400
         except NotFoundError as ex:
-            return {
-                "message": ex.body["message"],
-                "error": ex.body["code"]
-            }
+            return {"message": ex.body["message"], "error": ex.body["code"]}
+
     return inner
+
 
 class Dwolla:
     app_token = None
@@ -37,8 +37,8 @@ class Dwolla:
 
     def __init__(self, app_key, app_secret, host, secret, url):
         self.client = dwollav2.Client(key=app_key, secret=app_secret, environment=host)
-        self.secret=secret
-        self.url=url
+        self.secret = secret
+        self.url = url
         self.refresh_app_token()
         if "localhost" not in self.url:
             self.subscribe_webhooks()
@@ -48,11 +48,11 @@ class Dwolla:
 
     def subscribe_webhooks(self):
         request_body = {
-            'url': 'https://' + self.url + '/webhooks',
-            'secret': self.secret
+            "url": "https://" + self.url + "/webhooks",
+            "secret": self.secret,
         }
-        retries = self.app_token.post('webhook-subscriptions', request_body)
-        retries.body['total']
+        retries = self.app_token.post("webhook-subscriptions", request_body)
+        retries.body["total"]
 
     @catch_errors
     def get_customer_info(self, customer_url):
@@ -137,6 +137,7 @@ class Dwolla:
             ] = self.get_customer_info(transfer["_links"]["source"]["href"])
 
         return result
+
     @catch_errors
     def get_balance(self, customer_url):
         funding_sources = self.app_token.get("%s/funding-sources" % customer_url)

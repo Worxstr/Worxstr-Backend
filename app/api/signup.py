@@ -69,9 +69,7 @@ def sign_up_org():
     if type(dwolla_customer_url) == tuple and "error" in dwolla_customer_url[0]:
         return dwolla_customer_url
 
-    dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)[
-        "status"
-    ]
+    dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
 
     organization_name = business_name
     organization = Organization(
