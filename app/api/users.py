@@ -20,7 +20,6 @@ from app.email import send_email
 from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app.api.sockets import emit_to_users
-from app import payments
 
 
 def get_manager_user_ids(organization_id):
@@ -399,18 +398,3 @@ def list_contractors():
         .all()
     )
     return {"users": [x.to_dict() for x in result]}, 200
-
-
-@bp.route("/users/retry", methods=["PUT"])
-@login_required
-@roles_required("contractor")
-def retry_contractor_payments():
-    dwolla_request = request.get_json()
-    dwolla_request["type"] = "personal"
-    dwolla_request["email"] = current_user.email
-    status = payments.retry_personal_customer(dwolla_request)
-    db.session.query(ContractorInfo).filter(
-        ContractorInfo.id == current_user.id
-    ).update({ContractorInfo.dwolla_customer_status: status})
-    db.session.commit()
-    return current_user.to_dict()
