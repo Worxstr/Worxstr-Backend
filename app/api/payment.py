@@ -30,13 +30,14 @@ def get_manager_user_ids(organization_id):
 def update_account_status():
     topic = get_request_json(request, "topic")
     links = get_request_json(request, "_links")
-    customer_url = links["customer"]["href"]
-    customer = payments.get_customer_info(customer_url)
-    if customer["type"] == "personal":
-        db.session.query(ContractorInfo).filter(
-            ContractorInfo.dwolla_customer_url == customer_url
-        ).update({ContractorInfo.dwolla_customer_status: customer["status"]})
-        db.session.commit()
+    if topic == "customer_verified":
+        customer_url = links["customer"]["href"]
+        customer = payments.get_customer_info(customer_url)
+        if customer["type"] == "personal":
+            db.session.query(ContractorInfo).filter(
+                ContractorInfo.dwolla_customer_url == customer_url
+            ).update({ContractorInfo.dwolla_customer_status: customer["status"]})
+            db.session.commit()
     return OK_RESPONSE
 
 
