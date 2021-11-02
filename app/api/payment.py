@@ -25,6 +25,14 @@ def get_manager_user_ids(organization_id):
         .all()
     ]
 
+@bp.route("/payments/accounts/status", methods=["POST"])
+def update_account_status():
+    topic = get_request_arg(request, "topic")
+    links = get_request_arg(request, "_links")
+    customer_url = links["customer"]
+    customer = payments.get_customer_info(customer_url)
+    return OK_RESPONSE
+
 
 @bp.route("/payments/access", methods=["POST"])
 def access_payment_facilitator():
