@@ -233,7 +233,14 @@ def clock_out():
     calculate_timecard(timecard_info.timecard_id)
 
     payload = timeclock.to_dict()
+    timecard = (
+        db.session.query(TimeCard)
+        .filter(TimeCard.id == timecard_info.id)
+        .one()
+        .to_dict()
+    )
     user_ids = get_manager_user_ids(current_user.organization_id)
+    emit_to_users("ADD_TIMECARD", timecard, user_ids)
     user_ids.append(current_user.id)
     emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
     return payload
