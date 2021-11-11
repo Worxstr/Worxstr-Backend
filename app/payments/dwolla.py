@@ -2,7 +2,7 @@ import dwollav2
 from dwollav2.error import ValidationError, NotFoundError
 from functools import wraps
 
-
+# This function catches all the errors that could ever exist in dwolla. Yay!
 def catch_errors(f):
     @wraps(f)
     def inner(*args, **kwargs):
