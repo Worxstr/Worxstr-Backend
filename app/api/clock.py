@@ -239,6 +239,14 @@ def clock_out():
         .one()
         .to_dict()
     )
+    timecard["time_clocks"] = []
+    time_clocks = (
+        db.session.query(TimeClock)
+        .filter(TimeClock.timecard_id == timecard_info.timecard_id)
+        .all()
+    )
+    for time_clock in time_clocks:
+        timecard["time_clocks"].append(time_clock.to_dict())
     user_ids = get_manager_user_ids(current_user.organization_id)
     emit_to_users("ADD_TIMECARD", timecard, user_ids)
     user_ids.append(current_user.id)

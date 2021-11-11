@@ -202,6 +202,11 @@ class TimeClock(db.Model, CustomSerializerMixin):
 
 
 class TimeCard(db.Model, CustomSerializerMixin):
+    serialize_rules = (
+        "first_name",
+        "last_name",
+    )
+
     __tablename__ = "time_card"
     id = db.Column(db.Integer, primary_key=True)
     total_time = db.Column(db.Numeric)
@@ -212,6 +217,22 @@ class TimeCard(db.Model, CustomSerializerMixin):
     total_payment = db.Column(db.Numeric)
     paid = db.Column(db.Boolean, default=False)
     denied = db.Column(db.Boolean, default=False)
+
+    @hybrid_property
+    def first_name(self):
+        return (
+            db.session.query(User.first_name)
+            .filter(User.id == self.contractor_id)
+            .one()[0]
+        )
+
+    @hybrid_property
+    def last_name(self):
+        return (
+            db.session.query(User.last_name)
+            .filter(User.id == self.contractor_id)
+            .one()[0]
+        )
 
 
 class ContractorInfo(db.Model, CustomSerializerMixin):
