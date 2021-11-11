@@ -235,7 +235,7 @@ def clock_out():
     payload = timeclock.to_dict()
     timecard = (
         db.session.query(TimeCard)
-        .filter(TimeCard.id == timecard_info.id)
+        .filter(TimeCard.id == timecard_info.timecard_id)
         .one()
         .to_dict()
     )
