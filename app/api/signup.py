@@ -65,53 +65,40 @@ def sign_up_org():
     dwolla_request = request.get_json()
     dwolla_request["type"] = "business"
 
-    try:
-        dwolla_customer_url = payments.create_business_customer(dwolla_request)
+    dwolla_customer_url = payments.create_business_customer(dwolla_request)
+    if type(dwolla_customer_url) == tuple and "error" in dwolla_customer_url[0]:
+        return dwolla_customer_url
 
-        dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)[
-            "status"
-        ]
+    dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
 
-        organization_name = business_name
-        organization = Organization(
-            name=organization_name,
-            dwolla_customer_url=dwolla_customer_url,
-            dwolla_customer_status=dwolla_customer_status,
-        )
-        db.session.add(organization)
-        db.session.commit()
+    organization_name = business_name
+    organization = Organization(
+        name=organization_name,
+        dwolla_customer_url=dwolla_customer_url,
+        dwolla_customer_status=dwolla_customer_status,
+    )
+    db.session.add(organization)
+    db.session.commit()
 
-        roles = ["organization_manager", "contractor_manager"]
-        user = user_datastore.create_user(
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            phone=phone,
-            organization_id=organization.id,
-            roles=roles,
-            password=hash_password(password),
-        )
+    roles = ["organization_manager", "contractor_manager"]
+    user = user_datastore.create_user(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        phone=phone,
+        organization_id=organization.id,
+        roles=roles,
+        password=hash_password(password),
+    )
 
-        db.session.commit()
-        manager_reference = ManagerInfo(
-            id=user.id, reference_number=manager_reference_generator()
-        )
-        db.session.add(manager_reference)
-        db.session.commit()
-        send_confirmation_email(user.email, user.first_name)
-        return OK_RESPONSE
-
-    except ValidationError as e:
-
-        # TODO: Error handling is normall done in dwolla.py, but I think error handling is typically done in the route handlers.
-        # TODO: I am not sure though, let's look into it later.
-
-        error = e.body["_embedded"]["errors"][0]
-
-        return {
-            "message": error["message"],
-            "error": error,
-        }, 400
+    db.session.commit()
+    manager_reference = ManagerInfo(
+        id=user.id, reference_number=manager_reference_generator()
+    )
+    db.session.add(manager_reference)
+    db.session.commit()
+    send_confirmation_email(user.email, user.first_name)
+    return OK_RESPONSE
 
 
 @bp.route("/auth/sign-up/contractor", methods=["POST"])

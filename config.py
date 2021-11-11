@@ -91,6 +91,10 @@ class Config(object):
     DWOLLA_APP_KEY = os.environ.get("DWOLLA_APP_KEY")
     DWOLLA_APP_SECRET = os.environ.get("DWOLLA_APP_SECRET")
     DWOLLA_HOST = os.environ.get("DWOLLA_HOST")
+    DWOLLA_WEBHOOK_SECRET = (
+        os.environ.get("DWOLLA_WEBHOOK_SECRET")
+        or "146585145368132386173505678016728509634"
+    )
     PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID")
     PLAID_SECRET = os.environ.get("PLAID_SECRET")
     PLAID_HOST = os.environ.get("PLAID_HOST")

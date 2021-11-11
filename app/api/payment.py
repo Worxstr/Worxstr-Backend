@@ -26,22 +26,24 @@ def get_manager_user_ids(organization_id):
     ]
 
 
+@bp.route("/payments/accounts/status", methods=["POST"])
+def update_account_status():
+    topic = get_request_json(request, "topic")
+    links = get_request_json(request, "_links")
+    if topic == "customer_verified":
+        customer_url = links["customer"]["href"]
+        customer = payments.get_customer_info(customer_url)
+        if customer["type"] == "personal":
+            db.session.query(ContractorInfo).filter(
+                ContractorInfo.dwolla_customer_url == customer_url
+            ).update({ContractorInfo.dwolla_customer_status: customer["status"]})
+            db.session.commit()
+    return OK_RESPONSE
+
+
 @bp.route("/payments/access", methods=["POST"])
 def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
-
-
-@bp.route("/payments/dwolla/customers/me", methods=["GET"])
-@login_required
-def get_user_info():
-    customer_url = current_user.dwolla_customer_url
-    return payments.get_customer_info(customer_url)
-
-
-@bp.route("/payments/dwolla/customers/email", methods=["GET"])
-def get_dwolla_customer():
-    customer = payments.get_customer_info(request.args.get("customer_id"))
-    return {"email": customer["email"]}
 
 
 @bp.route("/payments/transfers", methods=["GET"])
