@@ -47,6 +47,12 @@ class Dwolla:
         self.app_token = self.client.Auth.client()
 
     def subscribe_webhooks(self):
+        webhook_subscriptions = self.app_token.get('webhook-subscriptions')
+        if webhook_subscriptions.body['total'] > 0:
+            for webhook in webhook_subscriptions.body['_embedded']['webhook-subscriptions']:
+                url = webhook['_links']['self']['href']
+                test = self.app_token.delete(url)
+
         request_body = {
             "url": "https://" + self.url + "/webhooks",
             "secret": self.secret,
