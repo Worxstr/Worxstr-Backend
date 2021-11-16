@@ -30,7 +30,7 @@ def get_manager_user_ids(organization_id):
 def update_account_status():
     topic = get_request_json(request, "topic")
     links = get_request_json(request, "_links")
-    if topic == "customer_verified":
+    if topic == "customer_verified" or topic == "customer_verification_document_needed" or topic == "customer_reverification_needed" or topic == "customer_suspended":
         customer_url = links["customer"]["href"]
         customer = payments.get_customer_info(customer_url)
         if customer["type"] == "personal":
