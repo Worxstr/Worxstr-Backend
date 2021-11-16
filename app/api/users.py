@@ -408,7 +408,14 @@ def retry_contractor_payments():
     dwolla_request = request.get_json()
     dwolla_request["type"] = "personal"
     dwolla_request["email"] = current_user.email
-    status = payments.retry_personal_customer(dwolla_request)
+    contractor_info = (
+        db.session.query(ContractorInfo)
+        .filter(ContractorInfo.id == current_user.id)
+        .one()
+    )
+    status = payments.retry_personal_customer(
+        dwolla_request, contractor_info.dwolla_customer_url
+    )
     db.session.query(ContractorInfo).filter(
         ContractorInfo.id == current_user.id
     ).update({ContractorInfo.dwolla_customer_status: status})
