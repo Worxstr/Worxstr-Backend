@@ -406,8 +406,8 @@ def list_contractors():
 @roles_required("contractor")
 def retry_contractor_payments():
     dwolla_request = request.get_json()
-    first_name = get_request_json(request, "first_name")
-    last_name = get_request_json(request, "last_name")
+    first_name = get_request_json(request, "firstName")
+    last_name = get_request_json(request, "lastName")
     dwolla_request["type"] = "personal"
     dwolla_request["email"] = current_user.email
     contractor_info = (
