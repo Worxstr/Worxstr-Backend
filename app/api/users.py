@@ -406,6 +406,8 @@ def list_contractors():
 @roles_required("contractor")
 def retry_contractor_payments():
     dwolla_request = request.get_json()
+    first_name = get_request_json(request, "first_name")
+    last_name = get_request_json(request, "last_name")
     dwolla_request["type"] = "personal"
     dwolla_request["email"] = current_user.email
     contractor_info = (
@@ -416,8 +418,21 @@ def retry_contractor_payments():
     status = payments.retry_personal_customer(
         dwolla_request, contractor_info.dwolla_customer_url
     )
+    db.session.query(User).filter(User.id == current_user.id).update(
+        {User.first_name: first_name, User.last_name: last_name}
+    )
     db.session.query(ContractorInfo).filter(
         ContractorInfo.id == current_user.id
     ).update({ContractorInfo.dwolla_customer_status: status})
     db.session.commit()
+
+    contractor_info = (
+        db.session.query(ContractorInfo)
+        .filter(ContractorInfo.id == current_user.id)
+        .one()
+        .to_dict()
+    )
+    result = db.session.query(User).filter(User.id == current_user.id).one().to_dict()
+    result["contractor_info"] = contractor_info
+
     return current_user.to_dict()
