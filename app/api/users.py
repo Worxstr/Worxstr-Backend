@@ -432,7 +432,7 @@ def retry_contractor_payments():
         .one()
         .to_dict()
     )
-    result = db.session.query(User).filter(User.id == current_user.id).one().to_dict()
+    result = current_user.to_dict()
     result["contractor_info"] = contractor_info
 
-    return current_user.to_dict()
+    return result

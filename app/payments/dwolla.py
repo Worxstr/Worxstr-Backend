@@ -55,7 +55,7 @@ class Dwolla:
                 self.app_token.delete(webhook["_links"]["self"]["href"])
 
         request_body = {
-            "url": "https://" + self.url + "/webhooks",
+            "url": "https://" + self.url + "/payments/accounts/status",
             "secret": self.secret,
         }
         self.app_token.post("webhook-subscriptions", request_body)
