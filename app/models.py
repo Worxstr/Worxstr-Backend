@@ -53,6 +53,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "roles",
         "direct",
         "fs_uniquifier",
+        "additional_info",
     )
     serialize_rules = ()
 
@@ -99,6 +100,21 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
             return int(current_user.id) == self.manager_id
         else:
             return None
+
+    @hybrid_property
+    def additional_info(self):
+        additional_info = None
+        if self.has_role("contractor"):
+            additional_info = (
+                db.session.query(ContractorInfo)
+                .filter(ContractorInfo.id == self.id)
+                .one()
+            )
+        else:
+            additional_info = (
+                db.session.query(ManagerInfo).filter(ManagerInfo.id == self.id).one()
+            )
+        return additional_info
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):
