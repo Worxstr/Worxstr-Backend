@@ -1,0 +1,1 @@
+web: gunicorn --bind :8000 --worker-class eventlet --workers 1 --threads 15 application:application

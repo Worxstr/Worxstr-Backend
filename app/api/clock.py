@@ -5,6 +5,7 @@ from flask_security import login_required, current_user, roles_accepted, roles_r
 
 from app import db
 from app.api import bp
+from app.api.sockets import emit_to_users
 from app.models import (
     Job,
     ScheduleShift,
@@ -13,8 +14,24 @@ from app.models import (
     TimeCard,
     User,
     ContractorInfo,
+    Role,
 )
 from app.utils import get_request_arg, get_request_json
+
+
+def get_manager_user_ids(organization_id):
+    # Get the ids of managers within the current organization
+    return [
+        r[0]
+        for r in db.session.query(User.id)
+        .filter(
+            User.organization_id == organization_id,
+            User.roles.any(
+                Role.name.in_(["contractor_manager", "organization_manager"])
+            ),
+        )
+        .all()
+    ]
 
 
 @bp.route("/clock/history", methods=["GET"])
@@ -40,7 +57,7 @@ def clock_history():
     # ? Week offset should begin at 0. There is probably a better way to write this
     week_offset = int(get_request_arg(request, "week_offset") or 0) + 1
     today = datetime.datetime.combine(
-        datetime.date.today(), datetime.datetime.max.time()
+        datetime.datetime.utcnow().date(), datetime.datetime.max.time()
     )
     num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
     num_weeks_end = today - datetime.timedelta(weeks=int(week_offset) - 1)
@@ -127,16 +144,30 @@ def clock_in():
     """
     shift_id = get_request_arg(request, "shift_id")
     code = str(get_request_json(request, "code"))
-
-    correct_code = (
-        db.session.query(Job.consultant_code)
+    job = (
+        db.session.query(Job)
         .join(ScheduleShift)
         .filter(ScheduleShift.id == shift_id)
         .one()
     )
+    correct_code = job.consultant_code
 
-    if code != correct_code[0]:
-        abort(401, "Unauthorized")
+    if code != correct_code:
+        return {"message": "Invalid clock-in code."}, 401
+
+    timeclock_state = (
+        db.session.query(TimeClock.action)
+        .filter(TimeClock.contractor_id == current_user.id)
+        .order_by(TimeClock.time.desc())
+        .first()
+    )
+    if timeclock_state != None:
+        if (
+            timeclock_state[0] == TimeClockAction.clock_in
+            or timeclock_state[0] == TimeClockAction.start_break
+            or timeclock_state[0] == TimeClockAction.end_break
+        ):
+            return {"message": "User is currently clocked in"}, 409
 
     time_in = datetime.datetime.utcnow()
 
@@ -151,11 +182,18 @@ def clock_in():
         contractor_id=current_user.id,
         action=TimeClockAction.clock_in,
         timecard_id=timecard.id,
+        shift_id=shift_id,
+        job_id=job.id,
     )
 
     db.session.add(timeclock)
     db.session.commit()
-    return {"event": timeclock.to_dict()}
+
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 @bp.route("/clock/clock-out", methods=["POST"])
@@ -172,23 +210,48 @@ def clock_out():
                 $ref: '#/definitions/TimeClock'
     """
     time_out = datetime.datetime.utcnow()
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info.action == TimeClockAction.clock_out:
+        return {"message": "Already clocked out"}, 409
+
     timeclock = TimeClock(
         time=time_out,
-        timecard_id=timecard_id,
+        timecard_id=timecard_info.timecard_id,
         contractor_id=current_user.id,
         action=TimeClockAction.clock_out,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
     )
     db.session.add(timeclock)
     db.session.commit()
-    calculate_timecard(timecard_id)
-    result = timeclock.to_dict()
-    return {"event": result}
+    calculate_timecard(timecard_info.timecard_id)
+
+    payload = timeclock.to_dict()
+    timecard = (
+        db.session.query(TimeCard)
+        .filter(TimeCard.id == timecard_info.timecard_id)
+        .one()
+        .to_dict()
+    )
+    timecard["time_clocks"] = []
+    time_clocks = (
+        db.session.query(TimeClock)
+        .filter(TimeClock.timecard_id == timecard_info.timecard_id)
+        .all()
+    )
+    for time_clock in time_clocks:
+        timecard["time_clocks"].append(time_clock.to_dict())
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    emit_to_users("ADD_TIMECARD", timecard, user_ids)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 @bp.route("/clock/start-break", methods=["POST"])
@@ -202,22 +265,34 @@ def start_break():
             schema:
                 $ref: '#/definitions/TimeClock'
     """
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info.action == TimeClockAction.start_break:
+        return {"message": "Already on break"}, 409
+    if timecard_info.action == TimeClockAction.clock_out:
+        return {"message": "Not currently clocked in"}, 409
+
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
-        timecard_id=timecard_id,
+        timecard_id=timecard_info.timecard_id,
         contractor_id=current_user.id,
         action=TimeClockAction.start_break,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
     )
     db.session.add(timeclock)
     db.session.commit()
 
-    return {"data": timeclock.to_dict()}
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 @bp.route("/clock/end-break", methods=["POST"])
@@ -231,22 +306,34 @@ def end_break():
             schema:
                 $ref: '#/definitions/TimeClock'
     """
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
+    timecard_info = (
+        db.session.query(TimeClock)
         .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info.action == TimeClockAction.end_break:
+        return {"message": "Not currently on break"}, 409
+    if timecard_info.action == TimeClockAction.clock_out:
+        return {"message": "Not currently clocked in"}, 409
+
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
-        timecard_id=timecard_id,
+        timecard_id=timecard_info.timecard_id,
         contractor_id=current_user.id,
         action=TimeClockAction.end_break,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
     )
     db.session.add(timeclock)
     db.session.commit()
 
-    return {"data": timeclock.to_dict()}
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 def calculate_timecard(timecard_id):
@@ -285,7 +372,7 @@ def calculate_timecard(timecard_id):
         .one()
     )
     wage = round(float(rate[0]) * total_time_hours, 2)
-    transaction_fees = round(wage * 0.025, 2)
+    transaction_fees = round(wage * 0.02, 2)
     total_payment = wage + transaction_fees
     # TODO: Does this need to be an iter? Can we iterate over it as a list?
     breaks = iter(

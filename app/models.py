@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from flask_security import UserMixin, RoleMixin, current_user
+from sqlalchemy.sql.expression import null
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
@@ -17,6 +18,12 @@ class RolesUsers(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     user_id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"))
     role_id = db.Column("role_id", db.Integer(), db.ForeignKey("role.id"))
+
+
+class Sessions(db.Model):
+    __tablename__ = "sessions"
+    user_id = db.Column(db.Integer(), db.ForeignKey("user.id"))
+    session_id = db.Column(db.String(50), primary_key=True)
 
 
 class Role(db.Model, RoleMixin, CustomSerializerMixin):
@@ -44,6 +51,9 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "manager_id",
         "dwolla_customer_url",
         "roles",
+        "direct",
+        "fs_uniquifier",
+        "additional_info",
     )
     serialize_rules = ()
 
@@ -84,6 +94,28 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
             )
         return customer_url
 
+    @hybrid_property
+    def direct(self):
+        if current_user.is_authenticated:
+            return int(current_user.id) == self.manager_id
+        else:
+            return None
+
+    @hybrid_property
+    def additional_info(self):
+        additional_info = None
+        if self.has_role("contractor"):
+            additional_info = (
+                db.session.query(ContractorInfo)
+                .filter(ContractorInfo.id == self.id)
+                .one()
+            )
+        else:
+            additional_info = (
+                db.session.query(ManagerInfo).filter(ManagerInfo.id == self.id).one()
+            )
+        return additional_info
+
 
 class ManagerInfo(db.Model, CustomSerializerMixin):
     serialize_only = ("reference_number",)
@@ -97,6 +129,8 @@ class Organization(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     dwolla_customer_url = db.Column(db.String(255))
+    dwolla_customer_status = db.Column(db.String(10))
+    minimum_wage = db.Column(db.Numeric, nullable=False, default=7.5)
 
     def __repr__(self):
         return "<Organization {}>".format(self.name)
@@ -178,10 +212,17 @@ class TimeClock(db.Model, CustomSerializerMixin):
     time = db.Column(db.DateTime)
     action = db.Column(db.Enum(TimeClockAction))
     timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
+    job_id = db.Column(db.Integer, db.ForeignKey("job.id"))
+    shift_id = db.Column(db.Integer, db.ForeignKey("schedule_shift.id"))
     contractor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
 
 class TimeCard(db.Model, CustomSerializerMixin):
+    serialize_rules = (
+        "first_name",
+        "last_name",
+    )
+
     __tablename__ = "time_card"
     id = db.Column(db.Integer, primary_key=True)
     total_time = db.Column(db.Numeric)
@@ -193,13 +234,29 @@ class TimeCard(db.Model, CustomSerializerMixin):
     paid = db.Column(db.Boolean, default=False)
     denied = db.Column(db.Boolean, default=False)
 
+    @hybrid_property
+    def first_name(self):
+        return (
+            db.session.query(User.first_name)
+            .filter(User.id == self.contractor_id)
+            .one()[0]
+        )
+
+    @hybrid_property
+    def last_name(self):
+        return (
+            db.session.query(User.last_name)
+            .filter(User.id == self.contractor_id)
+            .one()[0]
+        )
+
 
 class ContractorInfo(db.Model, CustomSerializerMixin):
-    serialize_only = ("hourly_rate",)
     __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
     hourly_rate = db.Column(db.Numeric)
     dwolla_customer_url = db.Column(db.String(255))
+    dwolla_customer_status = db.Column(db.String(10))
 
 
 class Message(db.Model, CustomSerializerMixin):

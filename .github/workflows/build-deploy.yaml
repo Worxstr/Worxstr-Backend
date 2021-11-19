@@ -9,6 +9,7 @@ on:
 env:
   DWOLLA_APP_KEY: ${{ secrets.DWOLLA_SANDBOX_KEY }}
   DWOLLA_APP_SECRET: ${{ secrets.DWOLLA_SANDBOX_SECRET }}
+  DWOLLA_HOST: "sandbox"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -72,7 +73,7 @@ jobs:
           if [[ "$BRANCH" == "refs/heads/main" ]]; then
             echo "DEPLOY_ENV=worxstr-backend-prod-env" >> $GITHUB_ENV
           elif [[ "$BRANCH" == "refs/heads/dev" ]]; then
-            echo "DEPLOY_ENV=worxstr-backend-dev-env" >> $GITHUB_ENV
+            echo "DEPLOY_ENV=worxstr-backend-dev2-env" >> $GITHUB_ENV
           else
             echo "DEPLOY_ENV=worxstr-backend-qa-env" >> $GITHUB_ENV
           fi
