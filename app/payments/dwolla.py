@@ -19,6 +19,11 @@ def catch_errors(f):
                         {"name": "VERIFY_BENEFICIAL_OWNERS", "action_text": "Verify"}
                     ],
                 }, 401
+            if error["code"] == "Duplicate":
+                return {
+                    "message": "That email is already in use.",
+                    "error": error,
+                }, 401
             return {
                 "message": error["message"],
                 "error": error,

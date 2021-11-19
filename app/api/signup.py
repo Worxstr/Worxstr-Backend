@@ -66,6 +66,8 @@ def sign_up_org():
     dwolla_request["type"] = "business"
 
     dwolla_customer_url = payments.create_business_customer(dwolla_request)
+    if type(dwolla_customer_url) == tuple:
+        return dwolla_customer_url
     if type(dwolla_customer_url) == tuple and "error" in dwolla_customer_url[0]:
         return dwolla_customer_url
 
@@ -130,6 +132,8 @@ def sign_up_contractor():
     dwolla_request = request.get_json()
     dwolla_request["type"] = "personal"
     dwolla_customer_url = payments.create_personal_customer(dwolla_request)
+    if type(dwolla_customer_url) == tuple:
+        return dwolla_customer_url
     dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
     roles = ["contractor"]
     manager_id = (
