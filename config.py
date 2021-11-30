@@ -17,6 +17,12 @@ class Config(object):
         "SQLALCHEMY_DATABASE_URL"
     ) or "sqlite:///" + os.path.join(basedir, "app.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "max_overflow": 15,
+        "pool_pre_ping": True,
+        "pool_recycle": 60 * 60,
+        "pool_size": 30,
+    }
 
     # Mail Server config
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
