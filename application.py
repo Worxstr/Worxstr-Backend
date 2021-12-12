@@ -2,8 +2,10 @@ from app import create_app, db, cli, socketio
 from app.models import Role, User, Job, TimeClock, ScheduleShift
 import atexit
 
+
 def OnExitApp(db):
     db.session.remove()
+
 
 application = create_app()
 cli.register(application)
