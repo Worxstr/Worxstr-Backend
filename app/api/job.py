@@ -249,6 +249,7 @@ def add_job():
         consultant_code=str(randint(000000, 999999)),
         color=get_request_json(request, "color"),
         radius=get_request_json(request, "radius"),
+        notes=get_request_json(request, "notes", optional=True),
     )
     db.session.add(job)
     db.session.commit()
@@ -495,6 +496,8 @@ def edit_job(job_id):
                 Job.consultant_email: get_request_json(request, "consultant_email"),
                 Job.color: get_request_json(request, "color"),
                 Job.radius: get_request_json(request, "radius"),
+                Job.notes: get_request_json(request, "notes", optional=True)
+                or Job.notes,
             }
         )
 

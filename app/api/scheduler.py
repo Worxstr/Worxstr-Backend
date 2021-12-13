@@ -2,10 +2,11 @@ import datetime
 
 from flask import abort, request
 from flask_security import current_user, login_required, roles_accepted
+from sqlalchemy.sql.expression import desc
 
 from app import db
 from app.api import bp
-from app.models import ScheduleShift, User, Organization, Job
+from app.models import ScheduleShift, ShiftTask, User, Organization, Job
 from app.scheduler import add_shift
 from app.users import get_users_list
 from app.utils import get_request_arg, get_request_json, get_key, OK_RESPONSE
@@ -114,6 +115,7 @@ def shifts():
     time_end = get_request_json(request, "time_end")
     site_locations = get_request_json(request, "site_locations")
     contractor_ids = get_request_json(request, "contractor_ids")
+    notes = get_request_json(request, "notes", optional=True)
 
     if len(site_locations) != len(contractor_ids):
         return {
@@ -129,6 +131,7 @@ def shifts():
                 time_end,
                 site_location=s,
                 contractor_id=e,
+                notes=notes,
             )
         )
 
@@ -197,6 +200,7 @@ def update_shift(shift_id):
             ScheduleShift.time_end: shift.get("time_end"),
             ScheduleShift.site_location: shift.get("site_location"),
             ScheduleShift.contractor_id: shift.get("contractor_id"),
+            ScheduleShift.notes: shift.get("notes") or ScheduleShift.notes,
         }
     )
 
@@ -227,6 +231,7 @@ def delete_shift(shift_id):
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
     job_id = shift.job_id
     contractor_id = shift.contractor_id
+    db.session.query(ShiftTask).filter(ShiftTask.shift_id == shift_id).delete()
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
     db.session.commit()
 
@@ -268,3 +273,59 @@ def get_next_shift(id=None):
         .first()
     )
     return {"shift": result.to_dict() if result else None}
+
+
+@bp.route("/shifts/<shift_id>", methods=["GET"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def get_shift_id(shift_id):
+    result = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+    return result.to_dict()
+
+
+@bp.route("/shifts/<shift_id>/tasks", methods=["POST"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def add_shift_task(shift_id):
+    title = get_request_json(request, "title")
+    description = get_request_json(request, "description", optional=True)
+    task = ShiftTask(
+        shift_id=shift_id,
+        description=description,
+        title=title,
+    )
+
+    db.session.add(task)
+    db.session.commit()
+    return task.to_dict()
+
+
+@bp.route("/tasks/<task_id>", methods=["PUT"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def edit_shift_task(task_id):
+    title = get_request_json(request, "title", optional=True)
+    description = get_request_json(request, "description", optional=True)
+    db.session.query(ShiftTask).filter(ShiftTask.id == task_id).update(
+        {
+            ShiftTask.title: title or ShiftTask.title,
+            ShiftTask.description: description or ShiftTask.description,
+        }
+    )
+    db.session.commit()
+    result = db.session.query(ShiftTask).filter(ShiftTask.id == task_id).one()
+    return result.to_dict()
+
+
+@bp.route("/tasks/<task_id>/complete", methods=["PUT"])
+@login_required
+def complete_task(task_id):
+    db.session.query(ShiftTask).filter(ShiftTask.id == task_id).update(
+        {
+            ShiftTask.complete: True,
+            ShiftTask.time_complete: datetime.datetime.utcnow(),
+        }
+    )
+    db.session.commit()
+    result = db.session.query(ShiftTask).filter(ShiftTask.id == task_id).one()
+    return result.to_dict()

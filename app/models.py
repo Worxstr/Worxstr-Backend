@@ -159,6 +159,7 @@ class Job(db.Model, CustomSerializerMixin):
     color = db.Column(db.String(7))
     radius = db.Column(db.Integer)
     active = db.Column(db.Boolean, default=True)
+    notes = db.Column(db.String())
 
     def __repr__(self):
         return "<Job {}>".format(self.name)
@@ -180,6 +181,8 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
     contractor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     site_location = db.Column(db.String(255))
     timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
+    tasks = db.relationship("ShiftTask")
+    notes = db.Column(db.String())
 
     def from_request(request):
         shift = get_request_json(request, "shift")
@@ -197,6 +200,16 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
             site_location=site_location,
             contractor_id=contractor_id,
         )
+
+
+class ShiftTask(db.Model, CustomSerializerMixin):
+    __tablename__ = "shift_task"
+    id = db.Column(db.Integer, primary_key=True)
+    shift_id = db.Column(db.Integer, db.ForeignKey("schedule_shift.id"))
+    complete = db.Column(db.Boolean, default=False)
+    time_complete = db.Column(db.DateTime())
+    description = db.Column(db.String())
+    title = db.Column(db.String(255))
 
 
 class TimeClockAction(Enum):
@@ -257,6 +270,7 @@ class ContractorInfo(db.Model, CustomSerializerMixin):
     hourly_rate = db.Column(db.Numeric)
     dwolla_customer_url = db.Column(db.String(255))
     dwolla_customer_status = db.Column(db.String(10))
+    color = db.Column(db.String(7))
 
 
 class Message(db.Model, CustomSerializerMixin):
