@@ -218,11 +218,11 @@ def update_shift(shift_id):
     task_ids = (
         db.session.query(ShiftTask.id).filter(ShiftTask.shift_id == shift_id).all()
     )
-    x=0
+    x = 0
     for i in task_ids:
         task_ids[x] = i[0]
         x += 1
-    
+
     for task in shift["tasks"]:
         if "id" in task:
             task_ids.delete(task["id"])
@@ -239,7 +239,9 @@ def update_shift(shift_id):
                 title=task["title"],
             )
             db.session.add(t)
-    db.session.query(ShiftTask).filter(ShiftTask.id.in_(task_ids)).delete(synchronize_session='fetch')
+    db.session.query(ShiftTask).filter(ShiftTask.id.in_(task_ids)).delete(
+        synchronize_session="fetch"
+    )
     db.session.commit()
 
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
