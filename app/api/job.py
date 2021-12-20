@@ -265,7 +265,6 @@ def add_job():
 
 @bp.route("/jobs/<job_id>", methods=["GET"])
 @login_required
-@roles_accepted("contractor_manager", "organization_manager")
 def job_detail(job_id):
     """
     Get details about a job, by ID.
