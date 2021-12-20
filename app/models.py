@@ -207,7 +207,7 @@ class ShiftTask(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     shift_id = db.Column(db.Integer, db.ForeignKey("schedule_shift.id"))
     complete = db.Column(db.Boolean, default=False)
-    time_complete = db.Column(db.DateTime())
+    last_updated = db.Column(db.DateTime())
     description = db.Column(db.String())
     title = db.Column(db.String(255))
 

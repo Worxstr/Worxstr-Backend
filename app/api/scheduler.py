@@ -286,18 +286,19 @@ def get_shift_id(shift_id):
 @bp.route("/shifts/<shift_id>/tasks", methods=["POST"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
-def add_shift_task(shift_id):
-    title = get_request_json(request, "title")
-    description = get_request_json(request, "description", optional=True)
-    task = ShiftTask(
-        shift_id=shift_id,
-        description=description,
-        title=title,
-    )
-
-    db.session.add(task)
+def add_shift_tasks(shift_id):
+    tasks = get_request_json(request, "tasks")
+    result = []
+    for task in tasks:
+        t = ShiftTask(
+            shift_id=shift_id,
+            description=task["description"],
+            title=task["title"],
+        )
+        db.session.add(t)
+        result.append(t.to_dict())
     db.session.commit()
-    return task.to_dict()
+    return result
 
 
 @bp.route("/tasks/<task_id>", methods=["PUT"])
@@ -316,14 +317,24 @@ def edit_shift_task(task_id):
     result = db.session.query(ShiftTask).filter(ShiftTask.id == task_id).one()
     return result.to_dict()
 
+@bp.route("/tasks/<task_id>", methods=["DELETE"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def delete_shift_task(task_id):
+    db.session.query(ShiftTask).filter(ShiftTask.id == task_id).delete()
+    db.session.commit()
+    return OK_RESPONSE
+
+
 
 @bp.route("/tasks/<task_id>/complete", methods=["PUT"])
 @login_required
 def complete_task(task_id):
+    completed = get_request_json(request, "completed")
     db.session.query(ShiftTask).filter(ShiftTask.id == task_id).update(
         {
-            ShiftTask.complete: True,
-            ShiftTask.time_complete: datetime.datetime.utcnow(),
+            ShiftTask.complete: completed,
+            ShiftTask.last_updated: datetime.datetime.utcnow(),
         }
     )
     db.session.commit()
