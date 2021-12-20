@@ -116,6 +116,7 @@ def shifts():
     site_locations = get_request_json(request, "site_locations")
     contractor_ids = get_request_json(request, "contractor_ids")
     notes = get_request_json(request, "notes", optional=True)
+    tasks = get_request_json(request, "tasks", optional=True)
 
     if len(site_locations) != len(contractor_ids):
         return {
@@ -136,6 +137,16 @@ def shifts():
         )
 
     contractors = get_users_list(contractor_ids)
+
+    for s in shifts:
+        for tas in tasks:
+            t = ShiftTask(
+                shift_id=s.id,
+                description=tas["description"],
+                title=tas["title"],
+            )
+            db.session.add(t)
+    db.session.commit()
 
     # Add contractor objects to the results
     for s in shifts:
@@ -204,6 +215,31 @@ def update_shift(shift_id):
         }
     )
 
+    task_ids = (
+        db.session.query(ShiftTask.id).filter(ShiftTask.shift_id == shift_id).all()
+    )
+    x=0
+    for i in task_ids:
+        task_ids[x] = i[0]
+        x += 1
+    
+    for task in shift["tasks"]:
+        if "id" in task:
+            task_ids.delete(task["id"])
+            db.session.query(ShiftTask).filter(ShiftTask.id == task["id"]).update(
+                {
+                    ShiftTask.title: task["title"] or ShiftTask.title,
+                    ShiftTask.description: task["description"] or ShiftTask.description,
+                }
+            )
+        else:
+            t = ShiftTask(
+                shift_id=shift_id,
+                description=task["description"],
+                title=task["title"],
+            )
+            db.session.add(t)
+    db.session.query(ShiftTask).filter(ShiftTask.id.in_(task_ids)).delete(synchronize_session='fetch')
     db.session.commit()
 
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
@@ -317,6 +353,7 @@ def edit_shift_task(task_id):
     result = db.session.query(ShiftTask).filter(ShiftTask.id == task_id).one()
     return result.to_dict()
 
+
 @bp.route("/tasks/<task_id>", methods=["DELETE"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
@@ -324,7 +361,6 @@ def delete_shift_task(task_id):
     db.session.query(ShiftTask).filter(ShiftTask.id == task_id).delete()
     db.session.commit()
     return OK_RESPONSE
-
 
 
 @bp.route("/tasks/<task_id>/complete", methods=["PUT"])
