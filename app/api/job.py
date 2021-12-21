@@ -357,7 +357,9 @@ def job_detail(job_id):
         shifts.append(shift)
 
     job["shifts"] = shifts
-    if current_user.has_role("organization_manager") or current_user.has_role("contractor_manager"):
+    if current_user.has_role("organization_manager") or current_user.has_role(
+        "contractor_manager"
+    ):
         job["managers"] = get_managers()
     job["contractors"] = []
     if current_user.has_role("contractor"):

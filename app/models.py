@@ -171,6 +171,11 @@ class Job(db.Model, CustomSerializerMixin):
             or int(current_user.id) == self.organization_manager_id
         )
 
+class TimeClockAction(Enum):
+    clock_in = 1
+    clock_out = 2
+    start_break = 3
+    end_break = 4
 
 class ScheduleShift(db.Model, CustomSerializerMixin):
     __tablename__ = "schedule_shift"
@@ -183,6 +188,8 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
     timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
     tasks = db.relationship("ShiftTask")
     notes = db.Column(db.String())
+    clock_history = db.relationship("TimeClock")
+    clock_state = db.Column(db.Enum(TimeClockAction))
 
     def from_request(request):
         shift = get_request_json(request, "shift")
@@ -210,13 +217,6 @@ class ShiftTask(db.Model, CustomSerializerMixin):
     last_updated = db.Column(db.DateTime())
     description = db.Column(db.String())
     title = db.Column(db.String(255))
-
-
-class TimeClockAction(Enum):
-    clock_in = 1
-    clock_out = 2
-    start_break = 3
-    end_break = 4
 
 
 class TimeClock(db.Model, CustomSerializerMixin):
