@@ -171,11 +171,13 @@ class Job(db.Model, CustomSerializerMixin):
             or int(current_user.id) == self.organization_manager_id
         )
 
+
 class TimeClockAction(Enum):
     clock_in = 1
     clock_out = 2
     start_break = 3
     end_break = 4
+
 
 class ScheduleShift(db.Model, CustomSerializerMixin):
     __tablename__ = "schedule_shift"
