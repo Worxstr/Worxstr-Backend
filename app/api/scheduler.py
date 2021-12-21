@@ -24,6 +24,30 @@ def get_organization_user_ids(job_id):
     ]
 
 
+@bp.route("/shifts", methods=["GET"])
+@login_required
+@roles_accepted("contractor")
+def get_shifts():
+    week_offset = int(get_request_arg(request, "week_offset") or 0) + 1
+    today = datetime.datetime.combine(
+        datetime.datetime.utcnow().date(), datetime.datetime.max.time()
+    )
+    num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
+    num_weeks_end = today - datetime.timedelta(weeks=int(week_offset) - 1)
+    shifts = (
+        db.session.query(ScheduleShift)
+        .filter(
+            ScheduleShift.time_end > num_weeks_begin,
+            ScheduleShift.time_end < num_weeks_end,
+            ScheduleShift.contractor_id == current_user.id,
+        )
+        .order_by(ScheduleShift.time_end.desc())
+        .all()
+    )
+
+    return {"shifts": [i.to_dict() for i in shifts]}
+
+
 @bp.route("/shifts", methods=["POST"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
