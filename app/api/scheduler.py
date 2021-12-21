@@ -315,7 +315,6 @@ def get_next_shift(id=None):
 
 @bp.route("/shifts/<shift_id>", methods=["GET"])
 @login_required
-@roles_accepted("organization_manager", "contractor_manager")
 def get_shift_id(shift_id):
     result = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
     return result.to_dict()
