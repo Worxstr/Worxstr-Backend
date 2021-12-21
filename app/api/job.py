@@ -279,24 +279,50 @@ def job_detail(job_id):
             description: Job details.
     """
     job = db.session.query(Job).filter(Job.id == job_id).one().to_dict()
-    # Collect all the current and future shifts for a job
-    scheduled_shifts = (
-        db.session.query(ScheduleShift)
-        .filter(
-            ScheduleShift.job_id == job["id"],
-            ScheduleShift.time_begin > datetime.utcnow(),
+
+    if current_user.has_role("contractor"):
+        del job["consultant_code"]
+
+    if current_user.has_role("contractor"):
+        # Collect all the current and future shifts for a job
+        scheduled_shifts = (
+            db.session.query(ScheduleShift)
+            .filter(
+                ScheduleShift.contractor_id == current_user.id,
+                ScheduleShift.job_id == job["id"],
+                ScheduleShift.time_begin > datetime.utcnow(),
+            )
+            .all()
         )
-        .all()
-    )
-    active_shifts = (
-        db.session.query(ScheduleShift)
-        .filter(
-            ScheduleShift.job_id == job["id"],
-            ScheduleShift.time_begin <= datetime.utcnow(),
-            ScheduleShift.time_end >= datetime.utcnow(),
+        active_shifts = (
+            db.session.query(ScheduleShift)
+            .filter(
+                ScheduleShift.contractor_id == current_user.id,
+                ScheduleShift.job_id == job["id"],
+                ScheduleShift.time_begin <= datetime.utcnow(),
+                ScheduleShift.time_end >= datetime.utcnow(),
+            )
+            .all()
         )
-        .all()
-    )
+    else:
+        # Collect all the current and future shifts for a job
+        scheduled_shifts = (
+            db.session.query(ScheduleShift)
+            .filter(
+                ScheduleShift.job_id == job["id"],
+                ScheduleShift.time_begin > datetime.utcnow(),
+            )
+            .all()
+        )
+        active_shifts = (
+            db.session.query(ScheduleShift)
+            .filter(
+                ScheduleShift.job_id == job["id"],
+                ScheduleShift.time_begin <= datetime.utcnow(),
+                ScheduleShift.time_end >= datetime.utcnow(),
+            )
+            .all()
+        )
 
     shifts = []
     # Add all scheduled shifts
@@ -331,12 +357,20 @@ def job_detail(job_id):
         shifts.append(shift)
 
     job["shifts"] = shifts
-    job["managers"] = get_managers()
+    if current_user.has_role("organization_manager") or current_user.has_role("contractor_manager"):
+        job["managers"] = get_managers()
     job["contractors"] = []
-    contractors = db.session.query(User).filter(
-        User.organization_id == current_user.organization_id,
-        User.active == True,
-    )
+    if current_user.has_role("contractor"):
+        contractors = db.session.query(User).filter(
+            User.id == current_user.id,
+            User.organization_id == current_user.organization_id,
+            User.active == True,
+        )
+    else:
+        contractors = db.session.query(User).filter(
+            User.organization_id == current_user.organization_id,
+            User.active == True,
+        )
     for contractor in contractors:
         if contractor.has_role("contractor"):
             job["contractors"].append(contractor.to_dict())
