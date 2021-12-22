@@ -29,13 +29,10 @@ def get_organization_user_ids(job_id):
 @roles_accepted("contractor")
 def get_shifts():
     offset = int(get_request_arg(request, "offset") or 0)
-    today = datetime.datetime.combine(
-        datetime.datetime.utcnow().date(), datetime.datetime.max.time()
-    )
     shifts = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.time_end > today,
+            ScheduleShift.time_end > datetime.datetime.utcnow(),
             ScheduleShift.contractor_id == current_user.id,
         )
         .order_by(ScheduleShift.time_end.desc())
