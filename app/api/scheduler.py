@@ -28,20 +28,19 @@ def get_organization_user_ids(job_id):
 @login_required
 @roles_accepted("contractor")
 def get_shifts():
-    week_offset = int(get_request_arg(request, "week_offset") or 0) + 1
+    offset = int(get_request_arg(request, "offset") or 0)
     today = datetime.datetime.combine(
         datetime.datetime.utcnow().date(), datetime.datetime.max.time()
     )
-    num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
-    num_weeks_end = today - datetime.timedelta(weeks=int(week_offset) - 1)
     shifts = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.time_end < num_weeks_begin,
-            ScheduleShift.time_end > num_weeks_end,
+            ScheduleShift.time_end > today,
             ScheduleShift.contractor_id == current_user.id,
         )
         .order_by(ScheduleShift.time_end.desc())
+        .offset(offset * 10)
+        .limit(10)
         .all()
     )
 
