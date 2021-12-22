@@ -37,8 +37,8 @@ def get_shifts():
     shifts = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.time_end > num_weeks_begin,
-            ScheduleShift.time_end < num_weeks_end,
+            ScheduleShift.time_end < num_weeks_begin,
+            ScheduleShift.time_end > num_weeks_end,
             ScheduleShift.contractor_id == current_user.id,
         )
         .order_by(ScheduleShift.time_end.desc())
