@@ -301,7 +301,10 @@ def delete_shift(shift_id):
     if next_shift != None:
         next_shift = next_shift["id"]
 
-    emit_to_users("REMOVE_SHIFT", int(shift_id), get_organization_user_ids(job_id))
+    emit_to_users("REMOVE_SHIFT", {
+        "shifId": int(shift_id),
+        "jobId": int(job_id)
+    }, get_organization_user_ids(job_id))
     emit_to_users("REMOVE_EVENT", int(shift_id), get_organization_user_ids(job_id))
     emit_to_users("SET_NEXT_SHIFT", next_shift, [contractor_id])
     return OK_RESPONSE
@@ -339,7 +342,6 @@ def get_next_shift(id=None):
 
 @bp.route("/shifts/<shift_id>", methods=["GET"])
 @login_required
-@roles_accepted("organization_manager", "contractor_manager")
 def get_shift_id(shift_id):
     result = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
     return result.to_dict()
