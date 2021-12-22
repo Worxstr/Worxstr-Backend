@@ -297,7 +297,10 @@ def delete_shift(shift_id):
     if next_shift != None:
         next_shift = next_shift["id"]
 
-    emit_to_users("REMOVE_SHIFT", int(shift_id), get_organization_user_ids(job_id))
+    emit_to_users("REMOVE_SHIFT", {
+        "shifId": int(shift_id),
+        "jobId": int(job_id)
+    }, get_organization_user_ids(job_id))
     emit_to_users("REMOVE_EVENT", int(shift_id), get_organization_user_ids(job_id))
     emit_to_users("SET_NEXT_SHIFT", next_shift, [contractor_id])
     return OK_RESPONSE
