@@ -12,6 +12,8 @@ from app.users import get_users_list
 from app.utils import get_request_arg, get_request_json, get_key, OK_RESPONSE
 from app.api.sockets import emit_to_users
 
+from dateutil.rrule import rrulestr
+
 
 def get_organization_user_ids(job_id):
     # Get the ids of all within the current organization from a job id
@@ -131,8 +133,8 @@ def shifts():
                             $ref: '#/definitions/ShiftContractorUnion'
     """
     job_id = get_request_arg(request, "job_id")
-    time_begin = get_request_json(request, "time_begin")
-    time_end = get_request_json(request, "time_end")
+    rrule = get_request_json(request, "rrule")
+    duration = get_request_json(request, "duration")
     site_locations = get_request_json(request, "site_locations")
     contractor_ids = get_request_json(request, "contractor_ids")
     notes = get_request_json(request, "notes", optional=True)
@@ -145,16 +147,18 @@ def shifts():
 
     shifts = []
     for (e, s) in zip(contractor_ids, site_locations):
-        shifts.append(
-            add_shift(
-                job_id,
-                time_begin,
-                time_end,
-                site_location=s,
-                contractor_id=e,
-                notes=notes,
+        start_times = list(rrulestr(rrule))
+        for time in start_times:
+            shifts.append(
+                add_shift(
+                    job_id,
+                    time,
+                    time + datetime.timedelta(seconds=duration),
+                    site_location=s,
+                    contractor_id=e,
+                    notes=notes,
+                )
             )
-        )
 
     contractors = get_users_list(contractor_ids)
 
