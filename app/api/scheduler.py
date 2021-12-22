@@ -401,4 +401,6 @@ def complete_task(task_id):
     )
     db.session.commit()
     result = db.session.query(ShiftTask).filter(ShiftTask.id == task_id).one()
+    job_id = db.session.query(ScheduleShift.job_id).filter(ScheduleShift.id == result.shift_id).one()[0]
+    emit_to_users("ADD_TASK", result.to_dict(), get_organization_user_ids(job_id))
     return result.to_dict()
