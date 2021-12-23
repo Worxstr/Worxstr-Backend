@@ -175,7 +175,10 @@ def clock_in():
     db.session.add(timecard)
     db.session.commit()
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
-        {ScheduleShift.timecard_id: timecard.id}
+        {
+            ScheduleShift.timecard_id: timecard.id,
+            ScheduleShift.clock_state: TimeClockAction.clock_in,
+        }
     )
     timeclock = TimeClock(
         time=time_in,
@@ -219,6 +222,14 @@ def clock_out():
 
     if timecard_info.action == TimeClockAction.clock_out:
         return {"message": "Already clocked out"}, 409
+
+    db.session.query(ScheduleShift).filter(
+        ScheduleShift.id == timecard_info.shift_id
+    ).update(
+        {
+            ScheduleShift.clock_state: TimeClockAction.clock_out,
+        }
+    )
 
     timeclock = TimeClock(
         time=time_out,
@@ -277,6 +288,14 @@ def start_break():
     if timecard_info.action == TimeClockAction.clock_out:
         return {"message": "Not currently clocked in"}, 409
 
+    db.session.query(ScheduleShift).filter(
+        ScheduleShift.id == timecard_info.shift_id
+    ).update(
+        {
+            ScheduleShift.clock_state: TimeClockAction.start_break,
+        }
+    )
+
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),
         timecard_id=timecard_info.timecard_id,
@@ -317,6 +336,14 @@ def end_break():
         return {"message": "Not currently on break"}, 409
     if timecard_info.action == TimeClockAction.clock_out:
         return {"message": "Not currently clocked in"}, 409
+
+    db.session.query(ScheduleShift).filter(
+        ScheduleShift.id == timecard_info.shift_id
+    ).update(
+        {
+            ScheduleShift.clock_state: TimeClockAction.end_break,
+        }
+    )
 
     timeclock = TimeClock(
         time=datetime.datetime.utcnow(),

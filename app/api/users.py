@@ -346,6 +346,8 @@ def edit_contractor(user_id):
     """
     hourly_rate = get_request_json(request, "hourly_rate", optional=True)
     direct_manager = get_request_json(request, "direct_manager", optional=True)
+    color = get_request_json(request, "color", optional=True)
+
     if direct_manager:
         db.session.query(User).filter(
             User.id == user_id, User.organization_id == current_user.organization_id
@@ -353,6 +355,10 @@ def edit_contractor(user_id):
     if hourly_rate:
         db.session.query(ContractorInfo).filter(ContractorInfo.id == user_id).update(
             {ContractorInfo.hourly_rate: float(hourly_rate)}
+        )
+    if color:
+        db.session.query(ContractorInfo).filter(ContractorInfo.id == user_id).update(
+            {ContractorInfo.color: color}
         )
     db.session.commit()
 
