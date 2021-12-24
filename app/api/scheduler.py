@@ -13,6 +13,7 @@ from app.utils import get_request_arg, get_request_json, get_key, OK_RESPONSE
 from app.api.sockets import emit_to_users
 
 from dateutil.rrule import rrulestr
+import pytz
 
 
 def get_organization_user_ids(job_id):
@@ -149,11 +150,12 @@ def shifts():
     for (e, s) in zip(contractor_ids, site_locations):
         start_times = list(rrulestr(rrule))
         for time in start_times:
+            utc_time = time.astimezone(pytz.utc)
             shifts.append(
                 add_shift(
                     job_id,
-                    time,
-                    time + datetime.timedelta(seconds=duration),
+                    utc_time,
+                    utc_time + datetime.timedelta(seconds=duration),
                     site_location=s,
                     contractor_id=e,
                     notes=notes,
