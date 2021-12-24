@@ -252,7 +252,7 @@ def update_shift(shift_id):
 
     for task in shift["tasks"]:
         if "id" in task:
-            task_ids.delete(task["id"])
+            task_ids.remove(task["id"])
             db.session.query(ShiftTask).filter(ShiftTask.id == task["id"]).update(
                 {
                     ShiftTask.title: task["title"] or ShiftTask.title,
