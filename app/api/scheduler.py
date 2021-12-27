@@ -2,14 +2,18 @@ import datetime
 
 from flask import abort, request
 from flask_security import current_user, login_required, roles_accepted
+from sqlalchemy.sql.expression import desc
 
 from app import db
 from app.api import bp
-from app.models import ScheduleShift, User, Organization, Job
+from app.models import ScheduleShift, ShiftTask, User, Organization, Job
 from app.scheduler import add_shift
 from app.users import get_users_list
 from app.utils import get_request_arg, get_request_json, get_key, OK_RESPONSE
 from app.api.sockets import emit_to_users
+
+from dateutil.rrule import rrulestr
+import pytz
 
 
 def get_organization_user_ids(job_id):
@@ -21,6 +25,26 @@ def get_organization_user_ids(job_id):
         r[0]
         for r in db.session.query(User.id).filter(User.organization_id == org_id).all()
     ]
+
+
+@bp.route("/shifts", methods=["GET"])
+@login_required
+@roles_accepted("contractor")
+def get_shifts():
+    offset = int(get_request_arg(request, "offset") or 0)
+    shifts = (
+        db.session.query(ScheduleShift)
+        .filter(
+            ScheduleShift.time_end > datetime.datetime.utcnow(),
+            ScheduleShift.contractor_id == current_user.id,
+        )
+        .order_by(ScheduleShift.time_end.desc())
+        .offset(offset * 10)
+        .limit(10)
+        .all()
+    )
+
+    return {"shifts": [i.to_dict() for i in shifts]}
 
 
 @bp.route("/shifts", methods=["POST"])
@@ -110,10 +134,12 @@ def shifts():
                             $ref: '#/definitions/ShiftContractorUnion'
     """
     job_id = get_request_arg(request, "job_id")
-    time_begin = get_request_json(request, "time_begin")
-    time_end = get_request_json(request, "time_end")
+    rrule = get_request_json(request, "rrule")
+    duration = get_request_json(request, "duration")
     site_locations = get_request_json(request, "site_locations")
     contractor_ids = get_request_json(request, "contractor_ids")
+    notes = get_request_json(request, "notes", optional=True)
+    tasks = get_request_json(request, "tasks", optional=True)
 
     if len(site_locations) != len(contractor_ids):
         return {
@@ -122,17 +148,32 @@ def shifts():
 
     shifts = []
     for (e, s) in zip(contractor_ids, site_locations):
-        shifts.append(
-            add_shift(
-                job_id,
-                time_begin,
-                time_end,
-                site_location=s,
-                contractor_id=e,
+        start_times = list(rrulestr(rrule))
+        for time in start_times:
+            utc_time = time.astimezone(pytz.utc)
+            shifts.append(
+                add_shift(
+                    job_id,
+                    utc_time,
+                    utc_time + datetime.timedelta(seconds=duration),
+                    site_location=s,
+                    contractor_id=e,
+                    notes=notes,
+                )
             )
-        )
+            emit_to_users("ADD_UPCOMING_SHIFT", shifts[-1].to_dict(), [e])
 
     contractors = get_users_list(contractor_ids)
+
+    for s in shifts:
+        for tas in tasks:
+            t = ShiftTask(
+                shift_id=s.id,
+                description=tas["description"],
+                title=tas["title"],
+            )
+            db.session.add(t)
+    db.session.commit()
 
     # Add contractor objects to the results
     for s in shifts:
@@ -197,9 +238,37 @@ def update_shift(shift_id):
             ScheduleShift.time_end: shift.get("time_end"),
             ScheduleShift.site_location: shift.get("site_location"),
             ScheduleShift.contractor_id: shift.get("contractor_id"),
+            ScheduleShift.notes: shift.get("notes") or ScheduleShift.notes,
         }
     )
 
+    task_ids = (
+        db.session.query(ShiftTask.id).filter(ShiftTask.shift_id == shift_id).all()
+    )
+    x = 0
+    for i in task_ids:
+        task_ids[x] = i[0]
+        x += 1
+
+    for task in shift["tasks"]:
+        if "id" in task:
+            task_ids.remove(task["id"])
+            db.session.query(ShiftTask).filter(ShiftTask.id == task["id"]).update(
+                {
+                    ShiftTask.title: task["title"] or ShiftTask.title,
+                    ShiftTask.description: task["description"] or ShiftTask.description,
+                }
+            )
+        else:
+            t = ShiftTask(
+                shift_id=shift_id,
+                description=task["description"],
+                title=task["title"],
+            )
+            db.session.add(t)
+    db.session.query(ShiftTask).filter(ShiftTask.id.in_(task_ids)).delete(
+        synchronize_session="fetch"
+    )
     db.session.commit()
 
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
@@ -227,6 +296,7 @@ def delete_shift(shift_id):
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
     job_id = shift.job_id
     contractor_id = shift.contractor_id
+    db.session.query(ShiftTask).filter(ShiftTask.shift_id == shift_id).delete()
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
     db.session.commit()
 
@@ -234,7 +304,11 @@ def delete_shift(shift_id):
     if next_shift != None:
         next_shift = next_shift["id"]
 
-    emit_to_users("REMOVE_SHIFT", int(shift_id), get_organization_user_ids(job_id))
+    emit_to_users(
+        "REMOVE_SHIFT",
+        {"shiftId": int(shift_id), "jobId": int(job_id)},
+        get_organization_user_ids(job_id),
+    )
     emit_to_users("REMOVE_EVENT", int(shift_id), get_organization_user_ids(job_id))
     emit_to_users("SET_NEXT_SHIFT", next_shift, [contractor_id])
     return OK_RESPONSE
@@ -268,3 +342,75 @@ def get_next_shift(id=None):
         .first()
     )
     return {"shift": result.to_dict() if result else None}
+
+
+@bp.route("/shifts/<shift_id>", methods=["GET"])
+@login_required
+def get_shift_id(shift_id):
+    result = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+    return result.to_dict()
+
+
+@bp.route("/shifts/<shift_id>/tasks", methods=["POST"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def add_shift_tasks(shift_id):
+    tasks = get_request_json(request, "tasks")
+    result = []
+    for task in tasks:
+        t = ShiftTask(
+            shift_id=shift_id,
+            description=task["description"],
+            title=task["title"],
+        )
+        db.session.add(t)
+        result.append(t.to_dict())
+    db.session.commit()
+    return result
+
+
+@bp.route("/tasks/<task_id>", methods=["PUT"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def edit_shift_task(task_id):
+    title = get_request_json(request, "title", optional=True)
+    description = get_request_json(request, "description", optional=True)
+    db.session.query(ShiftTask).filter(ShiftTask.id == task_id).update(
+        {
+            ShiftTask.title: title or ShiftTask.title,
+            ShiftTask.description: description or ShiftTask.description,
+        }
+    )
+    db.session.commit()
+    result = db.session.query(ShiftTask).filter(ShiftTask.id == task_id).one()
+    return result.to_dict()
+
+
+@bp.route("/tasks/<task_id>", methods=["DELETE"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def delete_shift_task(task_id):
+    db.session.query(ShiftTask).filter(ShiftTask.id == task_id).delete()
+    db.session.commit()
+    return OK_RESPONSE
+
+
+@bp.route("/tasks/<task_id>/complete", methods=["PUT"])
+@login_required
+def complete_task(task_id):
+    completed = get_request_json(request, "completed")
+    db.session.query(ShiftTask).filter(ShiftTask.id == task_id).update(
+        {
+            ShiftTask.complete: completed,
+            ShiftTask.last_updated: datetime.datetime.utcnow(),
+        }
+    )
+    db.session.commit()
+    result = db.session.query(ShiftTask).filter(ShiftTask.id == task_id).one()
+    job_id = (
+        db.session.query(ScheduleShift.job_id)
+        .filter(ScheduleShift.id == result.shift_id)
+        .one()[0]
+    )
+    emit_to_users("ADD_TASK", result.to_dict(), get_organization_user_ids(job_id))
+    return result.to_dict()

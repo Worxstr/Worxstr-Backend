@@ -129,6 +129,7 @@ def sign_up_contractor():
     phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
     password = get_request_json(request, "password")
     manager_reference = get_request_json(request, "manager_reference")
+    color = get_request_json(request, "color")
     dwolla_request = request.get_json()
     dwolla_request["type"] = "personal"
     dwolla_customer_url = payments.create_personal_customer(dwolla_request)
@@ -168,6 +169,7 @@ def sign_up_contractor():
         dwolla_customer_url=dwolla_customer_url,
         hourly_rate=wage,
         dwolla_customer_status=dwolla_customer_status,
+        color=color,
     )
     db.session.add(contractor_info)
     db.session.commit()
