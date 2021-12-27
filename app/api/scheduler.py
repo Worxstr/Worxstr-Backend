@@ -161,7 +161,7 @@ def shifts():
                     notes=notes,
                 )
             )
-            emit_to_users("ADD_UPCOMING_SHIFT", shifts[-1].to_dict()['id'], [e])
+            emit_to_users("ADD_UPCOMING_SHIFT", shifts[-1].to_dict()["id"], [e])
 
     contractors = get_users_list(contractor_ids)
 
