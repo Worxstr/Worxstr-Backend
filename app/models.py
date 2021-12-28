@@ -54,6 +54,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "direct",
         "fs_uniquifier",
         "additional_info",
+        "location"
     )
     serialize_rules = ()
 
@@ -100,6 +101,17 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
             return int(current_user.id) == self.manager_id
         else:
             return None
+
+    @hybrid_property
+    def location(self):
+        location = (
+            db.session.query(UserLocation)
+            .filter(UserLocation.user_id == self.id)
+            .order_by(UserLocation.time.desc())
+            .limit(1)
+            .one_or_none()
+        )
+        return location
 
     @hybrid_property
     def additional_info(self):
