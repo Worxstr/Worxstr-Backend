@@ -473,7 +473,7 @@ def log_user_location():
         altitude=altitude,
         speed=speed,
         heading=heading,
-        timestamp=datetime.datetime.fromtimestamp(timestamp/1000.0, tz=pytz.utc),
+        timestamp=datetime.datetime.fromtimestamp(timestamp / 1000.0, tz=pytz.utc),
     )
     db.session.add(location)
     db.session.commit()
