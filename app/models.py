@@ -132,10 +132,14 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
 class UserLocation(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"))
-    longitude = db.Column(db.Float(precision=32))
-    latitude = db.Column(db.Float(precision=32))
-    precision = db.Column(db.Integer)
-    time = db.Column(db.DateTime)
+    lng = db.Column(db.Float(precision=32))
+    lat = db.Column(db.Float(precision=32))
+    accuracy = db.Column(db.Float(precision=32))
+    altitude_accuracy = db.Column(db.Float(precision=32))
+    altitude = db.Column(db.Float(precision=32))
+    speed = db.Column(db.Float(precision=32))
+    heading = db.Column(db.Float(precision=32))
+    timestamp = db.Column(db.DateTime)
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):

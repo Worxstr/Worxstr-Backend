@@ -28,6 +28,7 @@ from app.models import (
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app.api.sockets import emit_to_users
 from app import payments
+import pytz
 
 
 def get_manager_user_ids(organization_id):
@@ -454,16 +455,25 @@ def retry_contractor_payments():
 @bp.route("/users/location", methods=["POST"])
 @login_required
 def log_user_location():
-    longitude = get_request_json(request, "longitude")
-    latitude = get_request_json(request, "latitude")
-    precision = get_request_json(request, "precision")
-    time = datetime.datetime.utcnow()
+    lng = get_request_json(request, "lng")
+    lat = get_request_json(request, "lat")
+    accuracy = get_request_json(request, "accuracy")
+    altitude_accuracy = get_request_json(request, "altitude_accuracy")
+    altitude = get_request_json(request, "altitude")
+    speed = get_request_json(request, "speed")
+    heading = get_request_json(request, "heading")
+    timestamp = get_request_json(request, "timestamp")
+
     location = UserLocation(
         user_id=current_user.id,
-        longitude=longitude,
-        latitude=latitude,
-        precision=precision,
-        time=time,
+        lng=lng,
+        lat=lat,
+        accuracy=accuracy,
+        altitude_accuracy=altitude_accuracy,
+        altitude=altitude,
+        speed=speed,
+        heading=heading,
+        timestamp=datetime.datetime.fromtimestamp(timestamp/1000.0, tz=pytz.utc),
     )
     db.session.add(location)
     db.session.commit()
