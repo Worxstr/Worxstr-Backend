@@ -17,7 +17,14 @@ from sqlalchemy.sql.operators import op
 from app import db, user_datastore, geolocator, payments
 from app.api import bp
 from app.email import send_email
-from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
+from app.models import (
+    ManagerInfo,
+    User,
+    ContractorInfo,
+    Organization,
+    Role,
+    UserLocation,
+)
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app.api.sockets import emit_to_users
 from app import payments
@@ -442,3 +449,27 @@ def retry_contractor_payments():
     result["contractor_info"] = contractor_info
 
     return result
+
+
+@bp.route("/users/location", methods=["POST"])
+@login_required
+def log_user_location():
+    longitude = get_request_json(request, "longitude")
+    latitude = get_request_json(request, "latitude")
+    precision = get_request_json(request, "precision")
+    time = datetime.datetime.utcnow()
+    location = UserLocation(
+        user_id=current_user.id,
+        longitude=longitude,
+        latitude=latitude,
+        precision=precision,
+        time=time,
+    )
+    db.session.add(location)
+    db.session.commit()
+    emit_to_users(
+        "ADD_USER_LOCATION",
+        location.to_dict(),
+        get_manager_user_ids(current_user.organization_id),
+    )
+    return OK_RESPONSE

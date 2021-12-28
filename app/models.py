@@ -117,6 +117,15 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         return additional_info
 
 
+class UserLocation(db.Model, CustomSerializerMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"))
+    longitude = db.Column(db.Float(precision=32))
+    latitude = db.Column(db.Float(precision=32))
+    precision = db.Column(db.Integer)
+    time = db.Column(db.DateTime)
+
+
 class ManagerInfo(db.Model, CustomSerializerMixin):
     serialize_only = ("reference_number",)
     __tablename__ = "manager_info"
