@@ -54,7 +54,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "direct",
         "fs_uniquifier",
         "additional_info",
-        "location"
+        "location",
     )
     serialize_rules = ()
 
