@@ -478,8 +478,8 @@ def log_user_location():
     db.session.add(location)
     db.session.commit()
     emit_to_users(
-        "ADD_USER_LOCATION",
-        location.to_dict(),
+        "ADD_USER",
+        {"id":current_user.id, "location":location.to_dict()},
         get_manager_user_ids(current_user.organization_id),
     )
     return OK_RESPONSE
