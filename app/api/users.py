@@ -452,7 +452,7 @@ def retry_contractor_payments():
     return result
 
 
-@bp.route("/users/location", methods=["POST"])
+@bp.route("/users/me/location", methods=["POST"])
 @login_required
 def log_user_location():
     lng = get_request_json(request, "lng", optional=True)

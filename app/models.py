@@ -107,7 +107,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         location = (
             db.session.query(UserLocation)
             .filter(UserLocation.user_id == self.id)
-            .order_by(UserLocation.time.desc())
+            .order_by(UserLocation.timestamp.desc())
             .limit(1)
             .one_or_none()
         )
