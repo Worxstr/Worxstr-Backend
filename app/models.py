@@ -132,8 +132,8 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
 class UserLocation(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"))
-    lng = db.Column(db.Float(precision=32))
-    lat = db.Column(db.Float(precision=32))
+    longitude = db.Column(db.Float(precision=32))
+    latitude = db.Column(db.Float(precision=32))
     accuracy = db.Column(db.Float(precision=32))
     altitude_accuracy = db.Column(db.Float(precision=32))
     altitude = db.Column(db.Float(precision=32))

@@ -455,8 +455,8 @@ def retry_contractor_payments():
 @bp.route("/users/me/location", methods=["POST"])
 @login_required
 def log_user_location():
-    lng = get_request_json(request, "lng", optional=True)
-    lat = get_request_json(request, "lat", optional=True)
+    longitude = get_request_json(request, "longitude", optional=True)
+    latitude = get_request_json(request, "latitude", optional=True)
     accuracy = get_request_json(request, "accuracy", optional=True)
     altitude_accuracy = get_request_json(request, "altitude_accuracy", optional=True)
     altitude = get_request_json(request, "altitude", optional=True)
@@ -466,8 +466,8 @@ def log_user_location():
 
     location = UserLocation(
         user_id=current_user.id,
-        lng=lng,
-        lat=lat,
+        longitude=longitude,
+        latitude=latitude,
         accuracy=accuracy,
         altitude_accuracy=altitude_accuracy,
         altitude=altitude,
