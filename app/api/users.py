@@ -455,14 +455,14 @@ def retry_contractor_payments():
 @bp.route("/users/location", methods=["POST"])
 @login_required
 def log_user_location():
-    lng = get_request_json(request, "lng")
-    lat = get_request_json(request, "lat")
-    accuracy = get_request_json(request, "accuracy")
-    altitude_accuracy = get_request_json(request, "altitude_accuracy")
-    altitude = get_request_json(request, "altitude")
-    speed = get_request_json(request, "speed")
-    heading = get_request_json(request, "heading")
-    timestamp = get_request_json(request, "timestamp")
+    lng = get_request_json(request, "lng", optional=True)
+    lat = get_request_json(request, "lat", optional=True)
+    accuracy = get_request_json(request, "accuracy", optional=True)
+    altitude_accuracy = get_request_json(request, "altitude_accuracy", optional=True)
+    altitude = get_request_json(request, "altitude", optional=True)
+    speed = get_request_json(request, "speed", optional=True)
+    heading = get_request_json(request, "heading", optional=True)
+    timestamp = get_request_json(request, "timestamp", optional=True)
 
     location = UserLocation(
         user_id=current_user.id,
