@@ -76,6 +76,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "Role", secondary="roles_users", backref=db.backref("users", lazy="dynamic")
     )
     fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
+    registration_id = db.Column(db.string(255))
 
     @hybrid_property
     def dwolla_customer_url(self):
