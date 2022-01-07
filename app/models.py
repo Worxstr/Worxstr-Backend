@@ -38,10 +38,12 @@ class Role(db.Model, RoleMixin, CustomSerializerMixin):
     def __repr__(self):
         return "<Role {}>".format(self.name)
 
+
 class PushRegistration(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer(), db.ForeignKey("user.id"))
     registration_id = db.Column(db.String(255))
+
 
 class User(db.Model, UserMixin, CustomSerializerMixin):
 
