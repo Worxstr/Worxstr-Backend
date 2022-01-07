@@ -12,11 +12,15 @@ class Push:
         self.table = table
 
     def send_notification(self, message_title, message_body, users):
-        registration_ids = (
+        query = (
             self.db.session.query(self.table.registration_id)
-            .filter_by(self.table.user_id.in_(tuple(users)))
+            .filter(self.table.user_id.in_(users))
             .all()
         )
+        registration_ids = []
+        for i in query:
+            registration_ids.append(i[0])
+
         result = self.push_service.notify_multiple_devices(
             registration_ids=registration_ids,
             message_title=message_title,
