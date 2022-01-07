@@ -113,7 +113,9 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         location = (
             db.session.query(UserLocation)
             .filter(UserLocation.user_id == self.id)
-            .order_by(UserLocation.timestamp.desc())
+            .order_by(
+                UserLocation.id.desc()
+            )  # This should really be timestamp. For some reason sqlalchemy won't order properly though.
             .limit(1)
             .one_or_none()
         )
