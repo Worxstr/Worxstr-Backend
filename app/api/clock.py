@@ -5,6 +5,7 @@ from flask_security import login_required, current_user, roles_accepted, roles_r
 
 from app import db
 from app.api import bp
+from app.api.sockets import emit_to_users
 from app.models import (
     Job,
     ScheduleShift,
@@ -13,8 +14,24 @@ from app.models import (
     TimeCard,
     User,
     ContractorInfo,
+    Role,
 )
 from app.utils import get_request_arg, get_request_json
+
+
+def get_manager_user_ids(organization_id):
+    # Get the ids of managers within the current organization
+    return [
+        r[0]
+        for r in db.session.query(User.id)
+        .filter(
+            User.organization_id == organization_id,
+            User.roles.any(
+                Role.name.in_(["contractor_manager", "organization_manager"])
+            ),
+        )
+        .all()
+    ]
 
 
 @bp.route("/clock/history", methods=["GET"])
@@ -40,7 +57,7 @@ def clock_history():
     # ? Week offset should begin at 0. There is probably a better way to write this
     week_offset = int(get_request_arg(request, "week_offset") or 0) + 1
     today = datetime.datetime.combine(
-        datetime.date.today(), datetime.datetime.max.time()
+        datetime.datetime.utcnow().date(), datetime.datetime.max.time()
     )
     num_weeks_begin = today - datetime.timedelta(weeks=int(week_offset))
     num_weeks_end = today - datetime.timedelta(weeks=int(week_offset) - 1)
@@ -49,7 +66,7 @@ def clock_history():
         .filter(
             TimeClock.time > num_weeks_begin,
             TimeClock.time < num_weeks_end,
-            TimeClock.contractor_id == current_user.get_id(),
+            TimeClock.contractor_id == current_user.id,
         )
         .order_by(TimeClock.time.desc())
         .all()
@@ -94,7 +111,7 @@ def get_shift():
     shift = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.contractor_id == current_user.get_id(),
+            ScheduleShift.contractor_id == current_user.id,
             ScheduleShift.time_begin > today,
         )
         .order_by(ScheduleShift.time_begin)
@@ -127,35 +144,59 @@ def clock_in():
     """
     shift_id = get_request_arg(request, "shift_id")
     code = str(get_request_json(request, "code"))
-
-    correct_code = (
-        db.session.query(Job.consultant_code)
+    job = (
+        db.session.query(Job)
         .join(ScheduleShift)
         .filter(ScheduleShift.id == shift_id)
         .one()
     )
+    correct_code = job.consultant_code
 
-    if code != correct_code[0]:
-        abort(401, "Unauthorized")
+    if code != correct_code:
+        return {"message": "Invalid clock-in code."}, 401
+
+    timeclock_state = (
+        db.session.query(TimeClock.action)
+        .filter(TimeClock.contractor_id == current_user.id)
+        .order_by(TimeClock.time.desc())
+        .first()
+    )
+    if timeclock_state != None:
+        if (
+            timeclock_state[0] == TimeClockAction.clock_in
+            or timeclock_state[0] == TimeClockAction.start_break
+            or timeclock_state[0] == TimeClockAction.end_break
+        ):
+            return {"message": "User is currently clocked in"}, 409
 
     time_in = datetime.datetime.utcnow()
 
-    timecard = TimeCard(contractor_id=current_user.get_id())
+    timecard = TimeCard(contractor_id=current_user.id)
     db.session.add(timecard)
     db.session.commit()
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
-        {ScheduleShift.timecard_id: timecard.id}
+        {
+            ScheduleShift.timecard_id: timecard.id,
+            ScheduleShift.clock_state: TimeClockAction.clock_in,
+        }
     )
     timeclock = TimeClock(
         time=time_in,
-        contractor_id=current_user.get_id(),
+        contractor_id=current_user.id,
         action=TimeClockAction.clock_in,
         timecard_id=timecard.id,
+        shift_id=shift_id,
+        job_id=job.id,
     )
 
     db.session.add(timeclock)
     db.session.commit()
-    return {"event": timeclock.to_dict()}
+
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
 @bp.route("/clock/clock-out", methods=["POST"])
@@ -172,31 +213,156 @@ def clock_out():
                 $ref: '#/definitions/TimeClock'
     """
     time_out = datetime.datetime.utcnow()
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.contractor_id == current_user.get_id())
+    timecard_info = (
+        db.session.query(TimeClock)
+        .filter(TimeClock.contractor_id == current_user.id)
         .order_by(TimeClock.time.desc())
         .first()
     )
+
+    if timecard_info.action == TimeClockAction.clock_out:
+        return {"message": "Already clocked out"}, 409
+
+    db.session.query(ScheduleShift).filter(
+        ScheduleShift.id == timecard_info.shift_id
+    ).update(
+        {
+            ScheduleShift.clock_state: TimeClockAction.clock_out,
+        }
+    )
+
     timeclock = TimeClock(
         time=time_out,
-        timecard_id=timecard_id,
-        contractor_id=current_user.get_id(),
+        timecard_id=timecard_info.timecard_id,
+        contractor_id=current_user.id,
         action=TimeClockAction.clock_out,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
     )
     db.session.add(timeclock)
     db.session.commit()
-    calculate_timecard(timecard_id)
-    result = timeclock.to_dict()
-    result["need_info"] = (
-        db.session.query(ContractorInfo.need_info)
-        .filter(ContractorInfo.id == current_user.get_id())
-        .one()[0]
+    calculate_timecard(timecard_info.timecard_id)
+
+    payload = timeclock.to_dict()
+    timecard = (
+        db.session.query(TimeCard)
+        .filter(TimeCard.id == timecard_info.timecard_id)
+        .one()
+        .to_dict()
     )
-    return {"event": result}
+    timecard["time_clocks"] = []
+    time_clocks = (
+        db.session.query(TimeClock)
+        .filter(TimeClock.timecard_id == timecard_info.timecard_id)
+        .all()
+    )
+    for time_clock in time_clocks:
+        timecard["time_clocks"].append(time_clock.to_dict())
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    emit_to_users("ADD_TIMECARD", timecard, user_ids)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
 
 
-@bp.route("/clock/calculate/<timecard_id>", methods=["POST"])
+@bp.route("/clock/start-break", methods=["POST"])
+@login_required
+def start_break():
+    """Endpoint to start the current user's break.
+    ---
+    responses:
+        200:
+            description: Returns the start break TimeClock event
+            schema:
+                $ref: '#/definitions/TimeClock'
+    """
+    timecard_info = (
+        db.session.query(TimeClock)
+        .filter(TimeClock.contractor_id == current_user.id)
+        .order_by(TimeClock.time.desc())
+        .first()
+    )
+
+    if timecard_info.action == TimeClockAction.start_break:
+        return {"message": "Already on break"}, 409
+    if timecard_info.action == TimeClockAction.clock_out:
+        return {"message": "Not currently clocked in"}, 409
+
+    db.session.query(ScheduleShift).filter(
+        ScheduleShift.id == timecard_info.shift_id
+    ).update(
+        {
+            ScheduleShift.clock_state: TimeClockAction.start_break,
+        }
+    )
+
+    timeclock = TimeClock(
+        time=datetime.datetime.utcnow(),
+        timecard_id=timecard_info.timecard_id,
+        contractor_id=current_user.id,
+        action=TimeClockAction.start_break,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
+    )
+    db.session.add(timeclock)
+    db.session.commit()
+
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
+
+
+@bp.route("/clock/end-break", methods=["POST"])
+@login_required
+def end_break():
+    """Endpoint to end the current user's break.
+    ---
+    responses:
+        200:
+            description: Returns the end break TimeClock event
+            schema:
+                $ref: '#/definitions/TimeClock'
+    """
+    timecard_info = (
+        db.session.query(TimeClock)
+        .filter(TimeClock.contractor_id == current_user.id)
+        .order_by(TimeClock.time.desc())
+        .first()
+    )
+
+    if timecard_info.action == TimeClockAction.end_break:
+        return {"message": "Not currently on break"}, 409
+    if timecard_info.action == TimeClockAction.clock_out:
+        return {"message": "Not currently clocked in"}, 409
+
+    db.session.query(ScheduleShift).filter(
+        ScheduleShift.id == timecard_info.shift_id
+    ).update(
+        {
+            ScheduleShift.clock_state: TimeClockAction.end_break,
+        }
+    )
+
+    timeclock = TimeClock(
+        time=datetime.datetime.utcnow(),
+        timecard_id=timecard_info.timecard_id,
+        contractor_id=current_user.id,
+        action=TimeClockAction.end_break,
+        shift_id=timecard_info.shift_id,
+        job_id=timecard_info.job_id,
+    )
+    db.session.add(timeclock)
+    db.session.commit()
+
+    payload = timeclock.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(current_user.id)
+    emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
+    return payload
+
+
 def calculate_timecard(timecard_id):
     """
     Calculate pay for a given timecard and update the timecard in place.
@@ -233,7 +399,7 @@ def calculate_timecard(timecard_id):
         .one()
     )
     wage = round(float(rate[0]) * total_time_hours, 2)
-    transaction_fees = round(wage * 0.025, 2)
+    transaction_fees = round(wage * 0.02, 2)
     total_payment = wage + transaction_fees
     # TODO: Does this need to be an iter? Can we iterate over it as a list?
     breaks = iter(
@@ -268,270 +434,3 @@ def calculate_timecard(timecard_id):
         }
     )
     db.session.commit()
-    info = (
-        db.session.query(ContractorInfo)
-        .filter(ContractorInfo.id == timecard.contractor_id)
-        .one()
-    )
-    if not info.need_info and (info.ssn is None or info.address is None):
-        total_wage = 0.0
-        begin_year = datetime.date(datetime.date.today().year, 1, 1)
-        timecards = (
-            db.session.query(TimeCard)
-            .join(TimeClock)
-            .filter(
-                TimeCard.contractor_id == timecard.contractor_id,
-                TimeClock.time >= begin_year,
-            )
-            .all()
-        )
-        for i in timecards:
-            total_wage = total_wage + (float(i.wage_payment) - float(i.fees_payment))
-        if total_wage > 400:
-            db.session.query(ContractorInfo).filter(
-                ContractorInfo.id == timecard.contractor_id
-            ).update({ContractorInfo.need_info: True})
-            db.session.commit()
-
-
-@bp.route("/clock/timecards/<timecard_id>", methods=["PUT"])
-@login_required
-@roles_accepted("contractor_manager")
-def edit_timecard(timecard_id):
-    """Edit a given timecard.
-    ---
-    parameters:
-        - name: id
-          in: body
-          type: integer
-          required: true
-          description: TimeCard.id
-        - name: changes
-          in: body
-          type: array
-          items:
-              $ref: '#/definitions/Change'
-          required: true
-    definitions:
-        Change:
-            type: object
-            properties:
-                id:
-                    type: integer
-                    description: id of the TimeClock event to be modified
-                time:
-                    type: string
-                    format: date-time
-        TimeCard:
-            type: object
-            properties:
-                id:
-                    type: integer
-                time_in:
-                    type: string
-                    format: date-time
-                time_out:
-                    type: string
-                    format: date-time
-                time_break:
-                    type: integer
-                contractor_id:
-                    type: integer
-                total_payment:
-                    type: number
-                approved:
-                    type: boolean
-                paid:
-                    type: boolean
-    responses:
-        200:
-            description: An updated TimeCard showing the new changes.
-            schema:
-                $ref: '#/definitions/TimeCard'
-    """
-    changes = get_request_json(request, "changes")
-
-    timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
-    contractor_id = timecard.contractor_id
-
-    for i in changes:
-        db.session.query(TimeClock).filter(TimeClock.id == i["id"]).update(
-            {TimeClock.time: i["time"]}, synchronize_session=False
-        )
-
-    db.session.commit()
-    calculate_timecard(timecard.id)
-    # TODO: These could likely be combined into one query
-    rate = (
-        db.session.query(ContractorInfo.hourly_rate)
-        .filter(ContractorInfo.id == contractor_id)
-        .one()
-    )
-    user = (
-        db.session.query(User.first_name, User.last_name)
-        .filter(User.id == contractor_id)
-        .one()
-    )
-    result = (
-        db.session.query(TimeCard).filter(TimeCard.id == timecard.id).one().to_dict()
-    )
-    result["first_name"] = user[0]
-    result["last_name"] = user[1]
-    result["pay_rate"] = float(rate[0])
-    result["time_clocks"] = [
-        timeclock.to_dict()
-        for timeclock in db.session.query(TimeClock)
-        .filter(TimeClock.timecard_id == timecard_id)
-        .order_by(TimeClock.time)
-        .all()
-    ]
-    return {"timecard": result}
-
-
-@bp.route("/clock/timecards", methods=["GET"])
-@login_required
-@roles_accepted("organization_manager", "contractor_manager")
-def get_timecards():
-    """Endpoint to get all unpaid timecards associated with the current logged in manager.
-    ---
-    definitions:
-        TimeCard:
-            type: object
-            properties:
-                id:
-                    type: integer
-                time_in:
-                    type: string
-                    format: date-time
-                time_out:
-                    type: string
-                    format: date-time
-                time_break:
-                    type: integer
-                contractor_id:
-                    type: integer
-                total_payment:
-                    type: number
-                approved:
-                    type: boolean
-                paid:
-                    type: boolean
-                first_name:
-                    type: string
-                last_name:
-                    type: string
-                time_clocks:
-                    type: array
-                    items :
-                        $ref: '#/definitions/TimeClock'
-        TimeClock:
-            type: object
-            properties:
-                id:
-                    type: integer
-                time:
-                    type: string
-                    format: date-time
-                action:
-                    type: string
-                    enum: []
-                contractor_id:
-                    type: integer
-    responses:
-        200:
-            description: Returns the unapproved timecards associated with a manager
-            schema:
-                $ref: '#/definitions/TimeCard'
-    """
-    timecards = (
-        db.session.query(TimeCard, User.first_name, User.last_name)
-        .join(User)
-        .filter(
-            TimeCard.paid == False,
-            TimeCard.denied == False,
-            TimeCard.transaction_id == None,
-            User.manager_id == current_user.get_id(),
-        )
-        .all()
-    )
-
-    # TODO: Implement paging here
-    result = []
-    print(timecards)
-    for i in timecards:
-        timecard = i[0].to_dict()
-        print(f"Timecard: {timecard}")
-        timecard["first_name"] = i[1]
-        timecard["last_name"] = i[2]
-        timecard["pay_rate"] = float(
-            db.session.query(ContractorInfo.hourly_rate)
-            .filter(ContractorInfo.id == timecard["contractor_id"])
-            .one()[0]
-        )
-        timecard["time_clocks"] = [
-            timeclock.to_dict()
-            for timeclock in db.session.query(TimeClock)
-            .filter(TimeClock.timecard_id == timecard["id"])
-            .order_by(TimeClock.time)
-            .all()
-        ]
-        result.append(timecard)
-    return {"timecards": result}
-
-
-@bp.route("/clock/start-break", methods=["POST"])
-@login_required
-def start_break():
-    """Endpoint to start the current user's break.
-    ---
-    responses:
-        200:
-            description: Returns the start break TimeClock event
-            schema:
-                $ref: '#/definitions/TimeClock'
-    """
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.contractor_id == current_user.get_id())
-        .order_by(TimeClock.time.desc())
-        .first()
-    )
-    timeclock = TimeClock(
-        time=datetime.datetime.utcnow(),
-        timecard_id=timecard_id,
-        contractor_id=current_user.get_id(),
-        action=TimeClockAction.start_break,
-    )
-    db.session.add(timeclock)
-    db.session.commit()
-
-    return {"data": timeclock.to_dict()}
-
-
-@bp.route("/clock/end-break", methods=["POST"])
-@login_required
-def end_break():
-    """Endpoint to end the current user's break.
-    ---
-    responses:
-        200:
-            description: Returns the end break TimeClock event
-            schema:
-                $ref: '#/definitions/TimeClock'
-    """
-    timecard_id = (
-        db.session.query(TimeClock.timecard_id)
-        .filter(TimeClock.contractor_id == current_user.get_id())
-        .order_by(TimeClock.time.desc())
-        .first()
-    )
-    timeclock = TimeClock(
-        time=datetime.datetime.utcnow(),
-        timecard_id=timecard_id,
-        contractor_id=current_user.get_id(),
-        action=TimeClockAction.end_break,
-    )
-    db.session.add(timeclock)
-    db.session.commit()
-
-    return {"data": timeclock.to_dict()}

@@ -6,7 +6,13 @@ from app.models import ScheduleShift, User
 
 
 def add_shift(
-    job_id, time_begin, time_end, site_location, contractor_id, timecard_id=None
+    job_id,
+    time_begin,
+    time_end,
+    site_location,
+    contractor_id,
+    timecard_id=None,
+    notes=None,
 ):
     """
     Instantiate a ScheduleShift and insert it into the database and return the instance.
@@ -26,6 +32,7 @@ def add_shift(
         site_location=site_location,
         contractor_id=contractor_id,
         timecard_id=timecard_id,
+        notes=notes,
     )
 
     db.session.add(shift)

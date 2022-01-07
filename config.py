@@ -7,7 +7,8 @@ load_dotenv(os.path.join(basedir, ".env"))
 
 class Config(object):
 
-    BASE_URL = os.environ.get("BASE_URL") or "localhost:8080/{}"
+    BASE_URL = os.environ.get("BASE_URL") or "localhost:5000/{}"
+    FRONT_URL = os.environ.get("FRONT_URL") or "localhost:8080/"
 
     SECRET_KEY = os.environ.get("SECRET_KEY") or "you-will-never-guess"
 
@@ -16,6 +17,12 @@ class Config(object):
         "SQLALCHEMY_DATABASE_URL"
     ) or "sqlite:///" + os.path.join(basedir, "app.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "max_overflow": 15,
+        "pool_pre_ping": True,
+        "pool_recycle": 60 * 60,
+        "pool_size": 30,
+    }
 
     # Mail Server config
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
@@ -48,10 +55,8 @@ class Config(object):
 
     # These need to be defined to handle redirects
     # As defined in the API documentation - they will receive the relevant context
-    SECURITY_POST_CONFIRM_VIEW = "/confirmed"
-    SECURITY_CONFIRM_ERROR_VIEW = "/confirm-error"
-    SECURITY_RESET_VIEW = "/reset-password"
-    SECURITY_RESET_ERROR_VIEW = "/reset-password"
+    SECURITY_RESET_VIEW = FRONT_URL + "/auth/reset"
+    SECURITY_RESET_ERROR_VIEW = FRONT_URL + "/auth/reset/error"
     SECURITY_REDIRECT_BEHAVIOR = "spa"
     SECURITY_PASSWORD_SALT = (
         os.environ.get("SECURITY_PASSWORD_SALT")
@@ -91,3 +96,13 @@ class Config(object):
     CLICKUP_KEY = os.environ.get("CLICKUP_KEY")
     DWOLLA_APP_KEY = os.environ.get("DWOLLA_APP_KEY")
     DWOLLA_APP_SECRET = os.environ.get("DWOLLA_APP_SECRET")
+    DWOLLA_HOST = os.environ.get("DWOLLA_HOST")
+    DWOLLA_WEBHOOK_SECRET = (
+        os.environ.get("DWOLLA_WEBHOOK_SECRET")
+        or "146585145368132386173505678016728509634"
+    )
+    PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID")
+    PLAID_SECRET = os.environ.get("PLAID_SECRET")
+    PLAID_HOST = os.environ.get("PLAID_HOST")
+
+    FIREBASE_SERVER_KEY = os.environ.get("FIREBASE_SERVER_KEY")

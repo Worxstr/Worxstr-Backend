@@ -1,18 +1,3 @@
-"""
-TODO:
-I have implemented some basic messaging so far. You can send messages from
-different user accounts, and the messages that other users have send appear on
-the left, and your messages on the right
-
-I mapped contractorone@worxstr.com to name Jackson Sippe and
-managerone@worxstr.com to Alex Wohlbruck, so when logged in to those accounts,
-the names appear next to the message
-
-Right now the new messages are broadcasted to all clients. We need to attach
-the socket.io session ids to each user account so that we can filter the
-broadcasts to certain clients.
-"""
-
 from flask import request
 from flask_security import current_user, login_required
 
@@ -20,12 +5,7 @@ from app import db, socketio
 from app.api import bp
 from app.models import Message, User, Conversation
 from app.utils import get_request_arg, get_request_json
-
-
-@socketio.on("connect")
-def on_connect():
-    # TODO: Attach the client session id to the user data in DB
-    print("Client connected")
+from app.api.sockets import emit_to_users
 
 
 @bp.route("/conversations", methods=["GET"])
@@ -50,7 +30,7 @@ def get_conversations():
     # TODO: This can be a single comprehension without a nested loop
     for i in all_conversations:
         for participant in i.participants:
-            if int(current_user.get_id()) == participant.id:
+            if int(current_user.id) == participant.id:
                 user_conversations.append(i.to_dict())
     return {"conversations": user_conversations}
 
@@ -97,8 +77,9 @@ def create_conversation():
     participants = [current_user]
 
     recipients = get_request_json(request, "users")
-
+    recipient_ids = [current_user.id]
     for recipient_id in recipients:
+        recipient_ids.append(int(recipient_id))
         participants.append(
             db.session.query(User).filter(User.id == recipient_id).one()
         )
@@ -106,6 +87,8 @@ def create_conversation():
     new_conversation = Conversation(participants=participants)
     db.session.add(new_conversation)
     db.session.commit()
+
+    emit_to_users("ADD_CONVERSATION", new_conversation.to_dict(), recipient_ids)
 
     return {"conversation": new_conversation.to_dict()}
 
@@ -130,7 +113,9 @@ def contacts():
     # TODO: Implement paging here
     org_contacts = (
         db.session.query(User)
-        .filter(User.organization_id == current_user.organization_id)
+        .filter(
+            User.organization_id == current_user.organization_id, User.active == True
+        )
         .all()
     )
     return {"contacts": [contact.to_dict() for contact in org_contacts]}
@@ -250,29 +235,22 @@ def create_messages(conversation_id):
 
     return {
         "message": send_message(
-            conversation_id, current_user.get_id(), {"body": message_body}
+            conversation_id, current_user.id, {"body": message_body}
         )
     }
 
 
 def send_message(conversation_id, user_id, message):
-    # TODO: Get user ID from database by querying for socket session id
-    db_message = Message(
+    conversation = db.session.query(Conversation).get(conversation_id).to_dict()
+
+    new_message = Message(
         sender_id=user_id, body=message.get("body"), conversation_id=conversation_id
     )
-    db.session.add(db_message)
+    db.session.add(new_message)
     db.session.commit()
 
-    socket_message = {
-        "id": db_message.id,
-        "sender_id": user_id,
-        "conversation_id": conversation_id,
-        "body": message.get("body"),
-    }
+    participant_ids = [c["id"] for c in conversation["participants"]]
 
-    socketio.emit(
-        "message:create",
-        {"message": socket_message, "conversation_id": conversation_id},
-    )
+    emit_to_users("ADD_MESSAGE", new_message.to_dict(), participant_ids)
 
-    return socket_message
+    return new_message.to_dict()

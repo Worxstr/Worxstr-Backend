@@ -12,23 +12,38 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from flasgger import Swagger
 from geopy.geocoders import Nominatim
+from app.notifications.notifications import Push
 
 from config import Config
 from app.payments.dwolla import Dwolla
+from app.payments.plaid import Plaid
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 cors = CORS()
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
 swagger = Swagger(config=Config.SWAGGER_CONFIG)
-from app.models import User, Role
+from app.models import PushRegistration, User, Role
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security()
 csrf = CSRFProtect()
 socketio = SocketIO()
 geolocator = Nominatim(user_agent="worxstr")
-payments = Dwolla(app_key=Config.DWOLLA_APP_KEY, app_secret=Config.DWOLLA_APP_SECRET)
+payments = Dwolla(
+    app_key=Config.DWOLLA_APP_KEY,
+    app_secret=Config.DWOLLA_APP_SECRET,
+    host=Config.DWOLLA_HOST,
+    secret=Config.DWOLLA_WEBHOOK_SECRET,
+    url=Config.BASE_URL,
+)
+payments_auth = Plaid(
+    client_id=Config.PLAID_CLIENT_ID, secret=Config.PLAID_SECRET, host=Config.PLAID_HOST
+)
+scheduler = BackgroundScheduler()
+notifications = Push(Config.FIREBASE_SERVER_KEY, db, PushRegistration)
 
 
 def create_app(config_class=Config):
@@ -41,7 +56,9 @@ def create_app(config_class=Config):
     mail.init_app(app)
     swagger.init_app(app)
     security.init_app(app, user_datastore)
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="eventlet")
+    scheduler.add_job(func=payments.refresh_app_token, trigger="interval", seconds=3600)
+    scheduler.start()
 
     @security.login_manager.unauthorized_handler
     def unauthorized_handler():
@@ -49,7 +66,8 @@ def create_app(config_class=Config):
             jsonify(
                 success=False,
                 data={"login_required": True},
-                message="Authorize please to access this page.",
+                message="You need to sign in first.",
+                actions=[{"name": "AUTHENTICATE", "action_text": "Sign in"}],
             ),
             401,
         )
