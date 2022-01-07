@@ -17,18 +17,6 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# Return phone number string from dictionary
-def build_phone_number(phone_dict):
-    return (
-        "+"
-        + phone["country_code"]
-        + " "
-        + phone["area_code"]
-        + " "
-        + phone["phone_number"][:3]
-        + " "
-        + phone["phone_number"][3:]
-    )
 
 # Format phone number as +X (XXX) XXX-XXXX
 def format_phone_number(phone_number):
@@ -40,6 +28,13 @@ def format_phone_number(phone_number):
         return "+" + phone_number[:1] + " (" + phone_number[1:4] + ") " + phone_number[4:7] + "-" + phone_number[7:]
     return phone_number
 
+# Return phone number string from dictionary
+def build_phone_number(phone_dict):
+    return format_phone_number(
+        phone["country_code"]
+        + phone["area_code"]
+        + phone["phone_number"]
+    )
 
 @bp.route("/contact/sales", methods=["POST"])
 def sales():
