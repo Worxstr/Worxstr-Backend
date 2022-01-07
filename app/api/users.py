@@ -17,14 +17,7 @@ from sqlalchemy.sql.operators import op
 from app import db, user_datastore, geolocator, payments
 from app.api import bp
 from app.email import send_email
-from app.models import (
-    ManagerInfo,
-    User,
-    ContractorInfo,
-    Organization,
-    Role,
-    UserLocation,
-)
+from app.models import ManagerInfo, PushRegistration, User, ContractorInfo, Organization, Role, UserLocation
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app.api.sockets import emit_to_users
 from app import payments
@@ -483,3 +476,12 @@ def log_user_location():
         get_manager_user_ids(current_user.organization_id),
     )
     return OK_RESPONSE
+@bp.route("/users/notifications", methods=["POST"])
+@login_required
+def add_push_registration():
+    registration_id = get_request_json(request, "registration_id")
+
+    registration = PushRegistration(
+        user_id = current_user.id,
+        registration_id = registration_id
+    )

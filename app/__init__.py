@@ -43,7 +43,7 @@ payments_auth = Plaid(
     client_id=Config.PLAID_CLIENT_ID, secret=Config.PLAID_SECRET, host=Config.PLAID_HOST
 )
 scheduler = BackgroundScheduler()
-notifications = Push(Config.FIREBASE_SERVER_KEY)
+notifications = Push(Config.FIREBASE_SERVER_KEY, db, User)
 
 def create_app(config_class=Config):
     app = Flask(__name__, static_folder="./frontend/dist")

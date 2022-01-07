@@ -38,6 +38,10 @@ class Role(db.Model, RoleMixin, CustomSerializerMixin):
     def __repr__(self):
         return "<Role {}>".format(self.name)
 
+class PushRegistration(db.Model, CustomSerializerMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer(), db.ForeignKey("user.id"))
+    registration_id = db.Column(db.String(255))
 
 class User(db.Model, UserMixin, CustomSerializerMixin):
 
@@ -77,7 +81,6 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "Role", secondary="roles_users", backref=db.backref("users", lazy="dynamic")
     )
     fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
-    registration_id = db.Column(db.string(255))
 
     @hybrid_property
     def dwolla_customer_url(self):
