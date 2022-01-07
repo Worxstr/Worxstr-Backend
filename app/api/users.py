@@ -498,10 +498,13 @@ def add_push_registration():
     db.session.commit()
     return registration.to_dict()
 
+
 @bp.route("/users/notifications/test", methods=["POST"])
 @login_required
 def send_notification():
     message_title = get_request_json(request, "message_title")
     message_body = get_request_json(request, "message_body")
 
-    return notifications.send_notification(message_title, message_body, [current_user.id])
+    return notifications.send_notification(
+        message_title, message_body, [current_user.id]
+    )
