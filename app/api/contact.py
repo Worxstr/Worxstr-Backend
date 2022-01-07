@@ -11,6 +11,11 @@ from app.utils import get_request_json, OK_RESPONSE
 
 CLICKUP_BASE_URL = "https://api.clickup.com/api/v2/"
 SALES_LIST_ID = "81940859"
+SUPPORT_LIST_ID = "84083345"
+HEADERS = {
+    "Authorization": Config.CLICKUP_KEY,
+    "Content-Type": "application/json"
+}
 
 # Return phone number string from dictionary
 def build_phone_number(phone_dict):
@@ -76,7 +81,7 @@ def create_ticket(
     num_contractors,
     notes,
 ):
-    values = {
+    payload = {
         "name": business_name,
         "description": notes,
         "status": "qualified prospect",
@@ -93,15 +98,11 @@ def create_ticket(
             {"id": "c2917630-b938-45de-99d1-6369c0690ee3", "value": website},
         ],
     }
-    headers = {
-        "Authorization": Config.CLICKUP_KEY,
-        "Content-Type": "application/json"
-    }
 
     return requests.post(
         CLICKUP_BASE_URL + "list/" + SALES_LIST_ID + "/task",
-        data=json.dumps(values),
-        headers=headers,
+        data=json.dumps(payload),
+        headers=HEADERS,
     )
 
 
@@ -114,36 +115,41 @@ def support():
         200:
     """
 
-    name = get_request_json(request, "name", optional=True) or "Unknown"
-    phone = get_request_json(request, "phone", optional=True)
+    # Retreive fields
+    name        = get_request_json(request, "name",         optional=True) or "Unknown"
+    phone       = get_request_json(request, "phone",        optional=True)
+    email       = get_request_json(request, "email",        optional=True)
+    description = get_request_json(request, "description",  optional=True)
+    user_agent  = get_request_json(request, "ua",           optional=True)
+    browser     = get_request_json(request, "browser",      optional=True)
+    os          = get_request_json(request, "os",           optional=True)
+    device      = get_request_json(request, "device",       optional=True)
+    cpu         = get_request_json(request, "cpu",          optional=True)
+    engine      = get_request_json(request, "engine",       optional=True)
+
+    # Reformat fields
     if phone:
         phone = build_phone_number(phone)
-    email = get_request_json(request, "email", optional=True)
-    description = get_request_json(request, "description", optional=True)
-    user_agent = get_request_json(request, "ua", optional=True)
-    browser = get_request_json(request, "browser", optional=True)
+
     if browser:
         browser = browser["name"] + " " + browser["version"] + " " + browser["major"]
-
-    os = get_request_json(request, "os", optional=True)
 
     if os:
         os = os["name"] + " " + os["version"]
 
-    the_user = current_user
-    device = get_request_json(request, "device", optional=True)
-    cpu = get_request_json(request, "cpu", optional=True)
     if cpu:
         cpu = cpu["architecture"]
-    engine = get_request_json(request, "engine", optional=True)
 
     if engine:
         engine = engine["name"] + " " + engine["version"]
-    if current_user.is_authenticated:
-        user_id = the_user.id
 
+    if current_user.is_authenticated:
+        user_id = current_user.id
     else:
         user_id = "Not logged in"
+
+    if not description:
+        raise (MissingParameterException(f"Include a Description For Your Problem"))
 
     create_support_ticket(
         name,
@@ -159,8 +165,6 @@ def support():
         user_id,
     )
 
-    if not description:
-        raise (MissingParameterException(f"Include a Description For Your Problem"))
     return OK_RESPONSE, 201
 
 
@@ -177,27 +181,13 @@ def create_support_ticket(
     cpu,
     user_id,
 ):
-    values = {
-        "name": name,
-        "phone": phone,
-        "email": email,
-        "description": description,
-        "ua": user_agent,
-        "browser": browser,
-        "engine": engine,
-        "os": os,
-        "device": device,
-        "cpu": cpu,
-        "user_id": user_id,
-    }
 
-    """
-    Using ids for custom fields did not allow me to post to list and threw an error.
-     However, the above body did work when posting.  
-    I did not delete the code below because I wanted to make sure that I was doing the 
-    right thing. 
+    payload = {
+        "name": description,
+        "status": "to do",
+        "notify_all": True,
+        "check_required_custom_fields": True,
         "custom_fields": [
-
             {"id": "1f5b9606-293f-4abc-8bdc-15a4d3739749", "value":name},
             {"id": "fd844e04-66de-4387-bc0e-4d51c499526b", "value": phone},
             {"id": "3dbe29b4-02ec-41ff-83dd-7e2b0b6d9dff", "value": email},
@@ -209,15 +199,11 @@ def create_support_ticket(
             {"id": "df2c9793-df47-432a-9d51-c8c2bfad9da7", "value": device},
             {"id": "17d2e246-df8e-4a66-a86b-8578d46eae53", "value": cpu},
             {"id": "5f3010d7-19a0-4be6-a69d-06e1c09d1ca1", "value": user_id},
-
         ],
-   # }
-    """
+    }
 
-    headers = {"Authorization": Config.CLICKUP_KEY, "Content-Type": "application/json"}
-    requests.post(
-        "https://api.clickup.com/api/v2/list/84083345/task",
-        data=json.dumps(values),
-        headers=headers,
+    return requests.post(
+        CLICKUP_BASE_URL + "list/" + SUPPORT_LIST_ID + "/task",
+        data=json.dumps(payload),
+        headers=HEADERS,
     )
-    return
