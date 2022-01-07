@@ -9,6 +9,23 @@ from app.api import bp
 from app.utils import get_request_json, OK_RESPONSE
 
 
+CLICKUP_BASE_URL = "https://api.clickup.com/api/v2/"
+SALES_LIST_ID = "81940859"
+
+# Return phone number string from dictionary
+def build_phone_number(phone_dict):
+    return (
+        "+"
+        + phone["country_code"]
+        + " "
+        + phone["area_code"]
+        + " "
+        + phone["phone_number"][:3]
+        + " "
+        + phone["phone_number"][3:]
+    )
+
+
 @bp.route("/contact/sales", methods=["POST"])
 def sales():
     """
@@ -17,32 +34,23 @@ def sales():
     responses:
         200:
     """
-    business_name = (
-        get_request_json(request, "business_name", optional=True) or "Unknown"
-    )
-    contact_name = get_request_json(request, "contact_name")
-    contact_title = get_request_json(request, "contact_title", optional=True)
-    phone = get_request_json(request, "phone", optional=True)
+    business_name   = get_request_json(request, "business_name",    optional=True) or "Unknown"
+    contact_name    = get_request_json(request, "contact_name")
+    contact_title   = get_request_json(request, "contact_title",    optional=True)
+    phone           = get_request_json(request, "phone",            optional=True)
+    email           = get_request_json(request, "email",            optional=True)
+    website         = get_request_json(request, "website",          optional=True)
+    num_managers    = get_request_json(request, "num_managers",     optional=True)
+    num_contractors = get_request_json(request, "num_contractors",  optional=True)
+    notes           = get_request_json(request, "notes",            optional=True)
+
     if phone:
-        phone = (
-            "+"
-            + phone["country_code"]
-            + " "
-            + phone["area_code"]
-            + " "
-            + phone["phone_number"][:3]
-            + " "
-            + phone["phone_number"][3:]
-        )
-    email = get_request_json(request, "email", optional=True)
-    website = get_request_json(request, "website", optional=True)
-    num_managers = get_request_json(request, "num_managers", optional=True)
-    num_contractors = get_request_json(request, "num_contractors", optional=True)
-    notes = get_request_json(request, "notes", optional=True)
+        phone = build_phone_number(phone)
 
     if not (phone or email):
         raise (MissingParameterException(f"No contact information provided."))
-    create_ticket(
+
+    ticket = create_ticket(
         business_name,
         contact_name,
         contact_title,
@@ -53,6 +61,7 @@ def sales():
         num_contractors,
         notes,
     )
+    # TODO: Return ticket data
     return OK_RESPONSE, 201
 
 
@@ -84,13 +93,16 @@ def create_ticket(
             {"id": "c2917630-b938-45de-99d1-6369c0690ee3", "value": website},
         ],
     }
-    headers = {"Authorization": Config.CLICKUP_KEY, "Content-Type": "application/json"}
-    requests.post(
-        "https://api.clickup.com/api/v2/list/81940859/task",
+    headers = {
+        "Authorization": Config.CLICKUP_KEY,
+        "Content-Type": "application/json"
+    }
+
+    return requests.post(
+        CLICKUP_BASE_URL + "list/" + SALES_LIST_ID + "/task",
         data=json.dumps(values),
         headers=headers,
     )
-    return
 
 
 @bp.route("/contact/support", methods=["POST"])
@@ -105,16 +117,7 @@ def support():
     name = get_request_json(request, "name", optional=True) or "Unknown"
     phone = get_request_json(request, "phone", optional=True)
     if phone:
-        phone = (
-            "+"
-            + phone["country_code"]
-            + " "
-            + phone["area_code"]
-            + " "
-            + phone["phone_number"][:3]
-            + " "
-            + phone["phone_number"][3:]
-        )
+        phone = build_phone_number(phone)
     email = get_request_json(request, "email", optional=True)
     description = get_request_json(request, "description", optional=True)
     user_agent = get_request_json(request, "ua", optional=True)
