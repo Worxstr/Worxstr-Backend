@@ -14,11 +14,12 @@ from flask_security import (
 )
 from sqlalchemy.sql.operators import op
 
-from app import db, user_datastore, geolocator, payments
+from app import db, user_datastore, geolocator, payments, notifications
 from app.api import bp
 from app.email import send_email
 from app.models import (
     ManagerInfo,
+    PushRegistration,
     User,
     ContractorInfo,
     Organization,
@@ -483,3 +484,27 @@ def log_user_location():
         get_manager_user_ids(current_user.organization_id),
     )
     return OK_RESPONSE
+
+
+@bp.route("/users/notifications", methods=["POST"])
+@login_required
+def add_push_registration():
+    registration_id = get_request_json(request, "registration_id")
+
+    registration = PushRegistration(
+        user_id=current_user.id, registration_id=registration_id
+    )
+    db.session.add(registration)
+    db.session.commit()
+    return registration.to_dict()
+
+
+@bp.route("/users/notifications/test", methods=["POST"])
+@login_required
+def send_notification():
+    message_title = get_request_json(request, "message_title")
+    message_body = get_request_json(request, "message_body")
+
+    return notifications.send_notification(
+        message_title, message_body, [current_user.id]
+    )

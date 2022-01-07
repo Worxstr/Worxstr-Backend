@@ -39,6 +39,12 @@ class Role(db.Model, RoleMixin, CustomSerializerMixin):
         return "<Role {}>".format(self.name)
 
 
+class PushRegistration(db.Model, CustomSerializerMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer(), db.ForeignKey("user.id"))
+    registration_id = db.Column(db.String(255))
+
+
 class User(db.Model, UserMixin, CustomSerializerMixin):
 
     serialize_only = (
@@ -107,7 +113,9 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         location = (
             db.session.query(UserLocation)
             .filter(UserLocation.user_id == self.id)
-            .order_by(UserLocation.timestamp.desc())
+            .order_by(
+                UserLocation.id.desc()
+            )  # This should really be timestamp. For some reason sqlalchemy won't order properly though.
             .limit(1)
             .one_or_none()
         )
