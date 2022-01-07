@@ -54,6 +54,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "direct",
         "fs_uniquifier",
         "additional_info",
+        "location",
     )
     serialize_rules = ()
 
@@ -102,6 +103,17 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
             return None
 
     @hybrid_property
+    def location(self):
+        location = (
+            db.session.query(UserLocation)
+            .filter(UserLocation.user_id == self.id)
+            .order_by(UserLocation.timestamp.desc())
+            .limit(1)
+            .one_or_none()
+        )
+        return location
+
+    @hybrid_property
     def additional_info(self):
         additional_info = None
         if self.has_role("contractor"):
@@ -115,6 +127,19 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
                 db.session.query(ManagerInfo).filter(ManagerInfo.id == self.id).one()
             )
         return additional_info
+
+
+class UserLocation(db.Model, CustomSerializerMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"))
+    longitude = db.Column(db.Float(precision=32))
+    latitude = db.Column(db.Float(precision=32))
+    accuracy = db.Column(db.Float(precision=32))
+    altitude_accuracy = db.Column(db.Float(precision=32))
+    altitude = db.Column(db.Float(precision=32))
+    speed = db.Column(db.Float(precision=32))
+    heading = db.Column(db.Float(precision=32))
+    timestamp = db.Column(db.DateTime)
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):
