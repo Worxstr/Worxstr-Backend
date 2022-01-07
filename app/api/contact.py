@@ -30,6 +30,16 @@ def build_phone_number(phone_dict):
         + phone["phone_number"][3:]
     )
 
+# Format phone number as +X (XXX) XXX-XXXX
+def format_phone_number(phone_number):
+    if phone_number is None:
+        return None
+    if len(phone_number) == 10:
+        return "+1 (" + phone_number[:3] + ") " + phone_number[3:6] + "-" + phone_number[6:]
+    if len(phone_number) == 11:
+        return "+" + phone_number[:1] + " (" + phone_number[1:4] + ") " + phone_number[4:7] + "-" + phone_number[7:]
+    return phone_number
+
 
 @bp.route("/contact/sales", methods=["POST"])
 def sales():
@@ -117,13 +127,15 @@ def support():
 
     if (current_user):
         name = current_user.first_name + " " + current_user.last_name
+        email = current_user.email
+        phone = format_phone_number(current_user.phone)
+        user_id = str(current_user.id)
     else:
-        name = "Anonymous"
+        name    = get_request_json(request, "name",         optional=True) or "Unknown"
+        phone   = build_phone_number(get_request_json(request, "phone", optional=True)) or "Unknown"
+        email   = get_request_json(request, "email",        optional=True) or "Unknown"
 
     # Retreive fields
-    name        = get_request_json(request, "name",         optional=True) or name
-    phone       = get_request_json(request, "phone",        optional=True)
-    email       = get_request_json(request, "email",        optional=True)
     description = get_request_json(request, "description",  optional=True)
     user_agent  = get_request_json(request, "ua",           optional=True)
     browser     = get_request_json(request, "browser",      optional=True)
@@ -133,9 +145,6 @@ def support():
     engine      = get_request_json(request, "engine",       optional=True)
 
     # Reformat fields
-    if phone:
-        phone = build_phone_number(phone)
-
     if browser:
         browser = browser["name"] + " " + browser["version"] + " " + browser["major"]
 
@@ -147,11 +156,6 @@ def support():
 
     if engine:
         engine = engine["name"] + " " + engine["version"]
-
-    if current_user.is_authenticated:
-        user_id = current_user.id
-    else:
-        user_id = "Not logged in"
 
     if not description:
         raise (MissingParameterException(f"Include a Description For Your Problem"))
