@@ -93,9 +93,11 @@ def create_conversation():
     message_body = "With: "
     for i in participants:
         message_body = message_body + i.first_name + ", "
-    message_body = message_body[:len(message_body)-2]
+    message_body = message_body[: len(message_body) - 2]
     message_body = message_body + "."
-    notifications.send_notification("You have been added to a group", message_body, recipients)
+    notifications.send_notification(
+        "You have been added to a group", message_body, recipients
+    )
 
     return {"conversation": new_conversation.to_dict()}
 
@@ -260,6 +262,8 @@ def send_message(conversation_id, user_id, message):
 
     emit_to_users("ADD_MESSAGE", new_message.to_dict(), participant_ids)
 
-    notifications.send_notification("New message from " + current_user.first_name, new_message.body, participant_ids)
+    notifications.send_notification(
+        "New message from " + current_user.first_name, new_message.body, participant_ids
+    )
 
     return new_message.to_dict()
