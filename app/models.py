@@ -42,7 +42,7 @@ class Role(db.Model, RoleMixin, CustomSerializerMixin):
 class PushRegistration(db.Model, CustomSerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer(), db.ForeignKey("user.id"))
-    registration_id = db.Column(db.String(255))
+    registration_id = db.Column(db.String(255), unique=True)
 
 
 class User(db.Model, UserMixin, CustomSerializerMixin):
