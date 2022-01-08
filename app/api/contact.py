@@ -47,9 +47,7 @@ def build_phone_number(phone_dict):
     if phone_dict == None:
         return "Unknown"
     return format_phone_number(
-        phone_dict["country_code"]
-        + phone_dict["area_code"]
-        + phone_dict["phone_number"]
+        phone_dict["countryCode"] + phone_dict["areaCode"] + phone_dict["phoneNumber"]
     )
 
 
