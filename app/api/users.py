@@ -499,6 +499,19 @@ def add_push_registration():
     return registration.to_dict()
 
 
+@bp.route("/users/notifications", methods=["DELETE"])
+@login_required
+def remove_push_registration():
+    registration_id = get_request_json(request, "registration_id")
+
+    db.session.query(PushRegistration).filter(
+        PushRegistration.registration_id == registration_id,
+        PushRegistration.user_id == current_user.id,
+    ).delete()
+    db.session.commit()
+    return OK_RESPONSE
+
+
 @bp.route("/users/notifications/test", methods=["POST"])
 @login_required
 def send_notification():
