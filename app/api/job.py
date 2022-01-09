@@ -250,6 +250,12 @@ def add_job():
         color=get_request_json(request, "color"),
         radius=get_request_json(request, "radius"),
         notes=get_request_json(request, "notes", optional=True),
+        restrict_by_location=get_request_json(request, "restrict_by_location"),
+        restrict_by_time=get_request_json(request, "restrict_by_time"),
+        restrict_by_code=get_request_json(request, "restrict_by_code"),
+        restrict_by_time_window=get_request_json(
+            request, "restrict_by_time_window", optional=True
+        ),
     )
     db.session.add(job)
     db.session.commit()
@@ -533,6 +539,14 @@ def edit_job(job_id):
                 Job.radius: get_request_json(request, "radius"),
                 Job.notes: get_request_json(request, "notes", optional=True)
                 or Job.notes,
+                Job.restrict_by_location: get_request_json(
+                    request, "restrict_by_location"
+                ),
+                Job.restrict_by_time: get_request_json(request, "restrict_by_time"),
+                Job.restrict_by_code: get_request_json(request, "restrict_by_code"),
+                Job.restrict_by_time_window: get_request_json(
+                    request, "restrict_by_time_window", optional=True
+                ),
             }
         )
 

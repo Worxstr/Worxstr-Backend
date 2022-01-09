@@ -143,17 +143,41 @@ def clock_in():
                 $ref: '#/definitions/TimeClock'
     """
     shift_id = get_request_arg(request, "shift_id")
-    code = str(get_request_json(request, "code"))
+    code = str(get_request_json(request, "code", optional=True)) or None
+    location = get_request_json(request, "location", optional=True) or None
+
     job = (
         db.session.query(Job)
         .join(ScheduleShift)
         .filter(ScheduleShift.id == shift_id)
         .one()
     )
-    correct_code = job.consultant_code
 
-    if code != correct_code:
-        return {"message": "Invalid clock-in code."}, 401
+    shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+
+    if job.restrict_by_code:
+        correct_code = job.consultant_code
+        if code != correct_code:
+            return {"message": "Invalid clock-in code."}, 401
+    if job.restrict_by_time:
+        earliest_time = shift.time_begin - datetime.timedelta(
+            hours=0, minutes=job.restrict_by_time_window
+        )
+        if datetime.datetime.utcnow() < earliest_time:
+            return {"message": "Too early to clock in!"}, 401
+    if job.restrict_by_location:
+        if location["accuracy"] > job.radius * 1.2:
+            return {"message": "Accuracy is too low! Please try again."}, 401
+        in_range = circle(
+            job.latitude,
+            job.longitude,
+            location["latitude"],
+            location["longitude"],
+            job.radius,
+            location["accuracy"],
+        )
+        if not in_range:
+            return {"message": "Not in range of site!"}, 401
 
     timeclock_state = (
         db.session.query(TimeClock.action)
@@ -197,6 +221,16 @@ def clock_in():
     user_ids.append(current_user.id)
     emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
     return payload
+
+
+def circle(x1, y1, x2, y2, r1, r2):
+
+    distSq = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)
+    radSumSq = (r1 + r2) * (r1 + r2)
+    if distSq > radSumSq:
+        return False
+    else:
+        return True
 
 
 @bp.route("/clock/clock-out", methods=["POST"])
