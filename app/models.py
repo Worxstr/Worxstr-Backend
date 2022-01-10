@@ -193,6 +193,10 @@ class Job(db.Model, CustomSerializerMixin):
     radius = db.Column(db.Integer)
     active = db.Column(db.Boolean, default=True)
     notes = db.Column(db.String())
+    restrict_by_location = db.Column(db.Boolean)
+    restrict_by_time = db.Column(db.Boolean)
+    restrict_by_code = db.Column(db.Boolean)
+    restrict_by_time_window = db.Column(db.Integer)
 
     def __repr__(self):
         return "<Job {}>".format(self.name)
