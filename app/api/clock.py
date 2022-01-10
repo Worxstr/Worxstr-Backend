@@ -155,27 +155,41 @@ def clock_in():
 
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
 
-    if job.restrict_by_code:
+    # When one of the restriction conditions is met, flag this as true and let the user clock in
+    passed_check = False
+
+    if (not passed_check) and job.restrict_by_code and len(code) > 0:
         correct_code = job.consultant_code
-        if code != correct_code:
+        if code == correct_code:
+            passed_check = True
+        else:
             return {"message": "Invalid clock-in code."}, 401
-    if job.restrict_by_time:
+
+    if (not passed_check) and job.restrict_by_time:
         earliest_time = shift.time_begin - datetime.timedelta(
             hours=0, minutes=job.restrict_by_time_window
         )
-        if datetime.datetime.utcnow() < earliest_time:
+        if datetime.datetime.utcnow() >= earliest_time:
+            passed_check = True
+        else:
             return {"message": "Too early to clock in!"}, 401
-    if job.restrict_by_location:
+
+    if (not passed_check) and job.restrict_by_location:
         if location["accuracy"] > job.radius * 1.2:
-            return {"message": "Accuracy is too low! Please try again."}, 401
+            return {"message": "Location accuracy is too low, try again later."}, 401
+
         in_range = within_bounds(
             (job.latitude, job.longitude),
             job.radius,
             (location["latitude"], location["longitude"]),
             location["accuracy"],
         )
-        if not in_range:
-            return {"message": "Not in range of site!"}, 401
+        if in_range:
+            passed_check = True
+        else:
+            return {
+                "message": "You aren't at the job site. Go to the job to clock in."
+            }, 401
 
     timeclock_state = (
         db.session.query(TimeClock.action)
