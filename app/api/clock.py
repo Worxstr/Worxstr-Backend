@@ -1,5 +1,5 @@
 import datetime
-
+from math import radians, cos, sin, asin, sqrt
 from flask import abort, request
 from flask_security import login_required, current_user, roles_accepted, roles_required
 
@@ -168,12 +168,10 @@ def clock_in():
     if job.restrict_by_location:
         if location["accuracy"] > job.radius * 1.2:
             return {"message": "Accuracy is too low! Please try again."}, 401
-        in_range = circle(
-            job.latitude,
-            job.longitude,
-            location["latitude"],
-            location["longitude"],
+        in_range = within_bounds(
+            (job.latitude, job.longitude),
             job.radius,
+            (location["latitude"], location["longitude"]),
             location["accuracy"],
         )
         if not in_range:
@@ -223,14 +221,27 @@ def clock_in():
     return payload
 
 
-def circle(x1, y1, x2, y2, r1, r2):
+def haversine(lat1, lng1, lat2, lng2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians
+    lng1, lat1, lng2, lat2 = map(radians, [lng1, lat1, lng2, lat2])
 
-    distSq = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)
-    radSumSq = (r1 + r2) * (r1 + r2)
-    if distSq > radSumSq:
-        return False
-    else:
-        return True
+    # haversine formula
+    dlng = lng2 - lng1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlng / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    r = 6371000  # Radius of earth in meters.
+    return c * r
+
+
+# Determine whether two coordinate locations and their radii are overlapping
+def within_bounds(location1, r1, location2, r2):
+    distance = haversine(location1[0], location1[1], location2[0], location2[1])
+    return r1 + r2 >= distance
 
 
 @bp.route("/clock/clock-out", methods=["POST"])
