@@ -2,7 +2,7 @@ from flask import request
 from flask_security import login_required, roles_accepted, current_user
 from sqlalchemy.sql.elements import Null
 
-from app import db, payments, payments_auth
+from app import db, payments, payments_auth, notifications
 from app.api import bp
 from app.errors.customs import MissingParameterException
 from app.models import Organization, TimeCard, User, TimeClock, ContractorInfo, Role
@@ -197,6 +197,12 @@ def complete_payments():
         if type(transfer) is not tuple:
             db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
                 {TimeCard.paid: True}
+            )
+            message_body = (
+                "You received a payment for $" + str(timecard[0].wage_payment) + "."
+            )
+            notifications.send_notification(
+                "You've been paid!", message_body, [timecard[0].contractor_id]
             )
         transfers.append(transfer["transfer"])
     db.session.commit()
