@@ -199,7 +199,7 @@ def complete_payments():
                 {TimeCard.paid: True}
             )
             message_body = (
-                "You received a payment for $" + timecard[0].wage_payment + "."
+                "You received a payment for $" + str(timecard[0].wage_payment) + "."
             )
             notifications.send_notification(
                 "You've been paid!", message_body, [timecard[0].contractor_id]
