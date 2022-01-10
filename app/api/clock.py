@@ -3,7 +3,7 @@ import datetime
 from flask import abort, request
 from flask_security import login_required, current_user, roles_accepted, roles_required
 
-from app import db
+from app import db, notifications
 from app.api import bp
 from app.api.sockets import emit_to_users
 from app.models import (
@@ -150,6 +150,9 @@ def clock_in():
         .filter(ScheduleShift.id == shift_id)
         .one()
     )
+
+    shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+
     correct_code = job.consultant_code
 
     if code != correct_code:
@@ -194,6 +197,10 @@ def clock_in():
 
     payload = timeclock.to_dict()
     user_ids = get_manager_user_ids(current_user.organization_id)
+    message_body = (
+        current_user.first_name + " has just clocked in at " + shift.site_location + "."
+    )
+    notifications.send_notification("Contractor clocked in", message_body, user_ids)
     user_ids.append(current_user.id)
     emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
     return payload
@@ -260,6 +267,15 @@ def clock_out():
         timecard["time_clocks"].append(time_clock.to_dict())
     user_ids = get_manager_user_ids(current_user.organization_id)
     emit_to_users("ADD_TIMECARD", timecard, user_ids)
+    shift = (
+        db.session.query(ScheduleShift)
+        .filter(ScheduleShift.id == timecard_info.shift_id)
+        .one()
+    )
+    message_body = (
+        current_user.first_name + " has just clocked in at " + shift.site_location + "."
+    )
+    notifications.send_notification("Contractor clocked in", message_body, user_ids)
     user_ids.append(current_user.id)
     emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
     return payload
