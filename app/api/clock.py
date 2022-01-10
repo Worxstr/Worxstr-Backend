@@ -167,7 +167,7 @@ def clock_in():
         else:
             return {"message": "Too early to clock in!"}, 401
 
-    if (not passed_check) and job.restrict_by_code and len(code) > 0:
+    if (not passed_check) and job.restrict_by_code and code and len(code) > 0:
         correct_code = job.consultant_code
         if code == correct_code:
             passed_check = True
