@@ -113,6 +113,7 @@ def get_shift():
         .filter(
             ScheduleShift.contractor_id == current_user.id,
             ScheduleShift.time_begin > today,
+            ScheduleShift.active == True,
         )
         .order_by(ScheduleShift.time_begin)
         .first()
@@ -153,7 +154,11 @@ def clock_in():
         .one()
     )
 
-    shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+    shift = (
+        db.session.query(ScheduleShift)
+        .filter(ScheduleShift.id == shift_id, ScheduleShift.active == True)
+        .one()
+    )
 
     # When one of the restriction conditions is met, flag this as true and let the user clock in
     passed_check = False

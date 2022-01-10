@@ -11,7 +11,15 @@ from app.api.sockets import emit_to_users
 from app import db
 from app.api import bp
 from app.email import send_email
-from app.models import ContractorInfo, Job, User, ScheduleShift, TimeClock, Role
+from app.models import (
+    ContractorInfo,
+    Job,
+    TimeClockAction,
+    User,
+    ScheduleShift,
+    TimeClock,
+    Role,
+)
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 
@@ -297,6 +305,7 @@ def job_detail(job_id):
                 ScheduleShift.contractor_id == current_user.id,
                 ScheduleShift.job_id == job["id"],
                 ScheduleShift.time_begin > datetime.utcnow(),
+                ScheduleShift.active == True,
             )
             .all()
         )
@@ -305,6 +314,7 @@ def job_detail(job_id):
             .filter(
                 ScheduleShift.contractor_id == current_user.id,
                 ScheduleShift.job_id == job["id"],
+                ScheduleShift.active == True,
                 ScheduleShift.time_begin <= datetime.utcnow(),
                 ScheduleShift.time_end >= datetime.utcnow(),
             )
@@ -317,6 +327,7 @@ def job_detail(job_id):
             .filter(
                 ScheduleShift.job_id == job["id"],
                 ScheduleShift.time_begin > datetime.utcnow(),
+                ScheduleShift.active == True,
             )
             .all()
         )
@@ -326,6 +337,7 @@ def job_detail(job_id):
                 ScheduleShift.job_id == job["id"],
                 ScheduleShift.time_begin <= datetime.utcnow(),
                 ScheduleShift.time_end >= datetime.utcnow(),
+                ScheduleShift.active == True,
             )
             .all()
         )
@@ -616,6 +628,15 @@ def close_job(job_id):
             schema:
                 $ref: '#/definitions/Job'
     """
+    shifts = (
+        db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job_id).all()
+    )
+    for shift in shifts:
+        if shift.clock_state != TimeClockAction.clock_out:
+            return {"message": "There are still users clocked in on this job!"}, 403
+    db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job_id).update(
+        {ScheduleShift.active: False}
+    )
     db.session.query(Job).filter(Job.id == job_id).update({Job.active: False})
     db.session.commit()
 
