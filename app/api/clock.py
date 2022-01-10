@@ -167,9 +167,18 @@ def clock_in():
             return {"message": "Too early to clock in!"}, 401
     if job.restrict_by_location:
         if location["accuracy"] > job.radius * 1.2:
+<<<<<<< HEAD
             return {"message": "Accuracy is too low! Please try again."}, 401
         in_range = within_bounds(
             (job.latitude, job.longitude),
+=======
+            return {"message": "Your location accuracy is low, try again or try another method."}, 401
+        in_range = circle(
+            job.latitude,
+            job.longitude,
+            location["latitude"],
+            location["longitude"],
+>>>>>>> bd0abfe2e7940b8879205ec10336d8663c6f23b5
             job.radius,
             (location["latitude"], location["longitude"]),
             location["accuracy"],
