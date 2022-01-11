@@ -229,6 +229,7 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
     notes = db.Column(db.String())
     clock_history = db.relationship("TimeClock")
     clock_state = db.Column(db.Enum(TimeClockAction))
+    active = db.Column(db.Boolean, default=True)
 
     def from_request(request):
         shift = get_request_json(request, "shift")
