@@ -144,6 +144,13 @@ def verify_micro():
     amount1 = get_request_json(request, "amount1")
     amount2 = get_request_json(request, "amount2")
     result = payments.verify_micro_deposits(amount1, amount2, funding_source)
+
+    if result[1] == 200:
+        if current_user.has_role("contractor"):
+            user_ids = [current_user.id]
+        else:
+            user_ids = get_manager_user_ids(current_user.organization_id)
+        emit_to_users("ADD_FUNDING_SOURCE", result[0], user_ids)
     return result
 
 
