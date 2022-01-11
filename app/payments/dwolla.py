@@ -180,3 +180,42 @@ class Dwolla:
     def retry_business_customer(self, request_body, customer_url):
         self.app_token.post(customer_url, request_body)
         return self.get_customer_info(customer_url)["status"]
+
+    @catch_errors
+    def create_funding_source_micro(
+        self, routing_number, account_number, account_type, name, customer_url
+    ):
+        request_body = {
+            "routingNumber": routing_number,
+            "accountNumber": account_number,
+            "bankAccountType": account_type,
+            "name": name,
+        }
+        account = self.app_token.post("%s/funding-sources" % customer_url, request_body)
+        funding_source_url = account.headers["location"]
+        self.app_token.post("%s/micro-deposits" % funding_source_url)
+        return self.get_customer_info(funding_source_url)
+
+    @catch_errors
+    def verify_micro_deposits(self, amount1, amount2, funding_source_url):
+        request_body = {
+            "amount1": {"value": amount1, "currency": "USD"},
+            "amount2": {"value": amount2, "currency": "USD"},
+        }
+        result = self.app_token.post(
+            "%s/micro-deposits" % funding_source_url, request_body
+        )
+        if result == 200:
+            return {"message": "Verified!"}, 200
+        elif result == 202:
+            return {"message": "Try again later. Deposits have not settled."}, 202
+        elif result == 400:
+            return {"message": "Wrong amount(s)"}, 400
+        elif result == 403:
+            return {"message": "Account already verified or too many attempts."}, 403
+        elif result == 404:
+            return {"message": "Funding source not found!"}, 404
+        else:
+            return {
+                "message": "Internal server error. Please contact support issue persists"
+            }, 500
