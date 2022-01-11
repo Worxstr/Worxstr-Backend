@@ -137,7 +137,7 @@ def add_account():
     return response
 
 
-@bp.route("/payments/accounts/micro", methods=["PUT"])
+@bp.route("/payments/accounts/verify", methods=["PUT"])
 @login_required
 def verify_micro():
     funding_source = get_request_json(request, "funding_source")

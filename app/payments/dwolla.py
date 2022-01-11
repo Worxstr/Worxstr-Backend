@@ -205,8 +205,8 @@ class Dwolla:
         result = self.app_token.post(
             "%s/micro-deposits" % funding_source_url, request_body
         )
-        if result == 200:
-            return {"message": "Verified!"}, 200
+        if result.status == 200:
+            return self.get_customer_info(funding_source_url), 200
         elif result == 202:
             return {"message": "Try again later. Deposits have not settled."}, 202
         elif result == 400:
