@@ -235,10 +235,9 @@ def clock_in():
 
     payload = timeclock.to_dict()
     user_ids = get_manager_user_ids(current_user.organization_id)
-    message_body = (
-        current_user.first_name + " has just clocked in at " + shift.site_location + "."
-    )
-    notifications.send_notification("Contractor clocked in", message_body, user_ids)
+    title = current_user.first_name + " clocked in"
+    message_body = "At " + shift.site_location + "."
+    notifications.send_notification(title, message_body, user_ids)
     user_ids.append(current_user.id)
     emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
     return payload
@@ -333,10 +332,9 @@ def clock_out():
         .filter(ScheduleShift.id == timecard_info.shift_id)
         .one()
     )
-    message_body = (
-        current_user.first_name + " has just clocked in at " + shift.site_location + "."
-    )
-    notifications.send_notification("Contractor clocked in", message_body, user_ids)
+    title = current_user.first_name + " clocked out"
+    message_body = "At " + shift.site_location + "."
+    notifications.send_notification(title, message_body, user_ids)
     user_ids.append(current_user.id)
     emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
     return payload
