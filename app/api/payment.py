@@ -137,13 +137,20 @@ def add_account():
     return response
 
 
-@bp.route("/payments/accounts/micro", methods=["PUT"])
+@bp.route("/payments/accounts/verify", methods=["PUT"])
 @login_required
 def verify_micro():
     funding_source = get_request_json(request, "funding_source")
     amount1 = get_request_json(request, "amount1")
     amount2 = get_request_json(request, "amount2")
     result = payments.verify_micro_deposits(amount1, amount2, funding_source)
+
+    if result[1] == 200:
+        if current_user.has_role("contractor"):
+            user_ids = [current_user.id]
+        else:
+            user_ids = get_manager_user_ids(current_user.organization_id)
+        emit_to_users("ADD_FUNDING_SOURCE", result[0], user_ids)
     return result
 
 
