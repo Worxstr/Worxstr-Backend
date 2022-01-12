@@ -611,6 +611,19 @@ def send_consultant_code(job_id):
     )
 
 
+@bp.route("/jobs/<job_id>/code", methods=["PUT"])
+def reset_code(job_id):
+    db.session.query(Job).filter(Job.id == job_id).update(
+        {Job.consultant_code: str(randint(000000, 999999))}
+    )
+    db.session.commit()
+    response = db.session.query(Job).filter(Job.id == job_id).one().to_dict()
+    recipients = get_manager_user_ids(current_user.organization_id)
+    recipients.append(current_user.id)
+    emit_to_users("ADD_JOB", response, recipients)
+    return response
+
+
 @bp.route("/jobs/<job_id>/close", methods=["PUT"])
 @login_required
 @roles_required("organization_manager")
