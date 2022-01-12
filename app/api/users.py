@@ -284,6 +284,7 @@ def get_authenticated_user():
     Returns the currently authenticated user
     """
     authenticated_user = current_user.to_dict()
+    authenticated_user["fs_uniquifier"] = current_user.fs_uniquifier
     authenticated_user["roles"] = [x.to_dict() for x in current_user.roles]
     authenticated_user["organization_info"] = (
         db.session.query(Organization)

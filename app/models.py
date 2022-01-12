@@ -58,7 +58,6 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "dwolla_customer_url",
         "roles",
         "direct",
-        "fs_uniquifier",
         "additional_info",
         "location",
     )
