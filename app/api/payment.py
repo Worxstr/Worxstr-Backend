@@ -107,21 +107,51 @@ def remove_balance():
 @bp.route("/payments/accounts", methods=["POST"])
 @login_required
 def add_account():
-    public_token = get_request_json(request, "public_token")
-    account_id = get_request_json(request, "account_id")
+    public_token = get_request_json(request, "public_token", optional=True) or None
+    account_id = get_request_json(request, "account_id", optional=True) or None
     account_name = get_request_json(request, "name")
+    routing_number = get_request_json(request, "routing_number", optional=True) or None
+    account_number = get_request_json(request, "account_number", optional=True) or None
+    account_type = get_request_json(request, "account_type", optional=True) or None
 
-    dwolla_token = payments_auth.get_dwolla_token(public_token, account_id)
     customer_url = current_user.dwolla_customer_url
+
+    if public_token != None and account_id != None:
+        dwolla_token = payments_auth.get_dwolla_token(public_token, account_id)
+        response = payments.authenticate_funding_source(
+            customer_url, dwolla_token, account_name
+        )
+    elif routing_number != None and account_number != None and account_type != None:
+        response = payments.create_funding_source_micro(
+            routing_number, account_number, account_type, account_name, customer_url
+        )
+    else:
+        return {"message": "Please provide a valid request!"}, 403
+
     if current_user.has_role("contractor"):
         user_ids = [current_user.id]
     else:
         user_ids = get_manager_user_ids(current_user.organization_id)
-    response = payments.authenticate_funding_source(
-        customer_url, dwolla_token, account_name
-    )
+
     emit_to_users("ADD_FUNDING_SOURCE", response, user_ids)
     return response
+
+
+@bp.route("/payments/accounts/verify", methods=["PUT"])
+@login_required
+def verify_micro():
+    funding_source = get_request_json(request, "funding_source")
+    amount1 = get_request_json(request, "amount1")
+    amount2 = get_request_json(request, "amount2")
+    result = payments.verify_micro_deposits(amount1, amount2, funding_source)
+
+    if result[1] == 200:
+        if current_user.has_role("contractor"):
+            user_ids = [current_user.id]
+        else:
+            user_ids = get_manager_user_ids(current_user.organization_id)
+        emit_to_users("ADD_FUNDING_SOURCE", result[0], user_ids)
+    return result
 
 
 @bp.route("/payments/accounts", methods=["GET"])
