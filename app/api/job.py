@@ -11,6 +11,7 @@ from app.api.sockets import emit_to_users
 from app import db
 from app.api import bp
 from app.email import send_email
+from app.api.scheduler import get_organization_user_ids
 from app.models import (
     ContractorInfo,
     Job,
@@ -647,6 +648,7 @@ def close_job(job_id):
     for shift in shifts:
         if shift.clock_state != TimeClockAction.clock_out:
             return {"message": "There are still users clocked in on this job!"}, 403
+
     db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job_id).update(
         {ScheduleShift.active: False}
     )
@@ -656,5 +658,11 @@ def close_job(job_id):
     emit_to_users(
         "REMOVE_JOB", int(job_id), get_manager_user_ids(current_user.organization_id)
     )
+    for shift in shifts:
+        emit_to_users(
+            "REMOVE_SHIFT",
+            {"shiftId": int(shift.id), "jobId": int(job_id)},
+            get_organization_user_ids(job_id),
+        )
 
     return OK_RESPONSE
