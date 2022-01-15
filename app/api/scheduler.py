@@ -1,4 +1,5 @@
 import datetime
+import dateutil.parser
 
 from flask import abort, request
 from flask_security import current_user, login_required, roles_accepted
@@ -241,12 +242,9 @@ def update_shift(shift_id):
                         $ref: '#/definitions/Shift'
     """
     shift = get_request_json(request, "shift")
-    time_begin = datetime.datetime.strptime(
-        shift.get("time_begin"), "%Y-%m-%dT%H:%M:%S.%fZ"
-    )
-    time_end = datetime.datetime.strptime(
-        shift.get("time_begin"), "%Y-%m-%dT%H:%M:%S.%fZ"
-    )
+    time_begin = dateutil.parser.parse(shift.get("time_begin"))
+    time_end = dateutil.parser.parse(shift.get("time_end"))
+
     if time_begin >= time_end:
         return {"message": "The end time must be after the start time."}, 400
 
