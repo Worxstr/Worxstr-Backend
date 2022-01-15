@@ -154,9 +154,7 @@ def shifts():
             "message": "Must supply the same number of Contractor IDs and Site Locations."
         }, 400
     if duration <= 0:
-        return {
-            "message": "The end time must be after the start time."
-        }, 400
+        return {"message": "The end time must be after the start time."}, 400
 
     shifts = []
     for (e, s) in zip(contractor_ids, site_locations):
@@ -243,12 +241,14 @@ def update_shift(shift_id):
                         $ref: '#/definitions/Shift'
     """
     shift = get_request_json(request, "shift")
-    time_begin = datetime.datetime.strptime(shift.get("time_begin"), "%Y-%m-%dT%H:%M:%S.%fZ")
-    time_end = datetime.datetime.strptime(shift.get("time_begin"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    time_begin = datetime.datetime.strptime(
+        shift.get("time_begin"), "%Y-%m-%dT%H:%M:%S.%fZ"
+    )
+    time_end = datetime.datetime.strptime(
+        shift.get("time_begin"), "%Y-%m-%dT%H:%M:%S.%fZ"
+    )
     if time_begin >= time_end:
-        return {
-            "message": "The end time must be after the start time."
-        }, 400
+        return {"message": "The end time must be after the start time."}, 400
 
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
         {
