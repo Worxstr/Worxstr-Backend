@@ -163,7 +163,7 @@ def clock_in():
     # When one of the restriction conditions is met, flag this as true and let the user clock in
     passed_check = False
 
-    if (not passed_check) and job.restrict_by_time:
+    if job.restrict_by_time:
         earliest_time = shift.time_begin - datetime.timedelta(
             hours=0, minutes=job.restrict_by_time_window
         )
@@ -172,14 +172,14 @@ def clock_in():
         else:
             return {"message": "Too early to clock in!"}, 401
 
-    if (not passed_check) and job.restrict_by_code and code and len(code) > 0:
+    if job.restrict_by_code:
         correct_code = job.consultant_code
         if code == correct_code:
             passed_check = True
         else:
             return {"message": "Invalid clock-in code."}, 401
 
-    if (not passed_check) and job.restrict_by_location:
+    if job.restrict_by_location:
         if location["accuracy"] > job.radius * 1.2:
             return {"message": "Location accuracy is too low, try again later."}, 401
 
