@@ -1,5 +1,4 @@
 import datetime
-import dateutil.parser
 
 from flask import abort, request
 from flask_security import current_user, login_required, roles_accepted
@@ -7,14 +6,7 @@ from sqlalchemy.sql.expression import desc
 
 from app import db
 from app.api import bp
-from app.models import (
-    ScheduleShift,
-    ShiftTask,
-    TimeClockAction,
-    User,
-    Organization,
-    Job,
-)
+from app.models import ScheduleShift, ShiftTask, User, Organization, Job
 from app.scheduler import add_shift
 from app.users import get_users_list
 from app.utils import get_request_arg, get_request_json, get_key, OK_RESPONSE
@@ -45,7 +37,6 @@ def get_shifts():
         .filter(
             ScheduleShift.time_end > datetime.datetime.utcnow(),
             ScheduleShift.contractor_id == current_user.id,
-            ScheduleShift.active == True,
         )
         .order_by(ScheduleShift.time_end.desc())
         .offset(offset * 10)
@@ -154,8 +145,6 @@ def shifts():
         return {
             "message": "Must supply the same number of Contractor IDs and Site Locations."
         }, 400
-    if duration <= 0:
-        return {"message": "The end time must be after the start time."}, 400
 
     shifts = []
     for (e, s) in zip(contractor_ids, site_locations):
@@ -242,11 +231,6 @@ def update_shift(shift_id):
                         $ref: '#/definitions/Shift'
     """
     shift = get_request_json(request, "shift")
-    time_begin = dateutil.parser.parse(shift.get("time_begin"))
-    time_end = dateutil.parser.parse(shift.get("time_end"))
-
-    if time_begin >= time_end:
-        return {"message": "The end time must be after the start time."}, 400
 
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
         {
@@ -310,13 +294,10 @@ def delete_shift(shift_id):
             description: Shift deleted.
     """
     shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
-    if shift.clock_state != TimeClockAction.clock_out:
-        return {"message": "User is still clocked in to this shift!"}, 403
     job_id = shift.job_id
     contractor_id = shift.contractor_id
-    db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
-        {ScheduleShift.active: False}
-    )
+    db.session.query(ShiftTask).filter(ShiftTask.shift_id == shift_id).delete()
+    db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).delete()
     db.session.commit()
 
     next_shift = get_next_shift(contractor_id)["shift"]
@@ -356,7 +337,6 @@ def get_next_shift(id=None):
         .filter(
             ScheduleShift.contractor_id == id,
             ScheduleShift.time_end > current_time,
-            ScheduleShift.active == True,
         )
         .order_by(ScheduleShift.time_end)
         .first()
