@@ -104,3 +104,5 @@ class Config(object):
     PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID")
     PLAID_SECRET = os.environ.get("PLAID_SECRET")
     PLAID_HOST = os.environ.get("PLAID_HOST")
+
+    FIREBASE_SERVER_KEY = os.environ.get("FIREBASE_SERVER_KEY")

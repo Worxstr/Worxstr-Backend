@@ -39,6 +39,12 @@ class Role(db.Model, RoleMixin, CustomSerializerMixin):
         return "<Role {}>".format(self.name)
 
 
+class PushRegistration(db.Model, CustomSerializerMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer(), db.ForeignKey("user.id"))
+    registration_id = db.Column(db.String(255), unique=True)
+
+
 class User(db.Model, UserMixin, CustomSerializerMixin):
 
     serialize_only = (
@@ -52,8 +58,8 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "dwolla_customer_url",
         "roles",
         "direct",
-        "fs_uniquifier",
         "additional_info",
+        "location",
     )
     serialize_rules = ()
 
@@ -102,6 +108,19 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
             return None
 
     @hybrid_property
+    def location(self):
+        location = (
+            db.session.query(UserLocation)
+            .filter(UserLocation.user_id == self.id)
+            .order_by(
+                UserLocation.id.desc()
+            )  # This should really be timestamp. For some reason sqlalchemy won't order properly though.
+            .limit(1)
+            .one_or_none()
+        )
+        return location
+
+    @hybrid_property
     def additional_info(self):
         additional_info = None
         if self.has_role("contractor"):
@@ -115,6 +134,19 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
                 db.session.query(ManagerInfo).filter(ManagerInfo.id == self.id).one()
             )
         return additional_info
+
+
+class UserLocation(db.Model, CustomSerializerMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column("user_id", db.Integer(), db.ForeignKey("user.id"))
+    longitude = db.Column(db.Float(precision=32))
+    latitude = db.Column(db.Float(precision=32))
+    accuracy = db.Column(db.Float(precision=32))
+    altitude_accuracy = db.Column(db.Float(precision=32))
+    altitude = db.Column(db.Float(precision=32))
+    speed = db.Column(db.Float(precision=32))
+    heading = db.Column(db.Float(precision=32))
+    timestamp = db.Column(db.DateTime)
 
 
 class ManagerInfo(db.Model, CustomSerializerMixin):
@@ -160,6 +192,10 @@ class Job(db.Model, CustomSerializerMixin):
     radius = db.Column(db.Integer)
     active = db.Column(db.Boolean, default=True)
     notes = db.Column(db.String())
+    restrict_by_location = db.Column(db.Boolean)
+    restrict_by_time = db.Column(db.Boolean)
+    restrict_by_code = db.Column(db.Boolean)
+    restrict_by_time_window = db.Column(db.Integer)
 
     def __repr__(self):
         return "<Job {}>".format(self.name)
@@ -192,6 +228,7 @@ class ScheduleShift(db.Model, CustomSerializerMixin):
     notes = db.Column(db.String())
     clock_history = db.relationship("TimeClock")
     clock_state = db.Column(db.Enum(TimeClockAction))
+    active = db.Column(db.Boolean, default=True)
 
     def from_request(request):
         shift = get_request_json(request, "shift")
