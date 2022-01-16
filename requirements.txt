@@ -54,6 +54,7 @@ pathspec==0.8.1
 plaid-python==8.0.0
 psycopg2-binary==2.8.6
 pycparser==2.20
+pyfcm==1.5.4
 pylint==2.6.0
 pyOpenSSL==20.0.1
 pypng==0.0.20

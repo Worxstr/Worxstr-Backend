@@ -1,9 +1,9 @@
 import datetime
-
+from math import radians, cos, sin, asin, sqrt
 from flask import abort, request
 from flask_security import login_required, current_user, roles_accepted, roles_required
 
-from app import db
+from app import db, notifications
 from app.api import bp
 from app.api.sockets import emit_to_users
 from app.models import (
@@ -113,6 +113,7 @@ def get_shift():
         .filter(
             ScheduleShift.contractor_id == current_user.id,
             ScheduleShift.time_begin > today,
+            ScheduleShift.active == True,
         )
         .order_by(ScheduleShift.time_begin)
         .first()
@@ -143,17 +144,57 @@ def clock_in():
                 $ref: '#/definitions/TimeClock'
     """
     shift_id = get_request_arg(request, "shift_id")
-    code = str(get_request_json(request, "code"))
+    code = str(get_request_json(request, "code", optional=True)) or None
+    location = get_request_json(request, "location", optional=True) or None
+
     job = (
         db.session.query(Job)
         .join(ScheduleShift)
         .filter(ScheduleShift.id == shift_id)
         .one()
     )
-    correct_code = job.consultant_code
 
-    if code != correct_code:
-        return {"message": "Invalid clock-in code."}, 401
+    shift = (
+        db.session.query(ScheduleShift)
+        .filter(ScheduleShift.id == shift_id, ScheduleShift.active == True)
+        .one()
+    )
+
+    # When one of the restriction conditions is met, flag this as true and let the user clock in
+    passed_check = False
+
+    if job.restrict_by_time:
+        earliest_time = shift.time_begin - datetime.timedelta(
+            hours=0, minutes=job.restrict_by_time_window
+        )
+        if datetime.datetime.utcnow() >= earliest_time:
+            passed_check = True
+        else:
+            return {"message": "Too early to clock in!"}, 401
+
+    if job.restrict_by_code:
+        correct_code = job.consultant_code
+        if code == correct_code:
+            passed_check = True
+        else:
+            return {"message": "Invalid clock-in code."}, 401
+
+    if job.restrict_by_location:
+        if location["accuracy"] > job.radius * 1.2:
+            return {"message": "Location accuracy is too low, try again later."}, 401
+
+        in_range = within_bounds(
+            (job.latitude, job.longitude),
+            job.radius,
+            (location["latitude"], location["longitude"]),
+            location["accuracy"],
+        )
+        if in_range:
+            passed_check = True
+        else:
+            return {
+                "message": "You aren't at the job site. Go to the job to clock in."
+            }, 401
 
     timeclock_state = (
         db.session.query(TimeClock.action)
@@ -194,9 +235,35 @@ def clock_in():
 
     payload = timeclock.to_dict()
     user_ids = get_manager_user_ids(current_user.organization_id)
+    title = current_user.first_name + " clocked in"
+    message_body = "At " + shift.site_location + "."
+    notifications.send_notification(title, message_body, user_ids)
     user_ids.append(current_user.id)
     emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
     return payload
+
+
+def haversine(lat1, lng1, lat2, lng2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians
+    lng1, lat1, lng2, lat2 = map(radians, [lng1, lat1, lng2, lat2])
+
+    # haversine formula
+    dlng = lng2 - lng1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlng / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    r = 6371000  # Radius of earth in meters.
+    return c * r
+
+
+# Determine whether two coordinate locations and their radii are overlapping
+def within_bounds(location1, r1, location2, r2):
+    distance = haversine(location1[0], location1[1], location2[0], location2[1])
+    return r1 + r2 >= distance
 
 
 @bp.route("/clock/clock-out", methods=["POST"])
@@ -260,6 +327,14 @@ def clock_out():
         timecard["time_clocks"].append(time_clock.to_dict())
     user_ids = get_manager_user_ids(current_user.organization_id)
     emit_to_users("ADD_TIMECARD", timecard, user_ids)
+    shift = (
+        db.session.query(ScheduleShift)
+        .filter(ScheduleShift.id == timecard_info.shift_id)
+        .one()
+    )
+    title = current_user.first_name + " clocked out"
+    message_body = "At " + shift.site_location + "."
+    notifications.send_notification(title, message_body, user_ids)
     user_ids.append(current_user.id)
     emit_to_users("ADD_CLOCK_EVENT", payload, user_ids)
     return payload
