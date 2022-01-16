@@ -12,7 +12,6 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from flasgger import Swagger
 from geopy.geocoders import Nominatim
-from app.notifications.notifications import Push
 
 from config import Config
 from app.payments.dwolla import Dwolla
@@ -25,7 +24,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
 swagger = Swagger(config=Config.SWAGGER_CONFIG)
-from app.models import PushRegistration, User, Role
+from app.models import User, Role
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security()
@@ -43,7 +42,6 @@ payments_auth = Plaid(
     client_id=Config.PLAID_CLIENT_ID, secret=Config.PLAID_SECRET, host=Config.PLAID_HOST
 )
 scheduler = BackgroundScheduler()
-notifications = Push(Config.FIREBASE_SERVER_KEY, db, PushRegistration)
 
 
 def create_app(config_class=Config):

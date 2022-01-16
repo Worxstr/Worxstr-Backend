@@ -2,7 +2,7 @@
 Plumbing for scheduling functionality
 """
 from app import db
-from app.models import ScheduleShift, TimeClockAction, User
+from app.models import ScheduleShift, User
 
 
 def add_shift(
@@ -33,7 +33,6 @@ def add_shift(
         contractor_id=contractor_id,
         timecard_id=timecard_id,
         notes=notes,
-        clock_state=TimeClockAction.clock_out,
     )
 
     db.session.add(shift)

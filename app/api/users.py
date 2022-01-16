@@ -14,22 +14,13 @@ from flask_security import (
 )
 from sqlalchemy.sql.operators import op
 
-from app import db, user_datastore, geolocator, payments, notifications
+from app import db, user_datastore, geolocator, payments
 from app.api import bp
 from app.email import send_email
-from app.models import (
-    ManagerInfo,
-    PushRegistration,
-    User,
-    ContractorInfo,
-    Organization,
-    Role,
-    UserLocation,
-)
+from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app.api.sockets import emit_to_users
 from app import payments
-import pytz
 
 
 def get_manager_user_ids(organization_id):
@@ -284,7 +275,6 @@ def get_authenticated_user():
     Returns the currently authenticated user
     """
     authenticated_user = current_user.to_dict()
-    authenticated_user["fs_uniquifier"] = current_user.fs_uniquifier
     authenticated_user["roles"] = [x.to_dict() for x in current_user.roles]
     authenticated_user["organization_info"] = (
         db.session.query(Organization)
@@ -452,73 +442,3 @@ def retry_contractor_payments():
     result["contractor_info"] = contractor_info
 
     return result
-
-
-@bp.route("/users/me/location", methods=["POST"])
-@login_required
-def log_user_location():
-    longitude = get_request_json(request, "longitude", optional=True)
-    latitude = get_request_json(request, "latitude", optional=True)
-    accuracy = get_request_json(request, "accuracy", optional=True)
-    altitude_accuracy = get_request_json(request, "altitude_accuracy", optional=True)
-    altitude = get_request_json(request, "altitude", optional=True)
-    speed = get_request_json(request, "speed", optional=True)
-    heading = get_request_json(request, "heading", optional=True)
-    timestamp = get_request_json(request, "timestamp", optional=True)
-
-    location = UserLocation(
-        user_id=current_user.id,
-        longitude=longitude,
-        latitude=latitude,
-        accuracy=accuracy,
-        altitude_accuracy=altitude_accuracy,
-        altitude=altitude,
-        speed=speed,
-        heading=heading,
-        timestamp=datetime.datetime.fromtimestamp(timestamp / 1000.0, tz=pytz.utc),
-    )
-    db.session.add(location)
-    db.session.commit()
-    emit_to_users(
-        "ADD_USER",
-        {"id": current_user.id, "location": location.to_dict()},
-        get_manager_user_ids(current_user.organization_id),
-    )
-    return OK_RESPONSE
-
-
-@bp.route("/users/notifications", methods=["POST"])
-@login_required
-def add_push_registration():
-    registration_id = get_request_json(request, "registration_id")
-
-    registration = PushRegistration(
-        user_id=current_user.id, registration_id=registration_id
-    )
-    db.session.add(registration)
-    db.session.commit()
-    return registration.to_dict()
-
-
-@bp.route("/users/notifications", methods=["DELETE"])
-@login_required
-def remove_push_registration():
-    registration_id = get_request_json(request, "registration_id")
-
-    db.session.query(PushRegistration).filter(
-        PushRegistration.registration_id == registration_id,
-        PushRegistration.user_id == current_user.id,
-    ).delete()
-    db.session.commit()
-    return OK_RESPONSE
-
-
-@bp.route("/users/notifications/test", methods=["POST"])
-@login_required
-def send_notification():
-    message_title = get_request_json(request, "message_title")
-    message_body = get_request_json(request, "message_body")
-
-    return notifications.send_notification(
-        message_title, message_body, [current_user.id]
-    )

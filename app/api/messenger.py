@@ -1,10 +1,10 @@
 from flask import request
 from flask_security import current_user, login_required
 
-from app import db, notifications
+from app import db, socketio
 from app.api import bp
 from app.models import Message, User, Conversation
-from app.utils import get_request_json
+from app.utils import get_request_arg, get_request_json
 from app.api.sockets import emit_to_users
 
 
@@ -89,16 +89,6 @@ def create_conversation():
     db.session.commit()
 
     emit_to_users("ADD_CONVERSATION", new_conversation.to_dict(), recipient_ids)
-
-    message_body = "With: "
-    for i in participants:
-        message_body = message_body + i.first_name + ", "
-    message_body = message_body[: len(message_body) - 2]
-    message_body = message_body + "."
-    recipient_ids.remove(current_user.id)
-    notifications.send_notification(
-        "You have been added to a group", message_body, recipient_ids
-    )
 
     return {"conversation": new_conversation.to_dict()}
 
@@ -262,9 +252,5 @@ def send_message(conversation_id, user_id, message):
     participant_ids = [c["id"] for c in conversation["participants"]]
 
     emit_to_users("ADD_MESSAGE", new_message.to_dict(), participant_ids)
-    participant_ids.remove(current_user.id)
-    notifications.send_notification(
-        "New message from " + current_user.first_name, new_message.body, participant_ids
-    )
 
     return new_message.to_dict()
