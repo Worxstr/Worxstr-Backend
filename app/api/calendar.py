@@ -19,6 +19,7 @@ def get_events(user_id, date_begin, date_end):
             ScheduleShift.time_begin > date_begin,
             ScheduleShift.time_begin < date_end,
             ScheduleShift.contractor_id == user_id,
+            ScheduleShift.active == True,
         )
         .order_by(ScheduleShift.time_begin.desc())
         .all()

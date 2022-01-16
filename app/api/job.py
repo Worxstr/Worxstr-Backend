@@ -11,7 +11,16 @@ from app.api.sockets import emit_to_users
 from app import db
 from app.api import bp
 from app.email import send_email
-from app.models import ContractorInfo, Job, User, ScheduleShift, TimeClock, Role
+from app.api.scheduler import get_organization_user_ids
+from app.models import (
+    ContractorInfo,
+    Job,
+    TimeClockAction,
+    User,
+    ScheduleShift,
+    TimeClock,
+    Role,
+)
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 
 
@@ -250,6 +259,12 @@ def add_job():
         color=get_request_json(request, "color"),
         radius=get_request_json(request, "radius"),
         notes=get_request_json(request, "notes", optional=True),
+        restrict_by_location=get_request_json(request, "restrict_by_location"),
+        restrict_by_time=get_request_json(request, "restrict_by_time"),
+        restrict_by_code=get_request_json(request, "restrict_by_code"),
+        restrict_by_time_window=get_request_json(
+            request, "restrict_by_time_window", optional=True
+        ),
     )
     db.session.add(job)
     db.session.commit()
@@ -291,6 +306,7 @@ def job_detail(job_id):
                 ScheduleShift.contractor_id == current_user.id,
                 ScheduleShift.job_id == job["id"],
                 ScheduleShift.time_begin > datetime.utcnow(),
+                ScheduleShift.active == True,
             )
             .all()
         )
@@ -299,6 +315,7 @@ def job_detail(job_id):
             .filter(
                 ScheduleShift.contractor_id == current_user.id,
                 ScheduleShift.job_id == job["id"],
+                ScheduleShift.active == True,
                 ScheduleShift.time_begin <= datetime.utcnow(),
                 ScheduleShift.time_end >= datetime.utcnow(),
             )
@@ -311,6 +328,7 @@ def job_detail(job_id):
             .filter(
                 ScheduleShift.job_id == job["id"],
                 ScheduleShift.time_begin > datetime.utcnow(),
+                ScheduleShift.active == True,
             )
             .all()
         )
@@ -320,6 +338,7 @@ def job_detail(job_id):
                 ScheduleShift.job_id == job["id"],
                 ScheduleShift.time_begin <= datetime.utcnow(),
                 ScheduleShift.time_end >= datetime.utcnow(),
+                ScheduleShift.active == True,
             )
             .all()
         )
@@ -533,6 +552,14 @@ def edit_job(job_id):
                 Job.radius: get_request_json(request, "radius"),
                 Job.notes: get_request_json(request, "notes", optional=True)
                 or Job.notes,
+                Job.restrict_by_location: get_request_json(
+                    request, "restrict_by_location"
+                ),
+                Job.restrict_by_time: get_request_json(request, "restrict_by_time"),
+                Job.restrict_by_code: get_request_json(request, "restrict_by_code"),
+                Job.restrict_by_time_window: get_request_json(
+                    request, "restrict_by_time_window", optional=True
+                ),
             }
         )
 
@@ -585,6 +612,19 @@ def send_consultant_code(job_id):
     )
 
 
+@bp.route("/jobs/<job_id>/code", methods=["PUT"])
+def reset_code(job_id):
+    db.session.query(Job).filter(Job.id == job_id).update(
+        {Job.consultant_code: str(randint(000000, 999999))}
+    )
+    db.session.commit()
+    response = db.session.query(Job).filter(Job.id == job_id).one().to_dict()
+    recipients = get_manager_user_ids(current_user.organization_id)
+    recipients.append(current_user.id)
+    emit_to_users("ADD_JOB", response, recipients)
+    return response
+
+
 @bp.route("/jobs/<job_id>/close", methods=["PUT"])
 @login_required
 @roles_required("organization_manager")
@@ -602,11 +642,27 @@ def close_job(job_id):
             schema:
                 $ref: '#/definitions/Job'
     """
+    shifts = (
+        db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job_id).all()
+    )
+    for shift in shifts:
+        if shift.clock_state != TimeClockAction.clock_out:
+            return {"message": "There are still users clocked in on this job!"}, 403
+
+    db.session.query(ScheduleShift).filter(ScheduleShift.job_id == job_id).update(
+        {ScheduleShift.active: False}
+    )
     db.session.query(Job).filter(Job.id == job_id).update({Job.active: False})
     db.session.commit()
 
     emit_to_users(
         "REMOVE_JOB", int(job_id), get_manager_user_ids(current_user.organization_id)
     )
+    for shift in shifts:
+        emit_to_users(
+            "REMOVE_SHIFT",
+            {"shiftId": int(shift.id), "jobId": int(job_id)},
+            get_organization_user_ids(job_id),
+        )
 
     return OK_RESPONSE
