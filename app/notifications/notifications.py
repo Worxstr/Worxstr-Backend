@@ -25,5 +25,16 @@ class Push:
             registration_ids=registration_ids,
             message_title=message_title,
             message_body=message_body,
+            # Example of route body to send a notification to a specific route
+            # Check src/router/index.ts in the frontend repo for a list of routes
+            # More data can be added to the data_message as needed
+            # data_message= {
+            #     "route": {
+            #         "name": "job",
+            #         "params": {
+            #             "jobId": 114
+            #         }
+            #     }
+            # }
         )
         return result
