@@ -137,11 +137,14 @@ def sign_up_contractor():
         return dwolla_customer_url
     dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
     roles = ["contractor"]
-    manager_id = (
-        db.session.query(ManagerInfo.id)
+    manager_info = (
+        db.session.query(ManagerInfo)
         .filter(ManagerInfo.reference_number == manager_reference)
-        .one()[0]
+        .one_or_none()
     )
+    if manager_info == None:
+        return {"message": "Invalid manager reference number."}, 401
+    manager_id = manager_info.id
     organization_id = (
         db.session.query(User.organization_id).filter(User.id == manager_id).one()[0]
     )
