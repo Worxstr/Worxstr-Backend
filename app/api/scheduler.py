@@ -311,7 +311,9 @@ def delete_shift():
     """
     shift_ids = get_request_json(request, "shift_ids")
     for shift_id in shift_ids:
-        shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+        shift = (
+            db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+        )
         if shift.clock_state != TimeClockAction.clock_out:
             return {"message": "User is still clocked in to this shift!"}, 403
         job_id = shift.job_id
