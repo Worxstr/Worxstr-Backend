@@ -309,6 +309,11 @@ class TimeCard(db.Model, CustomSerializerMixin):
 
 
 class Payment(db.Model, CustomSerializerMixin):
+    serialize_rules = (
+        "receiver",
+        "sender",
+    )
+
     __tablename__ = "payment"
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Numeric)
@@ -323,6 +328,28 @@ class Payment(db.Model, CustomSerializerMixin):
     receiver_dwolla_url = db.Column(db.String)
     invoice = db.relationship("Invoice")
     bank_transfer = db.relationship("BankTransfer")
+
+    @hybrid_property
+    def sender(self):
+        return (
+            db.session.query(Organization)
+            .filter(Organization.dwolla_customer_url == self.sender_dwolla_url)
+            .one()
+        )
+
+    @hybrid_property
+    def receiver(self):
+        receiver = (
+            db.session.query(User)
+            .join(ContractorInfo)
+            .filter(ContractorInfo.dwolla_customer_url == self.receiver_dwolla_url)
+            .one_or_none()
+        )
+        if receiver == None:
+            receiver == db.session.query(Organization).filter(
+                Organization.dwolla_customer_url == self.receiver_dwolla_url
+            ).one()
+        return receiver
 
 
 class Invoice(db.Model, CustomSerializerMixin):
