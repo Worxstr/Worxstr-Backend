@@ -7,6 +7,7 @@ from app import db, payments, payments_auth, notifications
 from app.api import bp
 from app.errors.customs import MissingParameterException
 from app.models import (
+    BankTransfer,
     Invoice,
     InvoiceItem,
     Organization,
@@ -88,12 +89,31 @@ def add_balance():
     response = payments.transfer_funds(str(amount), location, balance)
     if type(response) is tuple:
         return response
+    response["transfer"]
+    transfer = BankTransfer(
+        amount=float(response["transfer"]["amount"]["value"]),
+        transaction_type="debit",
+        status=response["transfer"]["status"],
+        status_updated=response["transfer"]["created"],
+    )
+    db.session.add(transfer)
+    db.session.commit()
+    payment = Payment(
+        amount=transfer.amount,
+        bank_transfer_id=transfer.id,
+        date_completed=datetime.utcnow(),
+        dwolla_payment_transaction_id=response["transfer"]["id"],
+        sender_dwolla_url=current_user.dwolla_customer_url,
+        receiver_dwolla_url=current_user.dwolla_customer_url,
+    )
+    db.session.add(payment)
+    db.session.commit()
     emit_to_users(
         "ADD_TRANSFER",
-        response["transfer"],
+        payment.to_dict(),
         get_manager_user_ids(current_user.organization_id),
     )
-    return response
+    return payment.to_dict()
 
 
 @bp.route("/payments/balance/remove", methods=["POST"])
