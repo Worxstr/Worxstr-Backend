@@ -495,6 +495,13 @@ def get_payments():
     return {"payments": result}
 
 
+@bp.route("/payments/<payment_id>", methods=["GET"])
+@login_required
+def get_payment(payment_id):
+    payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
+    return payment.to_dict()
+
+
 @bp.route("/payments/invoices", methods=["POST"])
 @login_required
 def create_invoice():
