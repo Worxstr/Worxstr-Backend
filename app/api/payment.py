@@ -1,11 +1,22 @@
+from datetime import datetime
 from flask import request
 from flask_security import login_required, roles_accepted, current_user
-from sqlalchemy.sql.elements import Null
+from sqlalchemy.sql.elements import Null, or_
 
 from app import db, payments, payments_auth, notifications
 from app.api import bp
 from app.errors.customs import MissingParameterException
-from app.models import Organization, TimeCard, User, TimeClock, ContractorInfo, Role
+from app.models import (
+    Invoice,
+    InvoiceItem,
+    Organization,
+    Payment,
+    TimeCard,
+    User,
+    TimeClock,
+    ContractorInfo,
+    Role,
+)
 from app.api.clock import calculate_timecard
 from app.api.sockets import emit_to_users
 from app.utils import OK_RESPONSE, get_request_arg, get_request_json
@@ -462,3 +473,123 @@ def edit_timecard(timecard_id):
     emit_to_users("ADD_TIMECARD", result, user_ids)
 
     return result
+
+
+@bp.route("/payments", methods=["GET"])
+@login_required
+def get_payments():
+    payments = (
+        db.session.query(Payment)
+        .filter(
+            Payment.date_completed == None,
+            or_(
+                Payment.sender_dwolla_url == current_user.dwolla_customer_url,
+                Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
+            ),
+        )
+        .all()
+    )
+    result = []
+    for payment in payments:
+        result.append(payment.to_dict())
+    return {"payments":result}
+
+
+@bp.route("/payments/invoices", methods=["POST"])
+@login_required
+def create_invoice():
+    description = get_request_json(request, "description", optional=True) or None
+    items = get_request_json(request, "items")
+    invoice = Invoice(
+        description=description, date_created=datetime.utcnow()
+    )
+    db.session.add(invoice)
+    db.session.commit()
+    amount = 0.0
+    for item in items:
+        item = InvoiceItem(
+            description=item["description"],
+            amount=item["amount"],
+            invoice_id=invoice.id
+        )
+        amount += item.amount
+        db.session.add(item)
+    invoice.amount = amount
+    db.session.commit()
+    payment = Payment(
+        amount=invoice.amount,
+        invoice_id=invoice.id,
+        sender_dwolla_url=current_user.organization.dwolla_customer_url,
+        receiver_dwolla_url=current_user.dwolla_customer_url
+    )
+    db.session.add(payment)
+    db.session.commit()
+    return update_payment(invoice.id)
+
+
+@bp.route("/payments/invoices/<invoice_id>", methods=["PUT"])
+@login_required
+def edit_invoice(invoice_id):
+    invoice_items = get_request_json(request, "items")
+    description = get_request_json(request, "description", optional=True) or None
+    invoice_ids = (
+        db.session.query(InvoiceItem.id).filter(InvoiceItem.invoice_id == invoice_id).all()
+    )
+    x = 0
+    for i in invoice_ids:
+        invoice_ids[x] = i[0]
+        x += 1
+
+    for item in invoice_items:
+        if "id" in item:
+            invoice_ids.remove(item["id"])
+            db.session.query(InvoiceItem).filter(InvoiceItem.id == item["id"]).update(
+                {
+                    InvoiceItem.amount: item["amount"] or InvoiceItem.amount,
+                    InvoiceItem.description: item["description"] or InvoiceItem.description,
+                }
+            )
+        else:
+            i = InvoiceItem(
+                invoice_id=invoice_id,
+                description=item["description"],
+                amount=item["amount"],
+            )
+            db.session.add(i)
+    db.session.query(InvoiceItem).filter(InvoiceItem.id.in_(invoice_ids)).delete(
+        synchronize_session="fetch"
+    )
+    db.session.query(Invoice).filter(Invoice.id == invoice_id).update(
+        {
+            Invoice.description: description or Invoice.description,
+        }
+    )
+    db.session.commit()
+    return update_invoice(invoice_id)
+
+def update_invoice(invoice_id):
+    invoice = db.session.query(Invoice).filter(Invoice.id == invoice_id).one()
+    amount = 0
+    for item in invoice.items:
+        amount += item.amount
+    db.session.query(Invoice).filter(Invoice.id == invoice_id).update(
+        {
+            Invoice.amount: amount
+        }
+    )
+    db.session.commit()
+    return update_payment(invoice_id)
+
+def update_payment(invoice_id):
+    payment = db.session.query(Payment).filter(Payment.invoice_id == invoice_id).one()
+    organization = db.session.query(Organization).filter(Organization.dwolla_customer_url == payment.sender_dwolla_url).one()
+    transaction_fee = round(payment.amount * organization.subscription_tier.transfer_fee, 2)
+    total = payment.amount + transaction_fee
+    db.session.query(Payment).filter(Payment.invoice_id == invoice_id).update(
+        {
+            Payment.fee: transaction_fee,
+            Payment.total: total
+        }
+    )
+    db.session.commit()
+    return payment.to_dict()

@@ -82,6 +82,7 @@ class User(db.Model, UserMixin, CustomSerializerMixin):
         "Role", secondary="roles_users", backref=db.backref("users", lazy="dynamic")
     )
     fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
+    organization = db.relationship("Organization")
 
     @hybrid_property
     def dwolla_customer_url(self):
@@ -163,6 +164,10 @@ class Organization(db.Model, CustomSerializerMixin):
     dwolla_customer_url = db.Column(db.String(255))
     dwolla_customer_status = db.Column(db.String(10))
     minimum_wage = db.Column(db.Numeric, nullable=False, default=7.5)
+    subscription_tier_id = db.Column(db.Integer, db.ForeignKey("subscription_tier.id"))
+    subscription_tier = db.relationship("SubscriptionTier")
+    creation_date = db.Column(db.DateTime)
+    next_payment_date = db.Column(db.DateTime)
 
     def __repr__(self):
         return "<Organization {}>".format(self.name)
@@ -303,6 +308,52 @@ class TimeCard(db.Model, CustomSerializerMixin):
         )
 
 
+class Payment(db.Model, CustomSerializerMixin):
+    __tablename__ = "payment"
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Numeric)
+    fee = db.Column(db.Numeric)
+    total = db.Column(db.Numeric)
+    invoice_id = db.Column(db.Integer, db.ForeignKey("invoice.id"))
+    bank_transfer_id = db.Column(db.Integer, db.ForeignKey("bank_transfer.id"))
+    date_completed = db.Column(db.DateTime)
+    dwolla_payment_transaction_id = db.Column(db.String)
+    dwolla_fee_transaction_id = db.Column(db.String)
+    sender_dwolla_url = db.Column(db.String)
+    receiver_dwolla_url = db.Column(db.String)
+    invoice = db.relationship("Invoice")
+    bank_transfer = db.relationship("BankTransfer")
+
+
+class Invoice(db.Model, CustomSerializerMixin):
+    __tablename__ = "invoice"
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Numeric)
+    description = db.Column(db.String)
+    timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
+    approved = db.Column(db.Boolean)
+    date_created = db.Column(db.DateTime)
+    items = db.relationship("InvoiceItem")
+
+
+class InvoiceItem(db.Model, CustomSerializerMixin):
+    __tablename__ = "invoice_item"
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey("invoice.id"))
+    amount = db.Column(db.Numeric)
+    description = db.Column(db.String)
+
+
+class BankTransfer(db.Model, CustomSerializerMixin):
+    __tablename__ = "bank_transfer"
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Numeric)
+    transaction_type = db.Column(db.String)
+    bank_name = db.Column(db.String)
+    status = db.Column(db.String)
+    status_updated = db.Column(db.DateTime)
+
+
 class ContractorInfo(db.Model, CustomSerializerMixin):
     __tablename__ = "contractor_info"
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
@@ -310,6 +361,18 @@ class ContractorInfo(db.Model, CustomSerializerMixin):
     dwolla_customer_url = db.Column(db.String(255))
     dwolla_customer_status = db.Column(db.String(10))
     color = db.Column(db.String(7))
+
+
+class SubscriptionTier(db.Model, CustomSerializerMixin):
+    __tablename__ = "subscription_tier"
+    id = db.Column(db.Integer, primary_key=True)
+    monthly_rate = db.Column(db.Numeric)
+    annual = db.Column(db.Boolean)
+    num_contractors = db.Column(db.Integer)
+    business_ach_fee = db.Column(db.Numeric)
+    contractor_ach_fee = db.Column(db.Numeric)
+    transfer_fee = db.Column(db.Numeric)
+    tier_code = db.Column(db.String)
 
 
 class Message(db.Model, CustomSerializerMixin):
