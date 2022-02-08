@@ -212,7 +212,7 @@ def clock_in():
 
     time_in = datetime.datetime.utcnow()
 
-    timecard = TimeCard(contractor_id=current_user.id,shift_id=shift_id)
+    timecard = TimeCard(contractor_id=current_user.id)
     db.session.add(timecard)
     db.session.commit()
     db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
