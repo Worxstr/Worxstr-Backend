@@ -290,6 +290,8 @@ class TimeCard(db.Model, CustomSerializerMixin):
     total_payment = db.Column(db.Numeric)
     paid = db.Column(db.Boolean, default=False)
     denied = db.Column(db.Boolean, default=False)
+    shift_id = db.Column(db.Integer, db.ForeignKey("shift.id"))
+    shift = db.relationship("ScheduleShift")
 
     @hybrid_property
     def first_name(self):
