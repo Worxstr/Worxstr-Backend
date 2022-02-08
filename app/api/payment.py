@@ -492,7 +492,7 @@ def get_payments():
     result = []
     for payment in payments:
         result.append(payment.to_dict())
-    return {"payments":result}
+    return {"payments": result}
 
 
 @bp.route("/payments/invoices", methods=["POST"])
@@ -500,9 +500,7 @@ def get_payments():
 def create_invoice():
     description = get_request_json(request, "description", optional=True) or None
     items = get_request_json(request, "items")
-    invoice = Invoice(
-        description=description, date_created=datetime.utcnow()
-    )
+    invoice = Invoice(description=description, date_created=datetime.utcnow())
     db.session.add(invoice)
     db.session.commit()
     amount = 0.0
@@ -510,7 +508,7 @@ def create_invoice():
         item = InvoiceItem(
             description=item["description"],
             amount=item["amount"],
-            invoice_id=invoice.id
+            invoice_id=invoice.id,
         )
         amount += item.amount
         db.session.add(item)
@@ -520,7 +518,7 @@ def create_invoice():
         amount=invoice.amount,
         invoice_id=invoice.id,
         sender_dwolla_url=current_user.organization.dwolla_customer_url,
-        receiver_dwolla_url=current_user.dwolla_customer_url
+        receiver_dwolla_url=current_user.dwolla_customer_url,
     )
     db.session.add(payment)
     db.session.commit()
@@ -533,7 +531,9 @@ def edit_invoice(invoice_id):
     invoice_items = get_request_json(request, "items")
     description = get_request_json(request, "description", optional=True) or None
     invoice_ids = (
-        db.session.query(InvoiceItem.id).filter(InvoiceItem.invoice_id == invoice_id).all()
+        db.session.query(InvoiceItem.id)
+        .filter(InvoiceItem.invoice_id == invoice_id)
+        .all()
     )
     x = 0
     for i in invoice_ids:
@@ -546,7 +546,8 @@ def edit_invoice(invoice_id):
             db.session.query(InvoiceItem).filter(InvoiceItem.id == item["id"]).update(
                 {
                     InvoiceItem.amount: item["amount"] or InvoiceItem.amount,
-                    InvoiceItem.description: item["description"] or InvoiceItem.description,
+                    InvoiceItem.description: item["description"]
+                    or InvoiceItem.description,
                 }
             )
         else:
@@ -567,29 +568,32 @@ def edit_invoice(invoice_id):
     db.session.commit()
     return update_invoice(invoice_id)
 
+
 def update_invoice(invoice_id):
     invoice = db.session.query(Invoice).filter(Invoice.id == invoice_id).one()
     amount = 0
     for item in invoice.items:
         amount += item.amount
     db.session.query(Invoice).filter(Invoice.id == invoice_id).update(
-        {
-            Invoice.amount: amount
-        }
+        {Invoice.amount: amount}
     )
     db.session.commit()
     return update_payment(invoice_id)
 
+
 def update_payment(invoice_id):
     payment = db.session.query(Payment).filter(Payment.invoice_id == invoice_id).one()
-    organization = db.session.query(Organization).filter(Organization.dwolla_customer_url == payment.sender_dwolla_url).one()
-    transaction_fee = round(payment.amount * organization.subscription_tier.transfer_fee, 2)
+    organization = (
+        db.session.query(Organization)
+        .filter(Organization.dwolla_customer_url == payment.sender_dwolla_url)
+        .one()
+    )
+    transaction_fee = round(
+        payment.amount * organization.subscription_tier.transfer_fee, 2
+    )
     total = payment.amount + transaction_fee
     db.session.query(Payment).filter(Payment.invoice_id == invoice_id).update(
-        {
-            Payment.fee: transaction_fee,
-            Payment.total: total
-        }
+        {Payment.fee: transaction_fee, Payment.total: total}
     )
     db.session.commit()
     return payment.to_dict()
