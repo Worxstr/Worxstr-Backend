@@ -86,10 +86,14 @@ def add_balance():
     amount = get_request_json(request, "amount")
     customer_url = current_user.dwolla_customer_url
     balance = payments.get_balance(customer_url)["location"]
-    response = payments.transfer_funds(str(amount), location, balance)
+    fee = round(amount * current_user.organization.subscription_tier.business_ach_fee, 2)
+    amount = amount - fee
+    if fee > 0.0:
+        response = payments.transfer_funds(str(amount), balance, location, fee)
+    else:
+        response = payments.transfer_funds(str(amount), balance, location)
     if type(response) is tuple:
         return response
-    response["transfer"]
     transfer = BankTransfer(
         amount=float(response["transfer"]["amount"]["value"]),
         transaction_type="debit",
@@ -100,6 +104,8 @@ def add_balance():
     db.session.commit()
     payment = Payment(
         amount=transfer.amount,
+        fee=fee,
+        total=amount+fee,
         bank_transfer_id=transfer.id,
         date_completed=datetime.utcnow(),
         dwolla_payment_transaction_id=response["transfer"]["id"],
@@ -125,9 +131,40 @@ def remove_balance():
     balance = payments.get_balance(customer_url)["location"]
     if current_user.has_role("contractor"):
         user_ids = [current_user.id]
+        fee = round(amount * float(current_user.organization.subscription_tier.contractor_ach_fee), 2)
+        amount = amount - fee
     else:
         user_ids = get_manager_user_ids(current_user.organization_id)
-    response = payments.transfer_funds(str(amount), balance, location)
+        fee = round(amount * float(current_user.organization.subscription_tier.business_ach_fee), 2)
+        amount = amount - fee
+    if fee > 0.0:
+        fee_request = [
+                {
+                    "_links": {"charge-to": {"href": customer_url}},
+                    "amount": {"value": str(fee), "currency": "USD"},
+                }
+            ]
+        response = payments.transfer_funds(str(amount), balance, location, None)
+    else:
+        response = payments.transfer_funds(str(amount), balance, location)
+    transfer = BankTransfer(
+        amount=float(response["transfer"]["amount"]["value"]),
+        transaction_type="credit",
+        status=response["transfer"]["status"],
+        status_updated=response["transfer"]["created"],
+    )
+    db.session.add(transfer)
+    db.session.commit()
+    payment = Payment(
+        amount=transfer.amount,
+        bank_transfer_id=transfer.id,
+        date_completed=datetime.utcnow(),
+        dwolla_payment_transaction_id=response["transfer"]["id"],
+        sender_dwolla_url=current_user.dwolla_customer_url,
+        receiver_dwolla_url=current_user.dwolla_customer_url,
+    )
+    db.session.add(payment)
+    db.session.commit()
     new_balance = payments.get_balance(customer_url)["balance"]
     response["transfer"]["new_balance"] = new_balance
     emit_to_users("ADD_TRANSFER", response["transfer"], user_ids)
@@ -464,6 +501,8 @@ def edit_timecard(timecard_id):
 
     db.session.commit()
     calculate_timecard(timecard.id)
+    invoice = db.session.query(Invoice).filter(Invoice.timecard_id == timecard_id).one()
+    update_invoice(invoice.id)
     # TODO: These could likely be combined into one query
     rate = (
         db.session.query(ContractorInfo.hourly_rate)
@@ -601,6 +640,8 @@ def update_invoice(invoice_id):
     amount = 0
     for item in invoice.items:
         amount += item.amount
+    if invoice.timecard:
+        amount += invoice.timecard.wage
     db.session.query(Invoice).filter(Invoice.id == invoice_id).update(
         {Invoice.amount: amount}
     )
