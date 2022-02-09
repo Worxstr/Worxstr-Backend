@@ -278,6 +278,7 @@ class TimeCard(db.Model, CustomSerializerMixin):
     serialize_rules = (
         "first_name",
         "last_name",
+        "shift"
     )
 
     __tablename__ = "time_card"
@@ -296,7 +297,7 @@ class TimeCard(db.Model, CustomSerializerMixin):
         return (
             db.session.query(ScheduleShift)
             .filter(ScheduleShift.timecard_id == self.id)
-            .one()
+            .one_or_none()
         )
 
     @hybrid_property
@@ -369,6 +370,7 @@ class Invoice(db.Model, CustomSerializerMixin):
     approved = db.Column(db.Boolean)
     date_created = db.Column(db.DateTime)
     items = db.relationship("InvoiceItem")
+    timecard = db.relationship("TimeCard")
 
 
 class InvoiceItem(db.Model, CustomSerializerMixin):
