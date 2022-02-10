@@ -497,7 +497,7 @@ def calculate_timecard(timecard_id):
     )
     wage = round(float(rate[0]) * total_time_hours, 2)
     transaction_fees = round(wage * float(current_user.organization.subscription_tier.transfer_fee), 2)
-    total_payment = wage + transaction_fees
+    total_payment = round(wage + transaction_fees, 2)
     # TODO: Does this need to be an iter? Can we iterate over it as a list?
     breaks = iter(
         db.session.query(TimeClock)

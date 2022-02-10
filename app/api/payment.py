@@ -321,11 +321,11 @@ def complete_payments():
         ][0]
         receiving_balance = payments.get_balance(receiving_customer_url)["balance"]
         emit_to_users("SET_BALANCE", receiving_balance, receiving_user_id)
-        emit_to_users("ADD_TRANSFER", receiving_transfer, receiving_user_id)
-        emit_to_users("ADD_TRANSFER", transfer, user_ids)
+        emit_to_users("ADD_PAYMENT", receiving_transfer, receiving_user_id)
+        emit_to_users("ADD_PAYMENT", transfer, user_ids)
 
     for timecard_id in timecard_ids:
-        emit_to_users("REMOVE_TIMECARD", timecard_id, user_ids)
+        emit_to_users("REMOVE_PAYMENT", timecard_id, user_ids)
 
     balance = payments.get_balance(customer_url)["balance"]
     emit_to_users("SET_BALANCE", balance, user_ids)
@@ -345,7 +345,7 @@ def deny_payment():
     user_ids = get_manager_user_ids(current_user.organization_id)
 
     for timecard_id in timecard_ids:
-        emit_to_users("REMOVE_TIMECARD", timecard_id, user_ids)
+        emit_to_users("REMOVE_PAYMENT", timecard_id, user_ids)
     return OK_RESPONSE
 
 
@@ -641,7 +641,7 @@ def update_invoice(invoice_id):
     for item in invoice.items:
         amount += item.amount
     if invoice.timecard:
-        amount += invoice.timecard.wage
+        amount += invoice.timecard.wage_payment
     db.session.query(Invoice).filter(Invoice.id == invoice_id).update(
         {Invoice.amount: amount}
     )
@@ -651,6 +651,8 @@ def update_invoice(invoice_id):
 
 def update_payment(invoice_id):
     payment = db.session.query(Payment).filter(Payment.invoice_id == invoice_id).one()
+    if payment.invoice:
+        payment.amount = payment.invoice.amount
     organization = (
         db.session.query(Organization)
         .filter(Organization.dwolla_customer_url == payment.sender_dwolla_url)
@@ -659,7 +661,7 @@ def update_payment(invoice_id):
     transaction_fee = round(
         payment.amount * organization.subscription_tier.transfer_fee, 2
     )
-    total = payment.amount + transaction_fee
+    total = round(payment.amount + transaction_fee, 2)
     db.session.query(Payment).filter(Payment.invoice_id == invoice_id).update(
         {Payment.fee: transaction_fee, Payment.total: total}
     )
