@@ -86,7 +86,9 @@ def add_balance():
     amount = get_request_json(request, "amount")
     customer_url = current_user.dwolla_customer_url
     balance = payments.get_balance(customer_url)["location"]
-    fee = round(amount * current_user.organization.subscription_tier.business_ach_fee, 2)
+    fee = round(
+        amount * current_user.organization.subscription_tier.business_ach_fee, 2
+    )
     amount = amount - fee
     if fee > 0.0:
         response = payments.transfer_funds(str(amount), balance, location, fee)
@@ -105,7 +107,7 @@ def add_balance():
     payment = Payment(
         amount=transfer.amount,
         fee=fee,
-        total=amount+fee,
+        total=amount + fee,
         bank_transfer_id=transfer.id,
         date_completed=datetime.utcnow(),
         dwolla_payment_transaction_id=response["transfer"]["id"],
@@ -131,19 +133,27 @@ def remove_balance():
     balance = payments.get_balance(customer_url)["location"]
     if current_user.has_role("contractor"):
         user_ids = [current_user.id]
-        fee = round(amount * float(current_user.organization.subscription_tier.contractor_ach_fee), 2)
+        fee = round(
+            amount
+            * float(current_user.organization.subscription_tier.contractor_ach_fee),
+            2,
+        )
         amount = amount - fee
     else:
         user_ids = get_manager_user_ids(current_user.organization_id)
-        fee = round(amount * float(current_user.organization.subscription_tier.business_ach_fee), 2)
+        fee = round(
+            amount
+            * float(current_user.organization.subscription_tier.business_ach_fee),
+            2,
+        )
         amount = amount - fee
     if fee > 0.0:
         fee_request = [
-                {
-                    "_links": {"charge-to": {"href": customer_url}},
-                    "amount": {"value": str(fee), "currency": "USD"},
-                }
-            ]
+            {
+                "_links": {"charge-to": {"href": customer_url}},
+                "amount": {"value": str(fee), "currency": "USD"},
+            }
+        ]
         response = payments.transfer_funds(str(amount), balance, location, None)
     else:
         response = payments.transfer_funds(str(amount), balance, location)

@@ -275,11 +275,7 @@ class TimeClock(db.Model, CustomSerializerMixin):
 
 
 class TimeCard(db.Model, CustomSerializerMixin):
-    serialize_rules = (
-        "first_name",
-        "last_name",
-        "shift"
-    )
+    serialize_rules = ("first_name", "last_name", "shift")
 
     __tablename__ = "time_card"
     id = db.Column(db.Integer, primary_key=True)

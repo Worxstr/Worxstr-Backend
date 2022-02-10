@@ -316,23 +316,29 @@ def clock_out():
         .one()
     )
     calculate_timecard(timecard_info.timecard_id)
-    timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_info.timecard_id).one()
+    timecard = (
+        db.session.query(TimeCard)
+        .filter(TimeCard.id == timecard_info.timecard_id)
+        .one()
+    )
     invoice = Invoice(
-        amount = timecard.wage_payment,
-        description = shift.site_location,
-        timecard_id = timecard.id,
-        date_created = datetime.datetime.utcnow()
+        amount=timecard.wage_payment,
+        description=shift.site_location,
+        timecard_id=timecard.id,
+        date_created=datetime.datetime.utcnow(),
     )
     db.session.add(invoice)
     db.session.commit()
-    fee = round(invoice.amount * current_user.organization.subscription_tier.transfer_fee, 2)
+    fee = round(
+        invoice.amount * current_user.organization.subscription_tier.transfer_fee, 2
+    )
     payment = Payment(
-        amount = invoice.amount,
-        fee = fee,
-        total = invoice.amount + fee,
-        invoice_id = invoice.id,
-        sender_dwolla_url = current_user.organization.dwolla_customer_url,
-        receiver_dwolla_url = current_user.dwolla_customer_url
+        amount=invoice.amount,
+        fee=fee,
+        total=invoice.amount + fee,
+        invoice_id=invoice.id,
+        sender_dwolla_url=current_user.organization.dwolla_customer_url,
+        receiver_dwolla_url=current_user.dwolla_customer_url,
     )
     db.session.add(payment)
     db.session.commit()
@@ -496,7 +502,9 @@ def calculate_timecard(timecard_id):
         .one()
     )
     wage = round(float(rate[0]) * total_time_hours, 2)
-    transaction_fees = round(wage * float(current_user.organization.subscription_tier.transfer_fee), 2)
+    transaction_fees = round(
+        wage * float(current_user.organization.subscription_tier.transfer_fee), 2
+    )
     total_payment = round(wage + transaction_fees, 2)
     # TODO: Does this need to be an iter? Can we iterate over it as a list?
     breaks = iter(
