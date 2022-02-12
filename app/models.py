@@ -331,6 +331,7 @@ class Payment(db.Model, CustomSerializerMixin):
     dwolla_fee_transaction_id = db.Column(db.String)
     sender_dwolla_url = db.Column(db.String)
     receiver_dwolla_url = db.Column(db.String)
+    denied = db.Column(db.Boolean, default=False)
     invoice = db.relationship("Invoice")
     bank_transfer = db.relationship("BankTransfer")
 

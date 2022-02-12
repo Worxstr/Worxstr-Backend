@@ -278,17 +278,20 @@ def get_link_token():
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def complete_payments():
-    timecard_ids = get_request_json(request, "timecard_ids")
-    timecards = (
-        db.session.query(TimeCard, User)
-        .filter(User.id == TimeCard.contractor_id, TimeCard.id.in_(timecard_ids))
+    payment_ids = get_request_json(request, "payment_ids")
+    payments_res = (
+        db.session.query(Payment)
+        .filter(
+            Payment.id.in_(payment_ids), Payment.dwolla_payment_transaction_id == None
+        )
         .all()
     )
-    customer_url = current_user.dwolla_customer_url
-    transfers = []
-    for timecard in timecards:
+    response = {"payments": []}
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    for payment in payments_res:
+        customer_url = payment.sender_dwolla_url
         fees = None
-        fee = timecard[0].fees_payment
+        fee = payment.fee
         if fee > 0:
             fees = [
                 {
@@ -297,45 +300,37 @@ def complete_payments():
                 }
             ]
         transfer = payments.transfer_funds(
-            str(timecard[0].wage_payment),
+            str(payment.amount),
             payments.get_balance(customer_url)["location"],
-            payments.get_balance(timecard[1].dwolla_customer_url)["location"],
+            payments.get_balance(payment.receiver_dwolla_url)["location"],
             fees,
         )
         if type(transfer) is not tuple:
-            db.session.query(TimeCard).filter(TimeCard.id == timecard[0].id).update(
-                {TimeCard.paid: True}
+            db.session.query(Payment).filter(Payment.id == payment.id).update(
+                {Payment.dwolla_payment_transaction_id: transfer["transfer"]["id"]}
             )
-            message_body = (
-                "You received a payment for $" + str(timecard[0].wage_payment) + "."
-            )
-            notifications.send_notification(
-                "You've been paid!", message_body, [timecard[0].contractor_id]
-            )
-        transfers.append(transfer["transfer"])
-    db.session.commit()
-    response = transfers
-    user_ids = get_manager_user_ids(current_user.organization_id)
+            message_body = "You received a payment for $" + str(payment.amount) + "."
+            if payment.receiver is User:
+                notifications.send_notification(
+                    "You've been paid!", message_body, [payment.receiver.id]
+                )
 
-    for transfer in transfers:
-        # TODO: When a contractor has multiple shifts approved their transfer history will only show
-        # a single transfer of the last amount. This can be fixed by querying on transfer id.
-        receiving_customer_url = transfer["_links"]["destination"]["href"]
+        # Handle real time notifications
         receiving_user_id = [
             db.session.query(ContractorInfo.id)
-            .filter(ContractorInfo.dwolla_customer_url == receiving_customer_url)
+            .filter(ContractorInfo.dwolla_customer_url == payment.receiver_dwolla_url)
             .one()[0]
         ]
-        receiving_transfer = payments.get_transfers(receiving_customer_url, 1, 0)[
-            "transfers"
-        ][0]
-        receiving_balance = payments.get_balance(receiving_customer_url)["balance"]
+        receiving_balance = payments.get_balance(payment.receiver_dwolla_url)["balance"]
         emit_to_users("SET_BALANCE", receiving_balance, receiving_user_id)
-        emit_to_users("ADD_PAYMENT", receiving_transfer, receiving_user_id)
+        emit_to_users("ADD_PAYMENT", payment.to_dict(), receiving_user_id)
         emit_to_users("ADD_PAYMENT", transfer, user_ids)
 
-    for timecard_id in timecard_ids:
-        emit_to_users("REMOVE_PAYMENT", timecard_id, user_ids)
+        response["payments"].append(payment.to_dict())
+    db.session.commit()
+
+    for payment_id in payment_ids:
+        emit_to_users("REMOVE_PAYMENT", payment_id, user_ids)
 
     balance = payments.get_balance(customer_url)["balance"]
     emit_to_users("SET_BALANCE", balance, user_ids)
@@ -347,160 +342,37 @@ def complete_payments():
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def deny_payment():
-    timecard_ids = get_request_json(request, "timecard_ids")
-    db.session.query(TimeCard).filter(TimeCard.id.in_(timecard_ids)).update(
-        {TimeCard.denied: True}, synchronize_session=False
+    payment_ids = get_request_json(request, "payment_ids")
+    db.session.query(Payment).filter(Payment.id.in_(payment_ids)).update(
+        {Payment.denied: True}, synchronize_session=False
     )
     db.session.commit()
     user_ids = get_manager_user_ids(current_user.organization_id)
 
-    for timecard_id in timecard_ids:
-        emit_to_users("REMOVE_PAYMENT", timecard_id, user_ids)
+    for payment_id in payment_ids:
+        emit_to_users("REMOVE_PAYMENT", payment_id, user_ids)
     return OK_RESPONSE
 
 
-@bp.route("/payments/timecards", methods=["GET"])
+@bp.route("/payments/<payment_id>", methods=["PUT"])
 @login_required
-@roles_accepted("organization_manager", "contractor_manager")
-def get_timecards():
-    """Endpoint to get all unpaid timecards associated with the current logged in manager.
-    ---
-    definitions:
-        TimeCard:
-            type: object
-            properties:
-                id:
-                    type: integer
-                time_in:
-                    type: string
-                    format: date-time
-                time_out:
-                    type: string
-                    format: date-time
-                time_break:
-                    type: integer
-                contractor_id:
-                    type: integer
-                total_payment:
-                    type: number
-                paid:
-                    type: boolean
-                first_name:
-                    type: string
-                last_name:
-                    type: string
-                time_clocks:
-                    type: array
-                    items :
-                        $ref: '#/definitions/TimeClock'
-        TimeClock:
-            type: object
-            properties:
-                id:
-                    type: integer
-                time:
-                    type: string
-                    format: date-time
-                action:
-                    type: string
-                    enum: []
-                contractor_id:
-                    type: integer
-    responses:
-        200:
-            description: Returns the timecards associated with a manager
-            schema:
-                $ref: '#/definitions/TimeCard'
-    """
-    timecards = (
-        db.session.query(TimeCard, User.first_name, User.last_name)
-        .join(User)
-        .filter(
-            TimeCard.paid == False,
-            TimeCard.denied == False,
-            TimeCard.total_payment != None,
-            User.manager_id == current_user.id,
-        )
-        .all()
+def edit_payment_route(payment_id):
+    timecard_changes = (
+        get_request_json(request, "timecard_changes", optional=True) or None
     )
-
-    # TODO: Implement paging here
-    result = []
-    for i in timecards:
-        timecard = i[0].to_dict()
-        timecard["first_name"] = i[1]
-        timecard["last_name"] = i[2]
-        timecard["pay_rate"] = float(
-            db.session.query(ContractorInfo.hourly_rate)
-            .filter(ContractorInfo.id == timecard["contractor_id"])
-            .one()[0]
-        )
-        timecard["time_clocks"] = [
-            timeclock.to_dict()
-            for timeclock in db.session.query(TimeClock)
-            .filter(TimeClock.timecard_id == timecard["id"])
-            .order_by(TimeClock.time)
-            .all()
-        ]
-        result.append(timecard)
-    return {"timecards": result}
+    invoice_items = get_request_json(request, "invoice_items", optional=True) or None
+    invoice_description = (
+        get_request_json(request, "Invioce_description", optional=True) or None
+    )
+    payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
+    if timecard_changes != None:
+        edit_timecard(payment.invoice.timecard_id, timecard_changes)
+    if invoice_items != None:
+        edit_invoice(payment.invoice_id, invoice_items, invoice_description)
+    return
 
 
-@bp.route("/payments/timecards/<timecard_id>", methods=["PUT"])
-@login_required
-@roles_accepted("contractor_manager")
-def edit_timecard(timecard_id):
-    """Edit a given timecard.
-    ---
-    parameters:
-        - name: id
-          in: body
-          type: integer
-          required: true
-          description: TimeCard.id
-        - name: changes
-          in: body
-          type: array
-          items:
-              $ref: '#/definitions/Change'
-          required: true
-    definitions:
-        Change:
-            type: object
-            properties:
-                id:
-                    type: integer
-                    description: id of the TimeClock event to be modified
-                time:
-                    type: string
-                    format: date-time
-        TimeCard:
-            type: object
-            properties:
-                id:
-                    type: integer
-                time_in:
-                    type: string
-                    format: date-time
-                time_out:
-                    type: string
-                    format: date-time
-                time_break:
-                    type: integer
-                contractor_id:
-                    type: integer
-                total_payment:
-                    type: number
-                paid:
-                    type: boolean
-    responses:
-        200:
-            description: An updated TimeCard showing the new changes.
-            schema:
-                $ref: '#/definitions/TimeCard'
-    """
-    changes = get_request_json(request, "changes")
-
+def edit_timecard(timecard_id, changes):
     timecard = db.session.query(TimeCard).filter(TimeCard.id == timecard_id).one()
     contractor_id = timecard.contractor_id
 
@@ -540,7 +412,6 @@ def edit_timecard(timecard_id):
     user_ids = get_manager_user_ids(current_user.organization_id)
 
     emit_to_users("ADD_TIMECARD", result, user_ids)
-
     return result
 
 
@@ -555,6 +426,7 @@ def get_payments():
                 Payment.sender_dwolla_url == current_user.dwolla_customer_url,
                 Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
             ),
+            Payment.denied == False,
         )
         .all()
     )
@@ -603,9 +475,13 @@ def create_invoice():
 
 @bp.route("/payments/invoices/<invoice_id>", methods=["PUT"])
 @login_required
-def edit_invoice(invoice_id):
+def edit_invoice_route(invoice_id):
     invoice_items = get_request_json(request, "items")
     description = get_request_json(request, "description", optional=True) or None
+    return edit_invoice(invoice_id, invoice_items, description)
+
+
+def edit_invoice(invoice_id, invoice_items, description):
     invoice_ids = (
         db.session.query(InvoiceItem.id)
         .filter(InvoiceItem.invoice_id == invoice_id)
