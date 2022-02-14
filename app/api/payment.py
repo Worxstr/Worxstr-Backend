@@ -288,8 +288,11 @@ def complete_payments():
     )
     response = {"payments": []}
     user_ids = get_manager_user_ids(current_user.organization_id)
+    customer_urls = []
     for payment in payments_res:
         customer_url = payment.sender_dwolla_url
+        if customer_url not in customer_urls:
+            customer_urls.append(customer_url)
         fees = None
         fee = payment.fee
         if fee > 0:
@@ -331,9 +334,9 @@ def complete_payments():
 
     for payment_id in payment_ids:
         emit_to_users("REMOVE_PAYMENT", payment_id, user_ids)
-
-    balance = payments.get_balance(customer_url)["balance"]
-    emit_to_users("SET_BALANCE", balance, user_ids)
+    for customer_url in customer_urls:
+        balance = payments.get_balance(customer_url)["balance"]
+        emit_to_users("SET_BALANCE", balance, user_ids)
 
     return {"transfers": response, "balance": balance}
 
