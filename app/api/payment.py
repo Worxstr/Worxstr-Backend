@@ -357,12 +357,10 @@ def deny_payment():
 @bp.route("/payments/<payment_id>", methods=["PUT"])
 @login_required
 def edit_payment_route(payment_id):
-    timecard_changes = (
-        get_request_json(request, "timecard_changes", optional=True) or None
-    )
+    timecard_changes = get_request_json(request, "clock_events", optional=True) or None
     invoice_items = get_request_json(request, "invoice_items", optional=True) or None
     invoice_description = (
-        get_request_json(request, "Invioce_description", optional=True) or None
+        get_request_json(request, "invoice.description", optional=True) or None
     )
     payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
     if timecard_changes != None:
