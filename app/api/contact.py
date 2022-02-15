@@ -207,7 +207,7 @@ def create_support_ticket(
 ):
     payload = {
         "name": description,
-        "status": "open",
+        "status": "to do",
         "notify_all": True,
         "check_required_custom_fields": True,
         "custom_fields": [

@@ -298,10 +298,10 @@ def update_shift(shift_id):
     return {"shift": result}
 
 
-@bp.route("/shifts", methods=["DELETE"])
+@bp.route("/shifts/<shift_id>", methods=["DELETE"])
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
-def delete_shift():
+def delete_shift(shift_id):
     """
     Deletes a shift.
     ---
@@ -309,31 +309,27 @@ def delete_shift():
         200:
             description: Shift deleted.
     """
-    shift_ids = get_request_json(request, "shift_ids")
-    for shift_id in shift_ids:
-        shift = (
-            db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
-        )
-        if shift.clock_state != TimeClockAction.clock_out:
-            return {"message": "User is still clocked in to this shift!"}, 403
-        job_id = shift.job_id
-        contractor_id = shift.contractor_id
-        db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
-            {ScheduleShift.active: False}
-        )
-        db.session.commit()
+    shift = db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).one()
+    if shift.clock_state != TimeClockAction.clock_out:
+        return {"message": "User is still clocked in to this shift!"}, 403
+    job_id = shift.job_id
+    contractor_id = shift.contractor_id
+    db.session.query(ScheduleShift).filter(ScheduleShift.id == shift_id).update(
+        {ScheduleShift.active: False}
+    )
+    db.session.commit()
 
-        next_shift = get_next_shift(contractor_id)["shift"]
-        if next_shift != None:
-            next_shift = next_shift["id"]
+    next_shift = get_next_shift(contractor_id)["shift"]
+    if next_shift != None:
+        next_shift = next_shift["id"]
 
-        emit_to_users(
-            "REMOVE_SHIFT",
-            {"shiftId": int(shift_id), "jobId": int(job_id)},
-            get_organization_user_ids(job_id),
-        )
-        emit_to_users("REMOVE_EVENT", int(shift_id), get_organization_user_ids(job_id))
-        emit_to_users("SET_NEXT_SHIFT", next_shift, [contractor_id])
+    emit_to_users(
+        "REMOVE_SHIFT",
+        {"shiftId": int(shift_id), "jobId": int(job_id)},
+        get_organization_user_ids(job_id),
+    )
+    emit_to_users("REMOVE_EVENT", int(shift_id), get_organization_user_ids(job_id))
+    emit_to_users("SET_NEXT_SHIFT", next_shift, [contractor_id])
     return OK_RESPONSE
 
 
