@@ -360,7 +360,9 @@ def deny_payment():
 @bp.route("/payments/<payment_id>", methods=["PUT"])
 @login_required
 def edit_payment_route(payment_id):
-    timecard_changes = get_request_json(request, "timecard.clock_events", optional=True) or None
+    timecard_changes = (
+        get_request_json(request, "timecard.clock_events", optional=True) or None
+    )
     invoice_items = get_request_json(request, "invoice.items", optional=True) or None
     invoice_description = (
         get_request_json(request, "invoice.description", optional=True) or None
