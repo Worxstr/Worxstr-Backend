@@ -363,7 +363,7 @@ def job_detail(job_id):
             .order_by(TimeClock.time.desc())
             .all()
         )
-        shift["timeclock_actions"] = [timeclock.to_dict() for timeclock in timeclocks]
+        shift["clock_history"] = [timeclock.to_dict() for timeclock in timeclocks]
         contractor = (
             db.session.query(User)
             .filter(User.id == shift["contractor_id"])

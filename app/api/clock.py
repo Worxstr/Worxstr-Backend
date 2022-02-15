@@ -7,7 +7,9 @@ from app import db, notifications
 from app.api import bp
 from app.api.sockets import emit_to_users
 from app.models import (
+    Invoice,
     Job,
+    Payment,
     ScheduleShift,
     TimeClock,
     TimeClockAction,
@@ -308,8 +310,38 @@ def clock_out():
     )
     db.session.add(timeclock)
     db.session.commit()
+    shift = (
+        db.session.query(ScheduleShift)
+        .filter(ScheduleShift.id == timecard_info.shift_id)
+        .one()
+    )
     calculate_timecard(timecard_info.timecard_id)
-
+    timecard = (
+        db.session.query(TimeCard)
+        .filter(TimeCard.id == timecard_info.timecard_id)
+        .one()
+    )
+    invoice = Invoice(
+        amount=timecard.wage_payment,
+        description=shift.site_location,
+        timecard_id=timecard.id,
+        date_created=datetime.datetime.utcnow(),
+    )
+    db.session.add(invoice)
+    db.session.commit()
+    fee = round(
+        invoice.amount * current_user.organization.subscription_tier.transfer_fee, 2
+    )
+    payment = Payment(
+        amount=invoice.amount,
+        fee=fee,
+        total=invoice.amount + fee,
+        invoice_id=invoice.id,
+        sender_dwolla_url=current_user.organization.dwolla_customer_url,
+        receiver_dwolla_url=current_user.dwolla_customer_url,
+    )
+    db.session.add(payment)
+    db.session.commit()
     payload = timeclock.to_dict()
     timecard = (
         db.session.query(TimeCard)
@@ -327,11 +359,7 @@ def clock_out():
         timecard["time_clocks"].append(time_clock.to_dict())
     user_ids = get_manager_user_ids(current_user.organization_id)
     emit_to_users("ADD_TIMECARD", timecard, user_ids)
-    shift = (
-        db.session.query(ScheduleShift)
-        .filter(ScheduleShift.id == timecard_info.shift_id)
-        .one()
-    )
+
     title = current_user.first_name + " clocked out"
     message_body = "At " + shift.site_location + "."
     notifications.send_notification(title, message_body, user_ids)
@@ -474,8 +502,10 @@ def calculate_timecard(timecard_id):
         .one()
     )
     wage = round(float(rate[0]) * total_time_hours, 2)
-    transaction_fees = round(wage * 0.02, 2)
-    total_payment = wage + transaction_fees
+    transaction_fees = round(
+        wage * float(current_user.organization.subscription_tier.transfer_fee), 2
+    )
+    total_payment = round(wage + transaction_fees, 2)
     # TODO: Does this need to be an iter? Can we iterate over it as a list?
     breaks = iter(
         db.session.query(TimeClock)
