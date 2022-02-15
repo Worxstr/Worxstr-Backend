@@ -370,7 +370,12 @@ def edit_payment_route(payment_id):
         edit_timecard(payment.invoice.timecard_id, timecard_changes)
     if invoice_items != None:
         edit_invoice(payment.invoice_id, invoice_items, invoice_description)
-    return
+
+    # TODO: There may be a better way to do this than querying again,
+    # TODO: but Jackson didn't return the object so I'm doing his job
+    payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
+    
+    return payment.to_dict()
 
 
 def edit_timecard(timecard_id, changes):
