@@ -91,9 +91,9 @@ def add_balance():
     )
     amount = amount - fee
     if fee > 0.0:
-        response = payments.transfer_funds(str(amount), balance, location, fee)
+        response = payments.transfer_funds(str(amount), location, balance, fee)
     else:
-        response = payments.transfer_funds(str(amount), balance, location)
+        response = payments.transfer_funds(str(amount), location, balance)
     if type(response) is tuple:
         return response
     transfer = BankTransfer(
