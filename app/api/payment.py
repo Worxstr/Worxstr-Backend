@@ -360,7 +360,9 @@ def deny_payment():
 @bp.route("/payments/<payment_id>", methods=["PUT"])
 @login_required
 def edit_payment_route(payment_id):
-    timecard_changes = get_request_json(request, "timecard.clock_events", optional=True) or None
+    timecard_changes = (
+        get_request_json(request, "timecard.clock_events", optional=True) or None
+    )
     invoice_items = get_request_json(request, "invoice.items", optional=True) or None
     invoice_description = (
         get_request_json(request, "invoice.description", optional=True) or None
@@ -374,7 +376,7 @@ def edit_payment_route(payment_id):
     # TODO: There may be a better way to do this than querying again,
     # TODO: but Jackson didn't return the object so I'm doing his job
     payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
-    
+
     return payment.to_dict()
 
 
@@ -433,6 +435,7 @@ def get_payments():
                 Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
             ),
             Payment.denied == False,
+            Payment.dwolla_payment_transaction_id == None,
         )
         .all()
     )
