@@ -332,8 +332,6 @@ def complete_payments():
         response["payments"].append(payment.to_dict())
     db.session.commit()
 
-    for payment_id in payment_ids:
-        emit_to_users("REMOVE_PAYMENT", payment_id, user_ids)
     for customer_url in customer_urls:
         balance = payments.get_balance(customer_url)["balance"]
         emit_to_users("SET_BALANCE", balance, user_ids)
