@@ -310,7 +310,10 @@ def complete_payments():
         )
         if type(transfer) is not tuple:
             db.session.query(Payment).filter(Payment.id == payment.id).update(
-                {Payment.dwolla_payment_transaction_id: transfer["transfer"]["id"]}
+                {
+                    Payment.dwolla_payment_transaction_id: transfer["transfer"]["id"],
+                    Payment.date_completed: datetime.utcnow(),
+                }
             )
             message_body = "You received a payment for $" + str(payment.amount) + "."
             if payment.receiver is User:
