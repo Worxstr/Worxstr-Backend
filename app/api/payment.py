@@ -427,13 +427,11 @@ def get_payments():
     payments = (
         db.session.query(Payment)
         .filter(
-            Payment.date_completed == None,
             or_(
                 Payment.sender_dwolla_url == current_user.dwolla_customer_url,
                 Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
             ),
             Payment.denied == False,
-            Payment.dwolla_payment_transaction_id == None,
         )
         .all()
     )
