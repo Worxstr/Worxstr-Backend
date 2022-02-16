@@ -332,13 +332,11 @@ def complete_payments():
         response["payments"].append(payment.to_dict())
     db.session.commit()
 
-    for payment_id in payment_ids:
-        emit_to_users("REMOVE_PAYMENT", payment_id, user_ids)
     for customer_url in customer_urls:
         balance = payments.get_balance(customer_url)["balance"]
         emit_to_users("SET_BALANCE", balance, user_ids)
 
-    return {"transfers": response, "balance": balance}
+    return {"payments": response["payments"], "balance": balance}
 
 
 @bp.route("/payments/deny", methods=["PUT"])
@@ -372,7 +370,12 @@ def edit_payment_route(payment_id):
         edit_timecard(payment.invoice.timecard_id, timecard_changes)
     if invoice_items != None:
         edit_invoice(payment.invoice_id, invoice_items, invoice_description)
-    return
+
+    # TODO: There may be a better way to do this than querying again,
+    # TODO: but Jackson didn't return the object so I'm doing his job
+    payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
+
+    return payment.to_dict()
 
 
 def edit_timecard(timecard_id, changes):
@@ -424,7 +427,6 @@ def get_payments():
     payments = (
         db.session.query(Payment)
         .filter(
-            Payment.date_completed == None,
             or_(
                 Payment.sender_dwolla_url == current_user.dwolla_customer_url,
                 Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
