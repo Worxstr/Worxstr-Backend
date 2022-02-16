@@ -338,7 +338,7 @@ def complete_payments():
         balance = payments.get_balance(customer_url)["balance"]
         emit_to_users("SET_BALANCE", balance, user_ids)
 
-    return {"transfers": response, "balance": balance}
+    return {"payments": response["payments"], "balance": balance}
 
 
 @bp.route("/payments/deny", methods=["PUT"])
