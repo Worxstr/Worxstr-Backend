@@ -327,7 +327,7 @@ def complete_payments():
         receiving_balance = payments.get_balance(payment.receiver_dwolla_url)["balance"]
         emit_to_users("SET_BALANCE", receiving_balance, receiving_user_id)
         emit_to_users("ADD_PAYMENT", payment.to_dict(), receiving_user_id)
-        emit_to_users("ADD_PAYMENT", transfer, user_ids)
+        # emit_to_users("ADD_PAYMENT", transfer, user_ids)
 
         response["payments"].append(payment.to_dict())
     db.session.commit()
