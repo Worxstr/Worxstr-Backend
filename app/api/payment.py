@@ -20,9 +20,17 @@ from app.models import (
 )
 from app.api.clock import calculate_timecard
 from app.api.sockets import emit_to_users
-from app.utils import OK_RESPONSE, get_request_arg, get_request_json, list_to_csv, flatten_dict_list, flatten_dict
+from app.utils import (
+    OK_RESPONSE,
+    get_request_arg,
+    get_request_json,
+    list_to_csv,
+    flatten_dict_list,
+    flatten_dict,
+)
 
 import json
+
 
 def get_manager_user_ids(organization_id):
     # Get the ids of managers within the current organization
@@ -472,23 +480,23 @@ def export_payments():
         },
     ]
 
-    format = request.args.get('format')
-    
-    if format == 'csv':
+    format = request.args.get("format")
+
+    if format == "csv":
         filename = "payments_export.csv"
         mimetype = "text/csv"
         output = list_to_csv(data)
-    
-    elif format == 'json':
+
+    elif format == "json":
         filename = "payments_export.json"
         mimetype = "application/json"
         output = json.dumps(data)
-    
+
     # elif format == 'xlsx':
     #     filename = "payments_export.xlsx"
     #     mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     #     output = list_to_xlsx(data)
-    
+
     # elif format == 'pdf':
     #     filename = "payments_export.pdf"
     #     mimetype = "application/pdf"
@@ -500,11 +508,9 @@ def export_payments():
     return Response(
         output,
         mimetype=mimetype,
-        headers={
-            "Content-disposition":
-            "attachment; filename=" + filename
-        }
+        headers={"Content-disposition": "attachment; filename=" + filename},
     )
+
 
 @bp.route("/payments/invoices", methods=["POST"])
 @login_required
