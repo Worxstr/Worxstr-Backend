@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import request
+from flask import request, Response
 from flask_security import login_required, roles_accepted, current_user
 from sqlalchemy.sql.elements import Null, or_
 
@@ -20,7 +20,16 @@ from app.models import (
 )
 from app.api.clock import calculate_timecard
 from app.api.sockets import emit_to_users
-from app.utils import OK_RESPONSE, get_request_arg, get_request_json
+from app.utils import (
+    OK_RESPONSE,
+    get_request_arg,
+    get_request_json,
+    list_to_csv,
+    flatten_dict_list,
+    flatten_dict,
+)
+
+import json
 
 
 def get_manager_user_ids(organization_id):
@@ -63,6 +72,7 @@ def access_payment_facilitator():
     return {"token": payments.app_token.access_token}
 
 
+# TODO: I don't think this route is used anymore
 @bp.route("/payments/transfers", methods=["GET"])
 @login_required
 def get_transfers():
@@ -327,7 +337,7 @@ def complete_payments():
         receiving_balance = payments.get_balance(payment.receiver_dwolla_url)["balance"]
         emit_to_users("SET_BALANCE", receiving_balance, receiving_user_id)
         emit_to_users("ADD_PAYMENT", payment.to_dict(), receiving_user_id)
-        emit_to_users("ADD_PAYMENT", transfer, user_ids)
+        # emit_to_users("ADD_PAYMENT", transfer, user_ids)
 
         response["payments"].append(payment.to_dict())
     db.session.commit()
@@ -446,6 +456,60 @@ def get_payments():
 def get_payment(payment_id):
     payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
     return payment.to_dict()
+
+
+@bp.route("/payments/export", methods=["GET"])
+@login_required
+@roles_accepted("organization_manager", "contractor_manager")
+def export_payments():
+    # data = get_payments()["payments"]
+    data = [
+        {
+            "name": {
+                "first": "Alex",
+                "last": "Wohlbruck",
+            },
+            "age": 21,
+        },
+        {
+            "name": {
+                "first": "Jackson",
+                "last": "Sippe",
+            },
+            "age": 23,
+        },
+    ]
+
+    format = request.args.get("format")
+
+    if format == "csv":
+        filename = "payments_export.csv"
+        mimetype = "text/csv"
+        output = list_to_csv(data)
+
+    elif format == "json":
+        filename = "payments_export.json"
+        mimetype = "application/json"
+        output = json.dumps(data)
+
+    # elif format == 'xlsx':
+    #     filename = "payments_export.xlsx"
+    #     mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    #     output = list_to_xlsx(data)
+
+    # elif format == 'pdf':
+    #     filename = "payments_export.pdf"
+    #     mimetype = "application/pdf"
+    #     output = list_to_pdf(data)
+
+    else:
+        return "Invalid format provided", 400
+
+    return Response(
+        output,
+        mimetype=mimetype,
+        headers={"Content-disposition": "attachment; filename=" + filename},
+    )
 
 
 @bp.route("/payments/invoices", methods=["POST"])
