@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask import request, Response
 from flask_security import login_required, roles_accepted, current_user
+from pyrsistent import optional
 from sqlalchemy.sql.elements import Null, or_
 
 from app import db, payments, payments_auth, notifications
@@ -123,6 +124,7 @@ def add_balance():
         dwolla_payment_transaction_id=response["transfer"]["id"],
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
+        date_created=datetime.utcnow(),
     )
     db.session.add(payment)
     db.session.commit()
@@ -182,14 +184,15 @@ def remove_balance():
         dwolla_payment_transaction_id=response["transfer"]["id"],
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
+        date_created=datetime.utcnow(),
     )
     db.session.add(payment)
     db.session.commit()
     new_balance = payments.get_balance(customer_url)["balance"]
     response["transfer"]["new_balance"] = new_balance
-    emit_to_users("ADD_TRANSFER", response["transfer"], user_ids)
+    emit_to_users("ADD_TRANSFER", payment.to_dict(), user_ids)
     emit_to_users("SET_BALANCE", new_balance, user_ids)
-    return response
+    return payment.to_dict()
 
 
 @bp.route("/payments/accounts", methods=["POST"])
@@ -320,7 +323,10 @@ def complete_payments():
         )
         if type(transfer) is not tuple:
             db.session.query(Payment).filter(Payment.id == payment.id).update(
-                {Payment.dwolla_payment_transaction_id: transfer["transfer"]["id"]}
+                {
+                    Payment.dwolla_payment_transaction_id: transfer["transfer"]["id"],
+                    Payment.date_completed: datetime.utcnow(),
+                }
             )
             message_body = "You received a payment for $" + str(payment.amount) + "."
             if payment.receiver is User:
@@ -427,13 +433,14 @@ def edit_timecard(timecard_id, changes):
     ]
     user_ids = get_manager_user_ids(current_user.organization_id)
 
-    emit_to_users("ADD_TIMECARD", result, user_ids)
     return result
 
 
 @bp.route("/payments", methods=["GET"])
 @login_required
 def get_payments():
+    limit = int(get_request_arg(request, "limit"))
+    offset = int(get_request_arg(request, "offset"))
     payments = (
         db.session.query(Payment)
         .filter(
@@ -443,6 +450,8 @@ def get_payments():
             ),
             Payment.denied == False,
         )
+        .limit(limit)
+        .offset(limit * offset)
         .all()
     )
     result = []
@@ -516,8 +525,11 @@ def export_payments():
 @login_required
 def create_invoice():
     description = get_request_json(request, "description", optional=True) or None
+    job_id = get_request_json(request, "job_id", optional=True) or None
     items = get_request_json(request, "items")
-    invoice = Invoice(description=description, date_created=datetime.utcnow())
+    invoice = Invoice(
+        description=description, date_created=datetime.utcnow(), job_id=job_id
+    )
     db.session.add(invoice)
     db.session.commit()
     amount = 0.0
@@ -536,6 +548,7 @@ def create_invoice():
         invoice_id=invoice.id,
         sender_dwolla_url=current_user.organization.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
+        date_created=datetime.utcnow(),
     )
     db.session.add(payment)
     db.session.commit()
@@ -547,10 +560,11 @@ def create_invoice():
 def edit_invoice_route(invoice_id):
     invoice_items = get_request_json(request, "items")
     description = get_request_json(request, "description", optional=True) or None
-    return edit_invoice(invoice_id, invoice_items, description)
+    job_id = get_request_json(request, "job_id", optional=True) or None
+    return edit_invoice(invoice_id, invoice_items, description, job_id)
 
 
-def edit_invoice(invoice_id, invoice_items, description):
+def edit_invoice(invoice_id, invoice_items, description, job_id):
     invoice_ids = (
         db.session.query(InvoiceItem.id)
         .filter(InvoiceItem.invoice_id == invoice_id)
@@ -584,6 +598,7 @@ def edit_invoice(invoice_id, invoice_items, description):
     db.session.query(Invoice).filter(Invoice.id == invoice_id).update(
         {
             Invoice.description: description or Invoice.description,
+            Invoice.job_id: job_id or Invoice.job_id,
         }
     )
     db.session.commit()

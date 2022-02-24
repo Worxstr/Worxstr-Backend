@@ -201,6 +201,7 @@ class Job(db.Model, CustomSerializerMixin):
     restrict_by_time = db.Column(db.Boolean)
     restrict_by_code = db.Column(db.Boolean)
     restrict_by_time_window = db.Column(db.Integer)
+    invoices = db.relationship("Invoice")
 
     def __repr__(self):
         return "<Job {}>".format(self.name)
@@ -326,6 +327,7 @@ class Payment(db.Model, CustomSerializerMixin):
     total = db.Column(db.Numeric)
     invoice_id = db.Column(db.Integer, db.ForeignKey("invoice.id"))
     bank_transfer_id = db.Column(db.Integer, db.ForeignKey("bank_transfer.id"))
+    date_created = db.Column(db.DateTime)
     date_completed = db.Column(db.DateTime)
     dwolla_payment_transaction_id = db.Column(db.String)
     dwolla_fee_transaction_id = db.Column(db.String)
@@ -366,8 +368,10 @@ class Invoice(db.Model, CustomSerializerMixin):
     timecard_id = db.Column(db.Integer, db.ForeignKey("time_card.id"))
     approved = db.Column(db.Boolean)
     date_created = db.Column(db.DateTime)
+    job_id = db.Column(db.Integer, db.ForeignKey("job.id"))
     items = db.relationship("InvoiceItem")
     timecard = db.relationship("TimeCard")
+    job = db.relationship("Job")
 
 
 class InvoiceItem(db.Model, CustomSerializerMixin):

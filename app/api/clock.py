@@ -325,6 +325,7 @@ def clock_out():
         amount=timecard.wage_payment,
         description=shift.site_location,
         timecard_id=timecard.id,
+        job_id=timecard_info.job_id,
         date_created=datetime.datetime.utcnow(),
     )
     db.session.add(invoice)
@@ -339,6 +340,7 @@ def clock_out():
         invoice_id=invoice.id,
         sender_dwolla_url=current_user.organization.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
+        date_created=datetime.datetime.utcnow(),
     )
     db.session.add(payment)
     db.session.commit()
@@ -358,7 +360,7 @@ def clock_out():
     for time_clock in time_clocks:
         timecard["time_clocks"].append(time_clock.to_dict())
     user_ids = get_manager_user_ids(current_user.organization_id)
-    emit_to_users("ADD_TIMECARD", timecard, user_ids)
+    emit_to_users("ADD_PAYMENT", payment.to_dict(), user_ids)
 
     title = current_user.first_name + " clocked out"
     message_body = "At " + shift.site_location + "."
