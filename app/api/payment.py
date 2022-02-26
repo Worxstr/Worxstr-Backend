@@ -126,6 +126,9 @@ def add_balance():
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
         date_created=datetime.utcnow(),
+        bank_name=response["transfer"]["_links"]["destination"][
+            "additional-information"
+        ]["name"],
     )
     db.session.add(payment)
     db.session.commit()
@@ -175,6 +178,9 @@ def remove_balance():
         transaction_type="credit",
         status=response["transfer"]["status"],
         status_updated=response["transfer"]["created"],
+        bank_name=response["transfer"]["_links"]["destination"][
+            "additional-information"
+        ]["name"],
     )
     db.session.add(transfer)
     db.session.commit()
@@ -442,15 +448,21 @@ def edit_timecard(timecard_id, changes):
 def get_payments():
     limit = int(get_request_arg(request, "limit"))
     offset = int(get_request_arg(request, "offset"))
+    pending = get_request_arg(request, "pending", optional=True) or None
+    filters = [
+        or_(
+            Payment.sender_dwolla_url == current_user.dwolla_customer_url,
+            Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
+        ),
+        Payment.denied == False,
+    ]
+    if pending == "true":
+        filters.append(Payment.date_completed == None)
+    if pending == "false":
+        filters.append(Payment.date_completed != None)
     payments = (
         db.session.query(Payment)
-        .filter(
-            or_(
-                Payment.sender_dwolla_url == current_user.dwolla_customer_url,
-                Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
-            ),
-            Payment.denied == False,
-        )
+        .filter(*filters)
         .order_by(asc(Payment.date_created))
         .limit(limit)
         .offset(limit * offset)
@@ -554,7 +566,10 @@ def create_invoice():
     )
     db.session.add(payment)
     db.session.commit()
-    return update_payment(invoice.id)
+    result = update_payment(invoice.id)
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    emit_to_users("ADD_PAYMENT", result, user_ids)
+    return result
 
 
 @bp.route("/payments/invoices/<invoice_id>", methods=["PUT"])
