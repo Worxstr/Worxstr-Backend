@@ -341,7 +341,7 @@ class Payment(db.Model, CustomSerializerMixin):
         return (
             db.session.query(Organization)
             .filter(Organization.dwolla_customer_url == self.sender_dwolla_url)
-            .one()
+            .one_or_none()
         )
 
     @hybrid_property
