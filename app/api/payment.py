@@ -53,6 +53,7 @@ def get_manager_user_ids(organization_id):
 def update_account_status():
     topic = get_request_json(request, "topic")
     links = get_request_json(request, "_links")
+    resource_id = get_request_json(request, "resourceId")
     if (
         topic == "customer_verified"
         or topic == "customer_verification_document_needed"
@@ -66,6 +67,23 @@ def update_account_status():
                 ContractorInfo.dwolla_customer_url == customer_url
             ).update({ContractorInfo.dwolla_customer_status: customer["status"]})
             db.session.commit()
+    if topic == "customer_bank_transfer_completed":
+        transaction_id = resource_id
+        payment = (
+            db.session.query(Payment)
+            .filter(Payment.dwolla_payment_transaction_id == transaction_id)
+            .one()
+        )
+        db.session.query(BankTransfer).filter(
+            BankTransfer.id == payment.bank_transfer_id,
+        ).update(
+            {
+                BankTransfer.status: "processed",
+                BankTransfer.status_updated: datetime.utcnow(),
+            }
+        )
+        db.session.commit()
+
     return OK_RESPONSE
 
 

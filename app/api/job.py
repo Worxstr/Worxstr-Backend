@@ -236,7 +236,9 @@ def add_job():
             schema:
                 $ref: '#/definitions/Job'
     """
-    consultant_phone_raw = get_request_json(request, "consultant_phone", optional=True) or None 
+    consultant_phone_raw = (
+        get_request_json(request, "consultant_phone", optional=True) or None
+    )
     if consultant_phone_raw == None:
         consultant_phone = None
     else:
@@ -255,9 +257,11 @@ def add_job():
         zip_code=get_request_json(request, "zip_code"),
         longitude=get_request_json(request, "longitude"),
         latitude=get_request_json(request, "latitude"),
-        consultant_name=get_request_json(request, "consultant_name", optional=True) or None,
+        consultant_name=get_request_json(request, "consultant_name", optional=True)
+        or None,
         consultant_phone=consultant_phone,
-        consultant_email=get_request_json(request, "consultant_email", optional=True) or None,
+        consultant_email=get_request_json(request, "consultant_email", optional=True)
+        or None,
         consultant_code=str(randint(000000, 999999)),
         color=get_request_json(request, "color"),
         radius=get_request_json(request, "radius"),
