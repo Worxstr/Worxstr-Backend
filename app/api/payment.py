@@ -2,6 +2,7 @@ from datetime import datetime
 from flask import request, Response
 from flask_security import login_required, roles_accepted, current_user
 from pyrsistent import optional
+from sqlalchemy import asc
 from sqlalchemy.sql.elements import Null, or_
 
 from app import db, payments, payments_auth, notifications
@@ -450,6 +451,7 @@ def get_payments():
             ),
             Payment.denied == False,
         )
+        .order_by(asc(Payment.date_created))
         .limit(limit)
         .offset(limit * offset)
         .all()
