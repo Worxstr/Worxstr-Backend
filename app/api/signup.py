@@ -8,7 +8,7 @@ from flask_security import (
 from app import db, user_datastore, payments
 from app.api import bp
 from app.api.users import manager_reference_generator
-from app.models import ManagerInfo, User, ContractorInfo, Organization, Role
+from app.models import ManagerInfo, SubscriptionTier, User, ContractorInfo, Organization, Role
 from app.email import send_email
 from app.utils import get_request_arg, get_request_json, OK_RESPONSE
 from app import payments
@@ -61,9 +61,12 @@ def sign_up_org():
     phone = phone_raw["areaCode"] + phone_raw["phoneNumber"]
     business_name = get_request_json(request, "businessName")
     password = get_request_json(request, "password")
+    subscription_tier_code = get_request_json(request, "subscription_tier")
 
     dwolla_request = request.get_json()
     dwolla_request["type"] = "business"
+
+    subscription_tier = db.session.query(SubscriptionTier).filter(SubscriptionTier.tier_code == subscription_tier_code).one()
 
     dwolla_customer_url = payments.create_business_customer(dwolla_request)
     if type(dwolla_customer_url) == tuple:
@@ -78,6 +81,7 @@ def sign_up_org():
         name=organization_name,
         dwolla_customer_url=dwolla_customer_url,
         dwolla_customer_status=dwolla_customer_status,
+        subscription_tier_id=subscription_tier.id,
     )
     db.session.add(organization)
     db.session.commit()
