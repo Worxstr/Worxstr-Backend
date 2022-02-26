@@ -15,4 +15,5 @@ from app.api import (
     signup,
     organization,
     sockets,
+    api,
 )
