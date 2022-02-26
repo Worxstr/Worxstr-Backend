@@ -442,15 +442,22 @@ def edit_timecard(timecard_id, changes):
 def get_payments():
     limit = int(get_request_arg(request, "limit"))
     offset = int(get_request_arg(request, "offset"))
+    pending = get_request_arg(request, "pending", optional=True) or None
+    filters = [
+        or_(
+            Payment.sender_dwolla_url == current_user.dwolla_customer_url,
+            Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
+        ),
+        Payment.denied == False,
+    ]
+    if pending == "true":
+        filters.append(Payment.date_completed == None)
+    if pending == "false":
+        filters.append(Payment.date_completed != None)
+    print(*filters)
     payments = (
         db.session.query(Payment)
-        .filter(
-            or_(
-                Payment.sender_dwolla_url == current_user.dwolla_customer_url,
-                Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
-            ),
-            Payment.denied == False,
-        )
+        .filter(*filters)
         .order_by(asc(Payment.date_created))
         .limit(limit)
         .offset(limit * offset)
