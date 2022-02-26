@@ -463,7 +463,7 @@ def get_payments():
     payments = (
         db.session.query(Payment)
         .filter(*filters)
-        .order_by(asc(Payment.date_created))
+        .order_by(desc(Payment.date_created))
         .limit(limit)
         .offset(limit * offset)
         .all()
