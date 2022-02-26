@@ -201,7 +201,6 @@ class Job(db.Model, CustomSerializerMixin):
     restrict_by_time = db.Column(db.Boolean)
     restrict_by_code = db.Column(db.Boolean)
     restrict_by_time_window = db.Column(db.Integer)
-    invoices = db.relationship("Invoice")
 
     def __repr__(self):
         return "<Job {}>".format(self.name)
@@ -342,7 +341,7 @@ class Payment(db.Model, CustomSerializerMixin):
         return (
             db.session.query(Organization)
             .filter(Organization.dwolla_customer_url == self.sender_dwolla_url)
-            .one()
+            .one_or_none()
         )
 
     @hybrid_property

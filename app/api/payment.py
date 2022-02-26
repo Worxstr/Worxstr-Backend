@@ -2,6 +2,7 @@ from datetime import datetime
 from flask import request, Response
 from flask_security import login_required, roles_accepted, current_user
 from pyrsistent import optional
+from sqlalchemy import asc, desc
 from sqlalchemy.sql.elements import Null, or_
 
 from app import db, payments, payments_auth, notifications
@@ -52,6 +53,7 @@ def get_manager_user_ids(organization_id):
 def update_account_status():
     topic = get_request_json(request, "topic")
     links = get_request_json(request, "_links")
+    resource_id = get_request_json(request, "resourceId")
     if (
         topic == "customer_verified"
         or topic == "customer_verification_document_needed"
@@ -65,6 +67,23 @@ def update_account_status():
                 ContractorInfo.dwolla_customer_url == customer_url
             ).update({ContractorInfo.dwolla_customer_status: customer["status"]})
             db.session.commit()
+    if topic == "customer_bank_transfer_completed":
+        transaction_id = resource_id
+        payment = (
+            db.session.query(Payment)
+            .filter(Payment.dwolla_payment_transaction_id == transaction_id)
+            .one()
+        )
+        db.session.query(BankTransfer).filter(
+            BankTransfer.id == payment.bank_transfer_id,
+        ).update(
+            {
+                BankTransfer.status: "processed",
+                BankTransfer.status_updated: datetime.utcnow(),
+            }
+        )
+        db.session.commit()
+
     return OK_RESPONSE
 
 
@@ -125,6 +144,9 @@ def add_balance():
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
         date_created=datetime.utcnow(),
+        bank_name=response["transfer"]["_links"]["destination"][
+            "additional-information"
+        ]["name"],
     )
     db.session.add(payment)
     db.session.commit()
@@ -174,6 +196,9 @@ def remove_balance():
         transaction_type="credit",
         status=response["transfer"]["status"],
         status_updated=response["transfer"]["created"],
+        bank_name=response["transfer"]["_links"]["destination"][
+            "additional-information"
+        ]["name"],
     )
     db.session.add(transfer)
     db.session.commit()
@@ -441,15 +466,22 @@ def edit_timecard(timecard_id, changes):
 def get_payments():
     limit = int(get_request_arg(request, "limit"))
     offset = int(get_request_arg(request, "offset"))
+    pending = get_request_arg(request, "pending", optional=True) or None
+    filters = [
+        or_(
+            Payment.sender_dwolla_url == current_user.dwolla_customer_url,
+            Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
+        ),
+        Payment.denied == False,
+    ]
+    if pending == "true":
+        filters.append(Payment.date_completed == None)
+    if pending == "false":
+        filters.append(Payment.date_completed != None)
     payments = (
         db.session.query(Payment)
-        .filter(
-            or_(
-                Payment.sender_dwolla_url == current_user.dwolla_customer_url,
-                Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
-            ),
-            Payment.denied == False,
-        )
+        .filter(*filters)
+        .order_by(desc(Payment.date_created))
         .limit(limit)
         .offset(limit * offset)
         .all()
@@ -471,23 +503,32 @@ def get_payment(payment_id):
 @login_required
 @roles_accepted("organization_manager", "contractor_manager")
 def export_payments():
-    # data = get_payments()["payments"]
-    data = [
-        {
-            "name": {
-                "first": "Alex",
-                "last": "Wohlbruck",
-            },
-            "age": 21,
-        },
-        {
-            "name": {
-                "first": "Jackson",
-                "last": "Sippe",
-            },
-            "age": 23,
-        },
+    filters = [
+        or_(
+            Payment.sender_dwolla_url == current_user.dwolla_customer_url,
+            Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
+        ),
+        Payment.denied == False,
     ]
+    payments = (
+        db.session.query(Payment)
+        .filter(*filters)
+        .order_by(desc(Payment.date_created))
+        .all()
+    )
+
+    data = []
+    for payment in payments:
+        payment = payment.to_dict()
+        data.append(
+            {
+                "total": payment.get("total"),
+                "amount": payment.get("amount"),
+                "fee": payment.get("fee"),
+                "date_created": payment.get("date_created"),
+                "date_completed": payment.get("date_completed"),
+            }
+        )
 
     format = request.args.get("format")
 
@@ -527,6 +568,7 @@ def create_invoice():
     description = get_request_json(request, "description", optional=True) or None
     job_id = get_request_json(request, "job_id", optional=True) or None
     items = get_request_json(request, "items")
+    recipient_id = get_request_json(request, "recipient_id")
     invoice = Invoice(
         description=description, date_created=datetime.utcnow(), job_id=job_id
     )
@@ -543,16 +585,21 @@ def create_invoice():
         db.session.add(item)
     invoice.amount = amount
     db.session.commit()
+    recipient = db.session.query(User).filter(User.id == recipient_id).one()
     payment = Payment(
         amount=invoice.amount,
         invoice_id=invoice.id,
         sender_dwolla_url=current_user.organization.dwolla_customer_url,
-        receiver_dwolla_url=current_user.dwolla_customer_url,
+        receiver_dwolla_url=recipient.dwolla_customer_url,
         date_created=datetime.utcnow(),
     )
     db.session.add(payment)
     db.session.commit()
-    return update_payment(invoice.id)
+    result = update_payment(invoice.id)
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(recipient_id)
+    emit_to_users("ADD_PAYMENT", result, user_ids)
+    return result
 
 
 @bp.route("/payments/invoices/<invoice_id>", methods=["PUT"])
