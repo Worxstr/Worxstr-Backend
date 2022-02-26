@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import request, Response
 from flask_security import login_required, roles_accepted, current_user
 from pyrsistent import optional
-from sqlalchemy import asc
+from sqlalchemy import asc, desc
 from sqlalchemy.sql.elements import Null, or_
 
 from app import db, payments, payments_auth, notifications
