@@ -541,6 +541,7 @@ def create_invoice():
     description = get_request_json(request, "description", optional=True) or None
     job_id = get_request_json(request, "job_id", optional=True) or None
     items = get_request_json(request, "items")
+    recipient_id = get_request_json(request, "recipient_id")
     invoice = Invoice(
         description=description, date_created=datetime.utcnow(), job_id=job_id
     )
@@ -557,17 +558,19 @@ def create_invoice():
         db.session.add(item)
     invoice.amount = amount
     db.session.commit()
+    recipient = db.session.query(User).filter(User.id == recipient_id).one()
     payment = Payment(
         amount=invoice.amount,
         invoice_id=invoice.id,
         sender_dwolla_url=current_user.organization.dwolla_customer_url,
-        receiver_dwolla_url=current_user.dwolla_customer_url,
+        receiver_dwolla_url=recipient.dwolla_customer_url,
         date_created=datetime.utcnow(),
     )
     db.session.add(payment)
     db.session.commit()
     result = update_payment(invoice.id)
     user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(recipient_id)
     emit_to_users("ADD_PAYMENT", result, user_ids)
     return result
 
