@@ -83,13 +83,19 @@ class Dwolla:
         funding_sources = self.app_token.get("%s/funding-sources" % customer_url)
         ownership_flag = None
         if not is_contractor:
-            beneficial_ownership = self.app_token.get(
-                "%s/beneficial-ownership" % customer_url
-            )
-            if beneficial_ownership.body["status"] == "certified":
-                ownership_flag = True
-            else:
-                ownership_flag = False
+            try:
+                beneficial_ownership = self.app_token.get(
+                    "%s/beneficial-ownership" % customer_url
+                )
+                if beneficial_ownership.body["status"] == "certified":
+                    ownership_flag = True
+                else:
+                    ownership_flag = False
+            except NotFoundError as ex:
+                print(ex)
+                code = ex.body["code"]
+                if code == "NotFound":
+                    ownership_flag = True
         result = []
         for funding_source in funding_sources.body["_embedded"]["funding-sources"]:
             if not funding_source["removed"] and funding_source["type"] != "balance":
