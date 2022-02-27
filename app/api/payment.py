@@ -415,8 +415,11 @@ def edit_payment_route(payment_id):
     # TODO: There may be a better way to do this than querying again,
     # TODO: but Jackson didn't return the object so I'm doing his job
     payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
-
-    return payment.to_dict()
+    result = payment.to_dict()
+    user_ids = get_manager_user_ids(current_user.organization_id)
+    user_ids.append(payment.receiver.id)
+    emit_to_users("ADD_PAYMENT", result, user_ids)
+    return result
 
 
 def edit_timecard(timecard_id, changes):
@@ -600,16 +603,6 @@ def create_invoice():
     user_ids.append(recipient_id)
     emit_to_users("ADD_PAYMENT", result, user_ids)
     return result
-
-
-# TODO: Don't need this route, edit_payment does the same job
-# @bp.route("/payments/invoices/<invoice_id>", methods=["PUT"])
-# @login_required
-# def edit_invoice_route(invoice_id):
-#     invoice_items = get_request_json(request, "items")
-#     description = get_request_json(request, "description", optional=True) or None
-#     job_id = get_request_json(request, "job_id", optional=True) or None
-#     return edit_invoice(invoice_id, invoice_items, description, job_id)
 
 
 def edit_invoice(invoice_id, invoice_items, description, job_id=None):
