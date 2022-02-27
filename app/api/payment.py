@@ -126,11 +126,13 @@ def add_balance():
         response = payments.transfer_funds(str(amount), location, balance)
     if type(response) is tuple:
         return response
+    funding_source = payments.get_customer_info(location)
     transfer = BankTransfer(
         amount=float(response["transfer"]["amount"]["value"]),
         transaction_type="debit",
         status=response["transfer"]["status"],
         status_updated=response["transfer"]["created"],
+        bank_name=funding_source['name'],
     )
     db.session.add(transfer)
     db.session.commit()
@@ -144,14 +146,11 @@ def add_balance():
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
         date_created=datetime.utcnow(),
-        bank_name=response["transfer"]["_links"]["destination"][
-            "additional-information"
-        ]["name"],
     )
     db.session.add(payment)
     db.session.commit()
     emit_to_users(
-        "ADD_TRANSFER",
+        "ADD_PAYMENT",
         payment.to_dict(),
         get_manager_user_ids(current_user.organization_id),
     )
@@ -215,7 +214,7 @@ def remove_balance():
     db.session.commit()
     new_balance = payments.get_balance(customer_url)["balance"]
     response["transfer"]["new_balance"] = new_balance
-    emit_to_users("ADD_TRANSFER", payment.to_dict(), user_ids)
+    emit_to_users("ADD_PAYMENT", payment.to_dict(), user_ids)
     emit_to_users("SET_BALANCE", new_balance, user_ids)
     return payment.to_dict()
 
