@@ -602,16 +602,17 @@ def create_invoice():
     return result
 
 
-@bp.route("/payments/invoices/<invoice_id>", methods=["PUT"])
-@login_required
-def edit_invoice_route(invoice_id):
-    invoice_items = get_request_json(request, "items")
-    description = get_request_json(request, "description", optional=True) or None
-    job_id = get_request_json(request, "job_id", optional=True) or None
-    return edit_invoice(invoice_id, invoice_items, description, job_id)
+# TODO: Don't need this route, edit_payment does the same job
+# @bp.route("/payments/invoices/<invoice_id>", methods=["PUT"])
+# @login_required
+# def edit_invoice_route(invoice_id):
+#     invoice_items = get_request_json(request, "items")
+#     description = get_request_json(request, "description", optional=True) or None
+#     job_id = get_request_json(request, "job_id", optional=True) or None
+#     return edit_invoice(invoice_id, invoice_items, description, job_id)
 
 
-def edit_invoice(invoice_id, invoice_items, description, job_id):
+def edit_invoice(invoice_id, invoice_items, description, job_id=None):
     invoice_ids = (
         db.session.query(InvoiceItem.id)
         .filter(InvoiceItem.invoice_id == invoice_id)
