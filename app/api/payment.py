@@ -212,6 +212,8 @@ def remove_balance():
         fee_id = None
     payment = Payment(
         amount=transfer.amount,
+        fee=fee,
+        total=fee + amount,
         bank_transfer_id=transfer.id,
         date_completed=datetime.utcnow(),
         dwolla_payment_transaction_id=response["transfer"]["id"],
