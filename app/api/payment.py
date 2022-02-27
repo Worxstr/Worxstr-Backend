@@ -132,7 +132,7 @@ def add_balance():
         transaction_type="debit",
         status=response["transfer"]["status"],
         status_updated=response["transfer"]["created"],
-        bank_name=funding_source['name'],
+        bank_name=funding_source["name"],
     )
     db.session.add(transfer)
     db.session.commit()
