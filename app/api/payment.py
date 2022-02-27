@@ -408,11 +408,15 @@ def edit_payment_route(payment_id):
     invoice_description = (
         get_request_json(request, "invoice.description", optional=True) or None
     )
+    invoice_job_id = get_request_json(request, "invoice.job_id", optional=True) or None
+
     payment = db.session.query(Payment).filter(Payment.id == payment_id).one()
     if timecard_changes != None:
         edit_timecard(payment.invoice.timecard_id, timecard_changes)
-    if invoice_items != None:
-        edit_invoice(payment.invoice_id, invoice_items, invoice_description)
+    if invoice_items != None or invoice_job_id != None or invoice_description != None:
+        edit_invoice(
+            payment.invoice_id, invoice_items, invoice_description, invoice_job_id
+        )
 
     # TODO: There may be a better way to do this than querying again,
     # TODO: but Jackson didn't return the object so I'm doing his job
