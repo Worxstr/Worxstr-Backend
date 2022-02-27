@@ -122,6 +122,7 @@ def add_balance():
         amount * current_user.organization.subscription_tier.business_ach_fee, 2
     )
     amount = amount - fee
+    fee_response = None
     if fee > 0.0:
         response = payments.transfer_funds(str(amount), location, balance, fee)
         fee_response = payments.transfer_funds(str(fee), balance, Config.FEE_ACCOUNT)
@@ -139,6 +140,10 @@ def add_balance():
     )
     db.session.add(transfer)
     db.session.commit()
+    if fee_response is not None and fee_response["transfer"]["id"]:
+        fee_id = fee_response["transfer"]["id"]
+    else:
+        fee_id = None
     payment = Payment(
         amount=transfer.amount,
         fee=fee,
@@ -146,7 +151,7 @@ def add_balance():
         bank_transfer_id=transfer.id,
         date_completed=datetime.utcnow(),
         dwolla_payment_transaction_id=response["transfer"]["id"],
-        dwolla_fee_transaction_id=fee_response["transfer"]["id"] or None,
+        dwolla_fee_transaction_id=fee_id,
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
         date_created=datetime.utcnow(),
@@ -184,6 +189,7 @@ def remove_balance():
             2,
         )
         amount = amount - fee
+    fee_response = None
     if fee > 0.0:
         response = payments.transfer_funds(str(amount), balance, location, None)
         fee_response = payments.transfer_funds(str(fee), balance, Config.FEE_ACCOUNT)
@@ -200,12 +206,16 @@ def remove_balance():
     )
     db.session.add(transfer)
     db.session.commit()
+    if fee_response is not None and fee_response["transfer"]["id"]:
+        fee_id = fee_response["transfer"]["id"]
+    else:
+        fee_id = None
     payment = Payment(
         amount=transfer.amount,
         bank_transfer_id=transfer.id,
         date_completed=datetime.utcnow(),
         dwolla_payment_transaction_id=response["transfer"]["id"],
-        dwolla_fee_transaction_id=fee_response["transfer"]["id"] or None,
+        dwolla_fee_transaction_id=fee_id,
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
         date_created=datetime.utcnow(),
