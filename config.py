@@ -8,6 +8,7 @@ load_dotenv(os.path.join(basedir, ".env"))
 class Config(object):
 
     APP_VERSION = "0.4.0"
+    FEE_ACCOUNT = os.environ.get("FEE_ACCOUNT")
 
     BASE_URL = os.environ.get("BASE_URL") or "localhost:5000/{}"
     FRONT_URL = os.environ.get("FRONT_URL") or "localhost:8080/"

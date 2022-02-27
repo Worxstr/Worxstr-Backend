@@ -33,6 +33,8 @@ from app.utils import (
 
 import json
 
+from config import Config
+
 
 def get_manager_user_ids(organization_id):
     # Get the ids of managers within the current organization
@@ -122,6 +124,7 @@ def add_balance():
     amount = amount - fee
     if fee > 0.0:
         response = payments.transfer_funds(str(amount), location, balance, fee)
+        fee_response = payments.transfer_funds(str(fee), balance, Config.FEE_ACCOUNT)
     else:
         response = payments.transfer_funds(str(amount), location, balance)
     if type(response) is tuple:
@@ -143,6 +146,7 @@ def add_balance():
         bank_transfer_id=transfer.id,
         date_completed=datetime.utcnow(),
         dwolla_payment_transaction_id=response["transfer"]["id"],
+        dwolla_fee_transaction_id=fee_response["transfer"]["id"] or None,
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
         date_created=datetime.utcnow(),
@@ -181,13 +185,8 @@ def remove_balance():
         )
         amount = amount - fee
     if fee > 0.0:
-        fee_request = [
-            {
-                "_links": {"charge-to": {"href": customer_url}},
-                "amount": {"value": str(fee), "currency": "USD"},
-            }
-        ]
         response = payments.transfer_funds(str(amount), balance, location, None)
+        fee_response = payments.transfer_funds(str(fee), balance, Config.FEE_ACCOUNT)
     else:
         response = payments.transfer_funds(str(amount), balance, location)
     transfer = BankTransfer(
@@ -206,6 +205,7 @@ def remove_balance():
         bank_transfer_id=transfer.id,
         date_completed=datetime.utcnow(),
         dwolla_payment_transaction_id=response["transfer"]["id"],
+        dwolla_fee_transaction_id=fee_response["transfer"]["id"] or None,
         sender_dwolla_url=current_user.dwolla_customer_url,
         receiver_dwolla_url=current_user.dwolla_customer_url,
         date_created=datetime.utcnow(),
