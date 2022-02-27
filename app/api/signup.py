@@ -93,6 +93,7 @@ def sign_up_org():
         dwolla_customer_url=dwolla_customer_url,
         dwolla_customer_status=dwolla_customer_status,
         subscription_tier_id=subscription_tier.id,
+        creation_date=datetime.datetime.utcnow(),
     )
     db.session.add(organization)
     db.session.commit()
