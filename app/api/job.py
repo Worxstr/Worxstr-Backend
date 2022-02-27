@@ -531,10 +531,15 @@ def edit_job(job_id):
     original_email = job.consultant_email
     original_code = job.consultant_code
 
-    consultant_phone_raw = get_request_json(request, "consultant_phone")
-    consultant_phone = (
-        consultant_phone_raw["areaCode"] + consultant_phone_raw["phoneNumber"]
+    consultant_phone_raw = (
+        get_request_json(request, "consultant_phone", optional=True) or None
     )
+    if consultant_phone_raw == None:
+        consultant_phone = None
+    else:
+        consultant_phone = (
+            consultant_phone_raw["areaCode"] + consultant_phone_raw["phoneNumber"]
+        )
 
     try:
         db.session.query(Job).filter(Job.id == job_id).update(
