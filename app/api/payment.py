@@ -392,7 +392,7 @@ def deny_payment():
     user_ids = get_manager_user_ids(current_user.organization_id)
 
     for payment_id in payment_ids:
-        payment =db.session.query(Payment).filter(Payment.id == payment_id)
+        payment = db.session.query(Payment).filter(Payment.id == payment_id)
         user_ids.append(payment.receiver.id)
         emit_to_users("REMOVE_PAYMENT", payment_id, user_ids)
         user_ids.remove(payment.receiver.id)
