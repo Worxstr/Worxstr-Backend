@@ -630,6 +630,11 @@ def edit_invoice(invoice_id, invoice_items, description, job_id=None):
         .filter(InvoiceItem.invoice_id == invoice_id)
         .all()
     )
+    if invoice_items == None:
+        db.session.query(InvoiceItem).filter(InvoiceItem.id.in_(invoice_ids)).delete(
+            synchronize_session="fetch"
+        )
+        return update_invoice(invoice_id)
     x = 0
     for i in invoice_ids:
         invoice_ids[x] = i[0]
