@@ -1,3 +1,4 @@
+# Fuck everything this better work
 from datetime import datetime
 from flask import request, Response
 from flask_security import login_required, roles_accepted, current_user
