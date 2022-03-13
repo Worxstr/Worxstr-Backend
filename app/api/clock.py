@@ -183,7 +183,9 @@ def clock_in():
 
     if job.restrict_by_location:
         if location == None:
-            return {"message": "Location not available. Please check your settings and try again."}, 401
+            return {
+                "message": "Location not available. Please check your settings and try again."
+            }, 401
         if location["accuracy"] > job.radius * 1.2:
             return {"message": "Location accuracy is too low, try again later."}, 401
 
