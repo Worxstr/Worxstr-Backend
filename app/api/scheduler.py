@@ -3,6 +3,7 @@ import dateutil.parser
 
 from flask import abort, request
 from flask_security import current_user, login_required, roles_accepted
+from sqlalchemy import or_
 from sqlalchemy.sql.expression import desc
 
 from app import db
@@ -43,7 +44,10 @@ def get_shifts():
     shifts = (
         db.session.query(ScheduleShift)
         .filter(
-            ScheduleShift.time_end > datetime.datetime.utcnow(),
+            or_(
+                ScheduleShift.time_end > datetime.datetime.utcnow(),
+                ScheduleShift.clock_state != TimeClockAction.clock_out,
+            ),
             ScheduleShift.contractor_id == current_user.id,
             ScheduleShift.active == True,
         )
