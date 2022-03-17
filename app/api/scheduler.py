@@ -51,7 +51,7 @@ def get_shifts():
             ScheduleShift.contractor_id == current_user.id,
             ScheduleShift.active == True,
         )
-        .order_by(ScheduleShift.time_end.desc())
+        .order_by(ScheduleShift.time_end.asc())
         .offset(offset * 10)
         .limit(10)
         .all()
