@@ -122,18 +122,26 @@ def add_balance():
     balance = payments.get_balance(customer_url)["location"]
     if transfer_speed == "next-available":
         fee = round(
-            amount * float(current_user.organization.subscription_tier.business_same_day_fee), 2
+            amount
+            * float(current_user.organization.subscription_tier.business_same_day_fee),
+            2,
         )
     else:
         fee = round(
-            amount * float(current_user.organization.subscription_tier.business_ach_fee), 2
+            amount
+            * float(current_user.organization.subscription_tier.business_ach_fee),
+            2,
         )
     fee_response = None
     if fee > 0.0:
-        response = payments.transfer_funds(str(amount), location, balance, transfer_speed=transfer_speed)
+        response = payments.transfer_funds(
+            str(amount), location, balance, transfer_speed=transfer_speed
+        )
         fee_response = payments.transfer_funds(str(fee), balance, Config.FEE_ACCOUNT)
     else:
-        response = payments.transfer_funds(str(amount), location, balance, transfer_speed=transfer_speed)
+        response = payments.transfer_funds(
+            str(amount), location, balance, transfer_speed=transfer_speed
+        )
     if type(response) is tuple:
         return response
     funding_source = payments.get_customer_info(location)
