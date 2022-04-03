@@ -117,18 +117,23 @@ def get_balance():
 def add_balance():
     location = get_request_json(request, "location")
     amount = get_request_json(request, "amount")
+    transfer_speed = get_request_json(request, "transfer_speed", optional=True)
     customer_url = current_user.dwolla_customer_url
     balance = payments.get_balance(customer_url)["location"]
-    fee = round(
-        amount * current_user.organization.subscription_tier.business_ach_fee, 2
-    )
-    amount = amount - fee
+    if transfer_speed == "next-available":
+        fee = round(
+            amount * float(current_user.organization.subscription_tier.business_same_day_fee), 2
+        )
+    else:
+        fee = round(
+            amount * float(current_user.organization.subscription_tier.business_ach_fee), 2
+        )
     fee_response = None
     if fee > 0.0:
-        response = payments.transfer_funds(str(amount), location, balance, fee)
+        response = payments.transfer_funds(str(amount), location, balance, transfer_speed=transfer_speed)
         fee_response = payments.transfer_funds(str(fee), balance, Config.FEE_ACCOUNT)
     else:
-        response = payments.transfer_funds(str(amount), location, balance)
+        response = payments.transfer_funds(str(amount), location, balance, transfer_speed=transfer_speed)
     if type(response) is tuple:
         return response
     funding_source = payments.get_customer_info(location)
