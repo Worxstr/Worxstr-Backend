@@ -137,7 +137,7 @@ def add_balance():
         response = payments.transfer_funds(
             str(amount), location, balance, transfer_speed=transfer_speed
         )
-        fee_response = payments.transfer_funds(str(fee), balance, Config.FEE_ACCOUNT)
+        fee_response = payments.transfer_funds(str(fee), location, Config.FEE_ACCOUNT)
     else:
         response = payments.transfer_funds(
             str(amount), location, balance, transfer_speed=transfer_speed
