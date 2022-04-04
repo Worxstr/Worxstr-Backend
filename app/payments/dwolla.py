@@ -116,13 +116,16 @@ class Dwolla:
         return
 
     @catch_errors
-    def transfer_funds(self, amount, source, destination, fees=None):
+    def transfer_funds(
+        self, amount, source, destination, fees=None, transfer_speed="standard"
+    ):
         request_body = {
             "_links": {
                 "source": {"href": source},
                 "destination": {"href": destination},
             },
             "amount": {"currency": "USD", "value": amount},
+            "clearing": {"source": transfer_speed},
         }
         if fees != None:
             request_body["fees"] = fees

@@ -407,6 +407,7 @@ class SubscriptionTier(db.Model, CustomSerializerMixin):
     annual = db.Column(db.Boolean)
     num_contractors = db.Column(db.Integer)
     business_ach_fee = db.Column(db.Numeric)
+    business_same_day_fee = db.Column(db.Numeric)
     contractor_ach_fee = db.Column(db.Numeric)
     transfer_fee = db.Column(db.Numeric)
     tier_code = db.Column(db.String)
