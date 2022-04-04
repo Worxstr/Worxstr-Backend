@@ -243,6 +243,9 @@ def create_messages(conversation_id):
     """
     message_body = get_request_json(request, "body")
 
+    if len(message_body) > 500:
+        return {"message": "Message is too long. Max 500 characters."}, 400
+
     return {
         "message": send_message(
             conversation_id, current_user.id, {"body": message_body}
