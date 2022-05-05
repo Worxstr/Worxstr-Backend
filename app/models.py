@@ -346,6 +346,7 @@ class Payment(db.Model, CustomSerializerMixin):
 
     @hybrid_property
     def receiver(self):
+        print(self)
         receiver = (
             db.session.query(User)
             .join(ContractorInfo)
