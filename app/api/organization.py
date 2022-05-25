@@ -90,7 +90,14 @@ def retry_organization_payments():
         )
         .one()[0]
     )
-    status = payments.retry_business_customer(dwolla_request)
+    customer_url = (
+        db.session.query(Organization.dwolla_customer_url)
+        .filter(
+            Organization.id == current_user.organization_id,
+        )
+        .one()[0]
+    )
+    status = payments.retry_business_customer(dwolla_request, customer_url)
     db.session.query(Organization).filter(
         Organization.id == current_user.organization_id
     ).update({Organization.dwolla_customer_status: status})
