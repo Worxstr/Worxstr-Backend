@@ -38,8 +38,8 @@ def upload():
             )
         except ClientError as e:
             return {"message": "Failed to upload!"}, 500
-        object_names.append(object_name)
-    return {"filename": object_names}, 200
+        object_names.append({"filename": object_name})
+    return {"files": object_names}, 200
 
 
 @bp.route("/api/file-download", methods=["GET"])
