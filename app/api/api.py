@@ -18,7 +18,7 @@ def info():
     return {"app_version": Config.APP_VERSION}
 
 
-@bp.route("/api/file-upload", methods=["POST"])
+@bp.route("/api/upload", methods=["POST"])
 def upload():
     object_names = []
     for file in request.files.getlist("file"):
@@ -42,7 +42,7 @@ def upload():
     return {"files": object_names}, 200
 
 
-@bp.route("/api/file-download", methods=["GET"])
+@bp.route("/api/download", methods=["GET"])
 def download():
     bucket_path = get_request_arg(request, "file_name")
     s3_client = boto3.client(
