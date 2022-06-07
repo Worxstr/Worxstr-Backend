@@ -45,7 +45,7 @@ def format_phone_number(phone_number):
 # Return phone number string from dictionary
 def build_phone_number(phone_dict):
     if phone_dict == None:
-        return "Unknown"
+        return None
     return format_phone_number(
         phone_dict["countryCode"] + phone_dict["areaCode"] + phone_dict["phoneNumber"]
     )
@@ -158,6 +158,8 @@ def support():
     device = get_request_json(request, "device", optional=True)
     cpu = get_request_json(request, "cpu", optional=True)
     engine = get_request_json(request, "engine", optional=True)
+    
+    print(device)
 
     # Reformat fields
     if browser:
@@ -171,11 +173,16 @@ def support():
 
     if engine:
         engine = engine["name"] + " " + engine["version"]
+        
+    if device:
+        device = device["vendor"] + " " + device["model"] + " " + device["type"]
+    else:
+        device = None
 
     if not description:
         raise (MissingParameterException(f"Include a Description For Your Problem"))
-
-    create_support_ticket(
+    
+    res = create_support_ticket(
         name,
         phone,
         email,
@@ -188,8 +195,8 @@ def support():
         cpu,
         user_id,
     )
-
-    return OK_RESPONSE, 201
+    
+    return res.content, 201
 
 
 def create_support_ticket(
@@ -242,7 +249,10 @@ def create_support_ticket(
             {"id": "5f3010d7-19a0-4be6-a69d-06e1c09d1ca1", "value": user_id},  # User ID
         ],
     }
-
+    # dump json
+    import json
+    # print (json.dumps(payload))
+    
     return requests.post(
         CLICKUP_BASE_URL + "list/" + SUPPORT_LIST_ID + "/task",
         data=json.dumps(payload),
