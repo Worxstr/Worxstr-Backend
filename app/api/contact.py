@@ -167,7 +167,13 @@ def support():
 
     # Reformat fields
     if browser:
-        browser = browser.get("name") + " " + browser.get("version") + " " + browser.get("major")
+        browser = (
+            browser.get("name")
+            + " "
+            + browser.get("version")
+            + " "
+            + browser.get("major")
+        )
 
     if os:
         os = os.get("name") + " " + os.get("version")
@@ -185,7 +191,9 @@ def support():
         engine = None
 
     if device:
-        device = device.get("vendor") + " " + device.get("model") + " " + device.get("type")
+        device = (
+            device.get("vendor") + " " + device.get("model") + " " + device.get("type")
+        )
     else:
         device = None
 
