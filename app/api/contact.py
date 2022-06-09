@@ -77,7 +77,7 @@ def sales():
     if not (phone or email):
         raise (MissingParameterException(f"No contact information provided."))
 
-    ticket = create_ticket(
+    return create_ticket(
         business_name,
         contact_name,
         contact_title,
@@ -88,8 +88,6 @@ def sales():
         num_contractors,
         notes,
     )
-    # TODO: Return ticket data
-    return OK_RESPONSE, 201
 
 
 def create_ticket(
@@ -120,12 +118,20 @@ def create_ticket(
             {"id": "c2917630-b938-45de-99d1-6369c0690ee3", "value": website},
         ],
     }
-
-    return requests.post(
+    res = requests.post(
         CLICKUP_BASE_URL + "list/" + SALES_LIST_ID + "/task",
         data=json.dumps(payload),
         headers=HEADERS,
     )
+    
+    if res.status_code != 200:
+        error = res.json()
+        return ({
+            "message": error.get('err', 'Something went wrong.'),
+            "error": error
+        }, res.status_code)
+        
+    return res.json(), res.status_code
 
 
 @bp.route("/contact/support", methods=["POST"])
@@ -159,8 +165,6 @@ def support():
     cpu = get_request_json(request, "cpu", optional=True)
     engine = get_request_json(request, "engine", optional=True)
     
-    print(device)
-
     # Reformat fields
     if browser:
         browser = browser["name"] + " " + browser["version"] + " " + browser["major"]
@@ -182,7 +186,7 @@ def support():
     if not description:
         raise (MissingParameterException(f"Include a Description For Your Problem"))
     
-    res = create_support_ticket(
+    return create_support_ticket(
         name,
         phone,
         email,
@@ -195,8 +199,6 @@ def support():
         cpu,
         user_id,
     )
-    
-    return res.content, 201
 
 
 def create_support_ticket(
@@ -249,12 +251,18 @@ def create_support_ticket(
             {"id": "5f3010d7-19a0-4be6-a69d-06e1c09d1ca1", "value": user_id},  # User ID
         ],
     }
-    # dump json
-    import json
-    # print (json.dumps(payload))
     
-    return requests.post(
+    res = requests.post(
         CLICKUP_BASE_URL + "list/" + SUPPORT_LIST_ID + "/task",
         data=json.dumps(payload),
         headers=HEADERS,
     )
+    
+    if res.status_code != 200:
+        error = res.json()
+        return ({
+            "message": error.get('err', 'Something went wrong.'),
+            "error": error
+        }, res.status_code)
+        
+    return res.json(), res.status_code
