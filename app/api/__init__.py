@@ -16,4 +16,5 @@ from app.api import (
     organization,
     sockets,
     api,
+    report,
 )
