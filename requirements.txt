@@ -15,7 +15,7 @@ certifi==2020.12.5
 cffi==1.14.4
 chardet==4.0.0
 click==7.1.2
-cryptography==3.3.2
+cryptography==37.0.4
 dnspython==1.16.0
 dwollav2==2.2.0
 email-validator==1.1.2
@@ -55,7 +55,7 @@ nulltype==2.3.1
 passlib==1.7.4
 pathspec==0.8.1
 plaid-python==8.0.0
-psycopg2-binary==2.8.6
+psycopg2-binary==2.9.3
 pycparser==2.20
 pyfcm==1.5.4
 pylint==2.6.0
