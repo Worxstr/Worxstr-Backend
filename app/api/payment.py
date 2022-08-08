@@ -534,69 +534,6 @@ def get_payment(payment_id):
     return payment.to_dict()
 
 
-@bp.route("/payments/export", methods=["GET"])
-@login_required
-@roles_accepted("organization_manager", "contractor_manager")
-def export_payments():
-    filters = [
-        or_(
-            Payment.sender_dwolla_url == current_user.dwolla_customer_url,
-            Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
-        ),
-        Payment.denied == False,
-    ]
-    payments = (
-        db.session.query(Payment)
-        .filter(*filters)
-        .order_by(desc(Payment.date_created))
-        .all()
-    )
-
-    data = []
-    for payment in payments:
-        payment = payment.to_dict()
-        data.append(
-            {
-                "total": payment.get("total"),
-                "amount": payment.get("amount"),
-                "fee": payment.get("fee"),
-                "date_created": payment.get("date_created"),
-                "date_completed": payment.get("date_completed"),
-            }
-        )
-
-    format = request.args.get("format")
-
-    if format == "csv":
-        filename = "payments_export.csv"
-        mimetype = "text/csv"
-        output = list_to_csv(data)
-
-    elif format == "json":
-        filename = "payments_export.json"
-        mimetype = "application/json"
-        output = json.dumps(data)
-
-    # elif format == 'xlsx':
-    #     filename = "payments_export.xlsx"
-    #     mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    #     output = list_to_xlsx(data)
-
-    # elif format == 'pdf':
-    #     filename = "payments_export.pdf"
-    #     mimetype = "application/pdf"
-    #     output = list_to_pdf(data)
-
-    else:
-        return "Invalid format provided", 400
-
-    return Response(
-        output,
-        mimetype=mimetype,
-        headers={"Content-disposition": "attachment; filename=" + filename},
-    )
-
-
 @bp.route("/payments/invoices", methods=["POST"])
 @login_required
 def create_invoice():
