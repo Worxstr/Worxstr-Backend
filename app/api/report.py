@@ -1,6 +1,6 @@
 import os
 from requests import Response
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 import xlsxwriter
 from flask_login import current_user, login_required
 from app import db
