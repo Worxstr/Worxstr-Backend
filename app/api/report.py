@@ -2,7 +2,7 @@ import os
 from requests import Response
 from sqlalchemy import desc, or_
 import xlsxwriter
-from flask_login import current_user, login_required
+from flask_security import current_user, login_required, roles_accepted
 from app import db
 from app.api import bp
 from flask import request
