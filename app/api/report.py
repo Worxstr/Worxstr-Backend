@@ -25,10 +25,14 @@ import json
 def export_payments():
     report_type = get_request_arg(request, "report_type")
     if report_type == "payments":
+        start_date = get_request_arg(request, "start_date")
+        end_date = get_request_arg(request, "end_date")
         filters = [
             or_(
                 Payment.sender_dwolla_url == current_user.dwolla_customer_url,
                 Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
+                Payment.date_created > start_date,
+                Payment.date_created < start_date
             ),
             Payment.denied == False,
         ]
