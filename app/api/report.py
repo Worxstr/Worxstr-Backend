@@ -1,5 +1,5 @@
 import os
-from requests import Response
+from flask import Response
 from sqlalchemy import desc, or_
 import xlsxwriter
 from flask_security import current_user, login_required, roles_accepted
@@ -79,7 +79,7 @@ def export_payments():
 
         return Response(
             output,
-            # mimetype=mimetype,
+            mimetype=mimetype,
             headers={"Content-disposition": "attachment; filename=" + filename},
         )
     elif report_type == "time":
