@@ -79,7 +79,7 @@ def export_payments():
 
         return Response(
             output,
-            mimetype=mimetype,
+            #mimetype=mimetype,
             headers={"Content-disposition": "attachment; filename=" + filename},
         )
     elif report_type == "time":
