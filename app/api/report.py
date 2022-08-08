@@ -32,7 +32,7 @@ def export_payments():
                 Payment.sender_dwolla_url == current_user.dwolla_customer_url,
                 Payment.receiver_dwolla_url == current_user.dwolla_customer_url,
                 Payment.date_created > start_date,
-                Payment.date_created < start_date
+                Payment.date_created < start_date,
             ),
             Payment.denied == False,
         ]
