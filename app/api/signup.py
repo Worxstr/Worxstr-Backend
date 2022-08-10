@@ -147,12 +147,6 @@ def sign_up_contractor():
     manager_reference = get_request_json(request, "manager_reference")
     color = get_request_json(request, "color")
     dwolla_request = request.get_json()
-    dwolla_request["type"] = "personal"
-    dwolla_customer_url = payments.create_personal_customer(dwolla_request)
-    if type(dwolla_customer_url) == tuple:
-        return dwolla_customer_url
-    dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
-    roles = ["contractor"]
     manager_info = (
         db.session.query(ManagerInfo)
         .filter(ManagerInfo.reference_number == manager_reference)
@@ -160,6 +154,12 @@ def sign_up_contractor():
     )
     if manager_info == None:
         return {"message": "Invalid manager reference number."}, 401
+    dwolla_request["type"] = "personal"
+    dwolla_customer_url = payments.create_personal_customer(dwolla_request)
+    if type(dwolla_customer_url) == tuple:
+        return dwolla_customer_url
+    dwolla_customer_status = payments.get_customer_info(dwolla_customer_url)["status"]
+    roles = ["contractor"]
     manager_id = manager_info.id
     organization_id = (
         db.session.query(User.organization_id).filter(User.id == manager_id).one()[0]

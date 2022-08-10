@@ -460,6 +460,9 @@ def get_managers():
     organization_managers = []
     contractor_managers = []
 
+    if not current_user.is_authenticated:
+        return {"message": "The current user is not logged in!"}, 400
+
     users = (
         db.session.query(User)
         .filter(
