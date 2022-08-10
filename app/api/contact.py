@@ -123,14 +123,14 @@ def create_ticket(
         data=json.dumps(payload),
         headers=HEADERS,
     )
-    
+
     if res.status_code != 200:
         error = res.json()
-        return ({
-            "message": error.get('err', 'Something went wrong.'),
-            "error": error
-        }, res.status_code)
-        
+        return (
+            {"message": error.get("err", "Something went wrong."), "error": error},
+            res.status_code,
+        )
+
     return res.json(), res.status_code
 
 
@@ -164,28 +164,42 @@ def support():
     device = get_request_json(request, "device", optional=True)
     cpu = get_request_json(request, "cpu", optional=True)
     engine = get_request_json(request, "engine", optional=True)
-    
+
     # Reformat fields
     if browser:
-        browser = browser["name"] + " " + browser["version"] + " " + browser["major"]
+        browser = (
+            browser.get("name")
+            + " "
+            + browser.get("version")
+            + " "
+            + browser.get("major")
+        )
 
     if os:
-        os = os["name"] + " " + os["version"]
+        os = os.get("name") + " " + os.get("version")
+    else:
+        os = None
 
     if cpu:
-        cpu = cpu["architecture"]
+        cpu = cpu.get("architecture")
+    else:
+        cpu = None
 
     if engine:
-        engine = engine["name"] + " " + engine["version"]
-        
+        engine = engine.get("name") + " " + engine.get("version")
+    else:
+        engine = None
+
     if device:
-        device = device["vendor"] + " " + device["model"] + " " + device["type"]
+        device = (
+            device.get("vendor") + " " + device.get("model") + " " + device.get("type")
+        )
     else:
         device = None
 
     if not description:
         raise (MissingParameterException(f"Include a Description For Your Problem"))
-    
+
     return create_support_ticket(
         name,
         phone,
@@ -251,18 +265,18 @@ def create_support_ticket(
             {"id": "5f3010d7-19a0-4be6-a69d-06e1c09d1ca1", "value": user_id},  # User ID
         ],
     }
-    
+
     res = requests.post(
         CLICKUP_BASE_URL + "list/" + SUPPORT_LIST_ID + "/task",
         data=json.dumps(payload),
         headers=HEADERS,
     )
-    
+
     if res.status_code != 200:
         error = res.json()
-        return ({
-            "message": error.get('err', 'Something went wrong.'),
-            "error": error
-        }, res.status_code)
-        
+        return (
+            {"message": error.get("err", "Something went wrong."), "error": error},
+            res.status_code,
+        )
+
     return res.json(), res.status_code

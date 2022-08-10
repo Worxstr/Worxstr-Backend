@@ -5,6 +5,11 @@ logs/
 .vscode/
 codes/
 flask_session/
+uploads/**
+!uploads/.gitkeep
+!downloads/.gitkeep
+downloads/**
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

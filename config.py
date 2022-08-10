@@ -109,3 +109,8 @@ class Config(object):
     PLAID_HOST = os.environ.get("PLAID_HOST")
 
     FIREBASE_SERVER_KEY = os.environ.get("FIREBASE_SERVER_KEY")
+    AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+    AWS_ACCESS_KEY_SECRET = os.environ.get("AWS_ACCESS_KEY_SECRET")
+    UPLOAD_FOLDER = os.path.join(basedir, "uploads")
+    DOWNLOAD_FOLDER = os.path.join(basedir, "downloads")
+    AWS_UPLOADS_BUCKET = os.environ.get("AWS_UPLOADS_BUCKET")
