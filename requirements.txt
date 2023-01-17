@@ -32,7 +32,7 @@ Flask-Security-Too==4.1.0
 Flask-SocketIO==5.1.1
 Flask-SQLAlchemy==2.4.4
 Flask-WTF==0.14.3
-future==0.18.2
+future==0.18.3
 geographiclib==1.50
 geopy==2.1.0
 greenlet==1.1.1
